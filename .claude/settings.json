@@ -46,7 +46,8 @@
       "Edit(/**/build.gradle.kts)",
       "Edit(/**/settings.gradle.kts)",
       "Edit(/**/libs.versions.toml)",
-      "Edit(/**/package.json)"
+      "Edit(/**/package.json)",
+      "Edit(/.claude/**)"
     ],
     "deny": [
       "Read(/**/.env)",
@@ -58,7 +59,23 @@
       "Edit(/**/.env.*)",
       "Edit(/**/application-local.*)",
       "Edit(/**/application-secret.*)",
-      "Edit(/**/secrets/**)"
+      "Edit(/**/secrets/**)",
+      "Bash(git diff *--output*)",
+      "Bash(git log *--output*)",
+      "Bash(./gradlew *--init-script*)",
+      "Bash(./gradlew * -I*)",
+      "Bash(npm run *--config*)",
+      "Bash(npm run * -c*)",
+      "Bash(npx vitest *--config*)",
+      "Bash(npx vitest * -c*)",
+      "PowerShell(git diff *--output*)",
+      "PowerShell(git log *--output*)",
+      "PowerShell(.\\gradlew.bat *--init-script*)",
+      "PowerShell(.\\gradlew.bat * -I*)",
+      "PowerShell(npm run *--config*)",
+      "PowerShell(npm run * -c*)",
+      "PowerShell(npx vitest *--config*)",
+      "PowerShell(npx vitest * -c*)"
     ]
   },
   "hooks": {

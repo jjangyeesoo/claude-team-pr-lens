@@ -79,10 +79,10 @@ docs/
 
 | 항목 | 방식 | 위치 |
 |---|---|---|
-| `.env`, `.env.*`, `application-local.*`, `application-secret.*`, `secrets/` 읽기·수정 금지 (모든 깊이) | **강제** (permissions deny) | `.claude/settings.json` |
-| 위 파일 + gradle wrapper, `package-lock.json`, `node_modules/`, `.next/`, `.git/` 수정 금지. Windows 별칭 경로(`파일:스트림`, `ENV~1` 같은 8.3 이름)도 차단 | **강제** (PreToolUse hook, 2차 방어선) | `ProtectFiles.java` |
+| `.env`, `.env.*`, `application-local.*`, `application-secret.*`, `secrets/` 읽기·수정 금지 (모든 깊이). allow된 명령에 `--output`, `--init-script`, `-I`, `--config`, `-c`를 붙이는 것도 금지 | **강제** (permissions deny) | `.claude/settings.json` |
+| 위 파일 + gradle wrapper, `package-lock.json`, `node_modules/`, `.next/`, `.git/` 수정 금지. Windows 별칭 경로(`파일:스트림`, `ENV~1` 같은 8.3 이름, `gradlew.`처럼 끝에 점·공백을 붙인 이름)도 차단 | **강제** (PreToolUse hook, 2차 방어선) | `ProtectFiles.java` |
 | 코드 변경 후 포맷과 테스트 통과 (바뀐 스택만) | **강제** (Stop hook, 실패 시 한 번 되돌려 보냄) | `VerifyOnStop.java` |
-| 모든 `build.gradle.kts`, `settings.gradle.kts`, `libs.versions.toml`, `package.json` 수정, `npm install`, `git push` | **확인 요청** (permissions ask) | `.claude/settings.json` |
+| 모든 `build.gradle.kts`, `settings.gradle.kts`, `libs.versions.toml`, `package.json` 수정, `.claude/` 아래 파일 수정(settings, hooks, rules, skills, agents), `npm install`, `git push` | **확인 요청** (permissions ask) | `.claude/settings.json` |
 | 줄 끝 LF 통일 (`* text=auto eol=lf`) | **강제** (git) | `.gitattributes` |
 
 > **`claude`는 저장소 루트에서 실행하세요.** 권한 규칙의 `/`는 프로젝트 루트를 뜻하도록 `/**/` 형태로 적어 두었지만, 하위 폴더에서 시작하면 hook과 규칙의 기준 위치가 달라질 수 있습니다.
@@ -96,7 +96,16 @@ docs/
   - 스크립트나 프로그램이 간접적으로 파일을 여는 경우. 예: Python, Node, Gradle 태스크, Next.js의 `.env.local` 로딩
   - 이런 경우까지 막으려면 OS 수준 격리인 `/sandbox`를 켜세요.
 - **ProtectFiles**는 파일 편집 도구(Edit, Write, NotebookEdit)만 검사합니다. 경로는 프로젝트 폴더 기준으로 판정합니다(프로젝트가 `C:\secrets\...` 아래 있어도 오탐하지 않음). 입력을 해석하지 못하면 편집을 허용합니다(fail-open). `npm install`이 lock 파일을 바꾸는 것은 막지 않습니다(ask 규칙으로 사람이 확인).
+  - 심볼릭 링크나 junction을 거친 경로는 실제 경로로 한 번 더 검사합니다. 실제 경로를 구하지 못하면 문자열 검사 결과만 씁니다.
 - **`.env.example`도 보호 대상**입니다(`.env.*` 패턴). Claude가 읽어야 하는 예시 파일은 `env.example`처럼 점 없이 이름 붙이세요.
+- **allow 규칙의 `*`는 뒤 인자를 제한하지 않습니다.** 파일을 쓰거나 다른 설정을 끌어오는 옵션(`git diff --output`, `gradlew --init-script`·`-I`, `npm run`·`vitest`의 `--config`·`-c`)은 deny로 막았지만, 목록에 없는 옵션이나 추가 태스크(`./gradlew test publish`)는 막지 못합니다.
+
+### 운영 규칙 (설정으로 막지 못하는 부분)
+위 한계 가운데 설계상 남겨 둔 세 가지는 사람이 지킵니다.
+
+- **셸로 보호 파일을 고치지 않습니다.** ProtectFiles는 Edit, Write, NotebookEdit만 보기 때문에 Bash나 PowerShell 명령으로 쓰는 것은 막지 못합니다. 보호 파일(gradle wrapper, lock 파일, `.git/`)을 바꿔야 하면 사람이 직접 하거나, Claude가 제안한 명령을 읽어 보고 승인합니다. 셸까지 막아야 하는 작업은 `/sandbox`를 켜고 합니다.
+- **신뢰할 수 없는 코드를 이 폴더에 체크아웃한 채로 Claude를 실행하지 않습니다.** Stop hook은 응답이 끝날 때 승인 없이 `gradlew spotlessApply test`와 `npm run verify`를 실행하므로, 그 브랜치의 빌드 스크립트와 테스트 코드가 그대로 실행됩니다. 외부 기여자의 PR이나 출처를 모르는 브랜치는 내용을 먼저 읽고, 필요하면 별도 폴더나 격리된 환경에서 엽니다.
+- **보호 대상은 deny 규칙에도 함께 넣습니다.** ProtectFiles는 입력을 해석하지 못하면 편집을 허용하는(fail-open) 2차 방어선입니다. 비밀값처럼 반드시 막아야 하는 파일을 hook에만 추가하지 말고 `settings.json`의 deny에도 넣습니다.
 
 ### VerifyOnStop 동작
 - **스택별로 판단합니다.** 설정은 hook 안의 `STACKS` 목록 하나입니다.
