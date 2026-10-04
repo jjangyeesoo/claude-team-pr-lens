@@ -1,0 +1,10 @@
+# claude --worktree로 만든 작업 폴더에 복사할 gitignore 파일 (비밀값·로컬 설정)
+# .gitignore의 Secrets 항목, settings.json의 deny 규칙, ProtectFiles와 같은 목록을 유지한다
+.env
+.env.*
+**/.env
+**/.env.*
+**/application-local.*
+**/application-secret.*
+secrets/
+**/secrets/

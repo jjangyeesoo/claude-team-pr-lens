@@ -1,0 +1,90 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew build *)",
+      "Bash(./gradlew spotlessApply *)",
+      "Bash(./gradlew spotlessCheck *)",
+      "Bash(npm ci)",
+      "Bash(npm run lint *)",
+      "Bash(npm run typecheck *)",
+      "Bash(npm run test *)",
+      "Bash(npm run format *)",
+      "Bash(npm run format:check *)",
+      "Bash(npm run verify *)",
+      "Bash(npm run build *)",
+      "Bash(npx vitest run *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "PowerShell(.\\gradlew.bat test *)",
+      "PowerShell(.\\gradlew.bat build *)",
+      "PowerShell(.\\gradlew.bat spotlessApply *)",
+      "PowerShell(.\\gradlew.bat spotlessCheck *)",
+      "PowerShell(npm ci)",
+      "PowerShell(npm run lint *)",
+      "PowerShell(npm run typecheck *)",
+      "PowerShell(npm run test *)",
+      "PowerShell(npm run format *)",
+      "PowerShell(npm run format:check *)",
+      "PowerShell(npm run verify *)",
+      "PowerShell(npm run build *)",
+      "PowerShell(npx vitest run *)",
+      "PowerShell(git status *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git log *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "PowerShell(git push *)",
+      "Bash(npm install *)",
+      "Bash(npm i *)",
+      "Bash(npm uninstall *)",
+      "PowerShell(npm install *)",
+      "PowerShell(npm i *)",
+      "PowerShell(npm uninstall *)",
+      "Edit(/**/build.gradle.kts)",
+      "Edit(/**/settings.gradle.kts)",
+      "Edit(/**/libs.versions.toml)",
+      "Edit(/**/package.json)"
+    ],
+    "deny": [
+      "Read(/**/.env)",
+      "Read(/**/.env.*)",
+      "Read(/**/application-local.*)",
+      "Read(/**/application-secret.*)",
+      "Read(/**/secrets/**)",
+      "Edit(/**/.env)",
+      "Edit(/**/.env.*)",
+      "Edit(/**/application-local.*)",
+      "Edit(/**/application-secret.*)",
+      "Edit(/**/secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "java",
+            "args": ["-Dfile.encoding=UTF-8", "${CLAUDE_PROJECT_DIR}/.claude/hooks/ProtectFiles.java"]
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "java",
+            "args": ["-Dfile.encoding=UTF-8", "${CLAUDE_PROJECT_DIR}/.claude/hooks/VerifyOnStop.java"],
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
