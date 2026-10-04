@@ -11,6 +11,7 @@
 | 결정 대기 항목 | 각 스펙의 색인과 `requirements.md` "결정 대기 항목", `design.md` "요구사항 공백" |
 | 확정한 아키텍처 결정 | [adr/](adr/README.md) |
 | 실행해서 확인한 기술 사실 | [spikes/](spikes/) |
+| 작업 하나를 고르고 머지하기까지의 순서 | [guide/task-workflow.md](guide/task-workflow.md) (안내서. 규칙의 원본은 PLAYBOOK과 스킬) |
 | Claude Code 설정이 무엇을 강제하고 어디까지 막는가 | [guide/claude-code-setup.md](guide/claude-code-setup.md) |
 | 팀 방법론 (일반 가이드. PR Lens 전용이 아님) | [guide/claude-code-team-methodology.md](guide/claude-code-team-methodology.md) |
 | Claude에게 주는 지시 | 루트 `CLAUDE.md`, `backend/CLAUDE.md`, `web/CLAUDE.md`, `.claude/rules/` |

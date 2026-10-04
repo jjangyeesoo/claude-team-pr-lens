@@ -6,6 +6,7 @@ disable-model-invocation: true
 현재 브랜치를 PR 전에 점검한다.
 
 1. `git status`, `git diff main...HEAD --stat`으로 변경 범위를 확인한다.
+   - 커밋하지 않은 변경이 있으면 먼저 알리고 멈춘다. reviewer는 `git diff main...HEAD`로 커밋된 변경만 본다.
    - PR 단위는 `tasks.md`의 상위 작업 하나다. 그 작업에 "PR 경계"가 적혀 있으면 이 브랜치가 경계 하나에 해당하는지 확인한다.
    - 크기는 `src/main` 변경만 센다(테스트, 픽스처, 문서 제외). 400줄을 넘으면 `tasks.md`의 PR 경계로 나눌 수 있는지 먼저 보고, 나눌 수 없으면 PR 설명에 넣을 이유를 한 줄 제안한다.
 2. 바뀐 스택만 검증하고 결과(통과 수, 실패 여부)를 증거로 기록한다.
