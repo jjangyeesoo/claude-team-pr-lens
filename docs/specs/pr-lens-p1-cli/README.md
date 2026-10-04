@@ -51,4 +51,4 @@ Glossary 용어는 밑줄 표기(`Diff_Parser`), 클래스는 붙여 쓴 이름(
 ## 관련 문서
 - 패키지 구조: [ADR 0003](../../adr/0003-role-based-flat-packages.md)
 - 확인한 기술 사실: [spikes/2026-10-04-build-stack.md](../../spikes/2026-10-04-build-stack.md), design.md "1주차 spike 확인 목록"
-- 이 스펙을 고친 근거: `docs/spec-review/`의 01, 04(B), 05와 커밋 `282d1ab`
+- 이 스펙을 고친 근거: `docs/spec-review/`의 01, 05와 커밋 `282d1ab`. 함께 근거로 쓴 02와 04(B)는 반영 뒤 지웠습니다(원문은 각각 `282d1ab` 이전, `f67a6b1`까지의 이력)
