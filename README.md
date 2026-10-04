@@ -1,13 +1,28 @@
-# claude-team-starter (Spring Boot + Next.js)
+# PR Lens
 
-소규모 팀(2~5명)이 Claude Code로 협업할 때 쓰는 **스타터 템플릿**입니다.
-팀 방법론 가이드("소규모 IT 팀을 위한 Claude Code 개발 방법론")의 내용을 **실제로 동작하는 설정**으로 옮겼습니다. 가이드는 [`docs/claude-code-team-methodology.md`](docs/claude-code-team-methodology.md)에 있습니다.
+팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, PR에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구입니다. 3명이 5주 동안 Claude Code로 만들면서 팀 개발 방법론을 실험하는 연구회 프로젝트입니다.
 
-- 구조: 모노레포. `backend/`(REST API)와 `web/`(조회 화면)
+- **지금 상태 (2026-10-04)**: P1 스펙까지 준비됐고 PR Lens 코드는 아직 없습니다. 소스는 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [`docs/HANDOFF.md`](docs/HANDOFF.md)에 있습니다.
+- **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회
+- **구조**: 모노레포. `backend/`(CLI와 P2부터 서버), `web/`(P3부터 조회 화면)
 - backend: Spring Boot 4.1 · Java 17 · Gradle (Kotlin DSL) · Spotless(google-java-format)
 - web: Next.js 16 (App Router) · React 19 · TypeScript · ESLint · Prettier · Vitest
-- 샘플 도메인: 메모 API (`/api/v1/memos`)와 메모 목록 화면(`/memos`). hooks, 스킬, 규칙이 실제 코드에서 동작하는지 확인하는 용도입니다.
+- 메모 샘플: 스타터의 메모 API(`/api/v1/memos`)와 메모 화면(`/memos`)이 남아 있습니다. backend는 P1 작업 1.1에서, web은 P3에서 지웁니다.
 - 필요한 것: JDK 17+, Node 24+(`web/.nvmrc`), git. hook은 Java 단일 파일 스크립트(`java Hook.java`)라 hook 자체에는 Node가 필요 없습니다.
+
+이 저장소의 Claude Code 설정(`.claude/`, hooks, 스킬)은 `claude-team-starter`에서 가져와 PR Lens에 맞게 고친 것입니다. 아래 "자동으로 강제되는 것" 이후의 절은 그 설정이 어떻게 동작하는지 설명합니다.
+
+## 문서
+
+| 문서 | 내용 |
+|---|---|
+| [`docs/study-project/PRD.md`](docs/study-project/PRD.md) | 제품 요구사항 (FR-1~14) |
+| [`docs/study-project/ROADMAP.md`](docs/study-project/ROADMAP.md) | 5주 계획과 주차별 트랙 |
+| [`docs/study-project/PLAYBOOK.md`](docs/study-project/PLAYBOOK.md) | 역할, 승인 규칙, 지표, 작업 규칙 |
+| [`docs/specs/`](docs/specs/) | 단계별 스펙 (`pr-lens-p1-cli`, `pr-lens-p2-automation`, `pr-lens-p3-web`) |
+| [`docs/adr/`](docs/adr/README.md) | 아키텍처 결정 기록 |
+| [`docs/spikes/`](docs/spikes/) | 기술 검증 기록 |
+| [`docs/claude-code-team-methodology.md`](docs/claude-code-team-methodology.md) | 팀 방법론 가이드 ("소규모 IT 팀을 위한 Claude Code 개발 방법론") |
 
 ## 빠른 시작
 
@@ -17,12 +32,12 @@ cd ../web && npm ci && npm run verify
 claude                              # 저장소 루트에서 실행. 처음에는 폴더 신뢰(trust)를 묻습니다. 신뢰해야 팀 allow 규칙이 적용됩니다
 ```
 
-화면까지 보려면 `backend`에서 `./gradlew bootRun`, `web`에서 `npm run dev`를 실행하고 http://localhost:3000/memos 를 엽니다. backend 주소는 `web/.env.local`의 `API_BASE_URL`로 바꿀 수 있습니다(기본 `http://localhost:8080`).
+메모 샘플 화면을 보려면 `backend`에서 `./gradlew bootRun`, `web`에서 `npm run dev`를 실행하고 http://localhost:3000/memos 를 엽니다. backend 주소는 `web/.env.local`의 `API_BASE_URL`로 바꿀 수 있습니다(기본 `http://localhost:8080`).
 
 첫 세션에서 확인할 것:
 1. `/context`에 루트 `CLAUDE.md`가 로드되어 있는지. `backend/`나 `web/` 파일을 읽게 한 뒤 다시 보면 그 폴더의 `CLAUDE.md`와 해당 rules가 추가로 로드됩니다
 2. `/hooks`에 `PreToolUse`(ProtectFiles)와 `Stop`(VerifyOnStop)이 보이는지
-3. `/`를 입력하면 `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지
+3. `/`를 입력하면 `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`와 `/new-page`는 아직 메모 샘플 기준이라 P2, P3 전에 고쳐야 합니다)
 
 ## 구성
 
@@ -30,50 +45,56 @@ claude                              # 저장소 루트에서 실행. 처음에�
 CLAUDE.md                        팀 공용 지시문 (구조, 워크플로, 스택 간 규칙, 컨벤션)
 backend/
 ├── CLAUDE.md                    backend 명령·아키텍처 (backend 파일을 다룰 때만 로드)
-└── build.gradle.kts, src/ ...   Spring Boot 앱
+└── build.gradle.kts, src/ ...   CLI와 서버 (지금은 메모 샘플)
 web/
 ├── CLAUDE.md                    web 명령·아키텍처 (web 파일을 다룰 때만 로드). 첫 줄의 @AGENTS.md는 Next.js가 관리
 ├── AGENTS.md                    Next.js가 생성: "번들된 문서(node_modules/next/dist/docs)를 먼저 읽어라"
-└── src/app, src/lib/api ...     Next.js 앱
+└── src/app, src/lib/api ...     조회 화면 (지금은 메모 샘플)
 .claude/
 ├── settings.json                권한(allow/ask/deny)과 hooks (팀 공유)
 ├── hooks/
 │   ├── ProtectFiles.java        PreToolUse: .env, 비밀 설정, gradle wrapper, lock 파일, 산출물 수정 차단
 │   └── VerifyOnStop.java        Stop: 바뀐 스택만 포맷 + 검증, 실패하면 계속 고치게 함
 ├── rules/
-│   ├── backend/testing.md       backend/** 를 다룰 때 로드
-│   ├── backend/api-design.md    backend api 패키지를 다룰 때 로드
+│   ├── backend/testing.md       backend/** 를 다룰 때 로드 (JUnit 6, jqwik, ArchUnit, 픽스처)
+│   ├── backend/api-design.md    REST API 규칙 (paths가 메모 샘플의 api 패키지 기준. P2 전에 수정)
 │   └── frontend/nextjs.md       web/src/** 를 다룰 때 로드
 ├── skills/
-│   ├── spec/                    /spec <기능>: 인터뷰 후 docs/specs/에 스펙 작성
+│   ├── spec/                    /spec <기능>: 인터뷰 후 docs/specs/에 작은 스펙 작성
 │   ├── new-endpoint/            /new-endpoint <API>: 컨벤션대로 TDD 방식 엔드포인트 추가
 │   ├── new-page/                /new-page <화면>: 컨벤션대로 backend 데이터를 보여 주는 페이지 추가
-│   ├── pr-ready/                /pr-ready: 바뀐 스택 검증, 리뷰, PR 설명 초안
+│   ├── pr-ready/                /pr-ready: PR 단위·크기 확인, 바뀐 스택 검증, 리뷰, PR 설명 초안
 │   └── adr/                     /adr <제목>: 아키텍처 결정 기록
-└── agents/reviewer.md           새 컨텍스트에서 diff를 리뷰하는 서브에이전트 (backend + web)
+└── agents/reviewer.md           새 컨텍스트에서 diff를 스펙 작업과 패키지 규칙(ADR 0003) 기준으로 리뷰하는 서브에이전트
 docs/
-├── specs/_template.md           스펙 템플릿
-└── adr/                         결정 기록 (README.md는 CLAUDE.md가 import)
+├── study-project/               PRD, ROADMAP, PLAYBOOK
+├── specs/pr-lens-*/             단계별 스펙 (requirements.md, design.md, tasks.md)
+├── specs/_template.md           작은 스펙용 템플릿 (/spec이 사용)
+├── adr/                         결정 기록 (README.md는 CLAUDE.md가 import)
+├── spikes/                      기술 검증 기록
+├── spec-review/, HANDOFF.md     스펙 검토 결과와 인수인계 (스펙 수정이 끝나면 삭제)
+└── claude-code-team-methodology.md   팀 방법론 가이드
 .github/
-├── pull_request_template.md     AI 사용 체크리스트 포함 PR 템플릿
-└── workflows/ci.yml             backend, web 검증 (브랜치 보호 필수 체크용)
+├── pull_request_template.md     작업 번호, 검증 증거, AI 리뷰 지적·반영 건수
+└── workflows/ci.yml             backend, web 검증 (브랜치 보호 필수 체크용. GitHub에서 실행해 본 적은 없음)
 .worktreeinclude                 claude --worktree 때 복사할 로컬 설정 파일 목록
 ```
 
 ## 개발 흐름
 
 ```
-/spec 메모 태그 기능     → docs/specs/2026-..-memo-tags.md (사람이 검토·수정)
-/clear                   → 새 컨텍스트
-@docs/specs/2026-..-memo-tags.md 구현해   → 테스트 먼저, 구현 (/new-endpoint, /new-page 활용)
-(응답이 끝날 때마다)       → Stop hook이 바뀐 스택만 검증 (backend: spotlessApply test, web: npm run verify)
-/pr-ready                → 검증 증거, reviewer 리뷰, PR 설명 초안
-사람이 PR을 올리고 동료가 리뷰, CI 통과 확인
+스펙의 tasks.md에서 작업을 고름        → 예: docs/specs/pr-lens-p1-cli/tasks.md 작업 5
+"pr-lens-p1-cli 작업 5.1 구현해"       → 작업 본문, 그 작업의 요구사항 인수 기준, design.md의 관련 절만 읽고 테스트 먼저, 구현
+(응답이 끝날 때마다)                    → Stop hook이 바뀐 스택만 검증 (backend: spotlessApply test, web: npm run verify)
+/pr-ready                              → 검증 증거, reviewer 리뷰, PR 설명 초안
+사람이 PR을 올리고 동료가 리뷰
 ```
 
-작은 변경(한 문장으로 설명되는 diff)은 스펙 없이 바로 요청해도 됩니다.
+- PR 하나는 `tasks.md`의 상위 작업 하나입니다. 작업 목록에 "PR 경계"가 표시된 작업은 그 경계대로 나눕니다. 크기 목표는 `src/main` 변경 400줄 이하입니다.
+- 스펙에 없는 새 기능은 `/spec`으로 스펙을 먼저 만듭니다. 작은 변경(한 문장으로 설명되는 diff)은 스펙 없이 바로 요청해도 됩니다.
+- 스펙에서 결정 대기(D-n, G-n)로 표시된 항목은 팀이 정합니다. Claude는 제안값으로 구현하고 임의로 확정하지 않습니다.
 
-**스택 간 규칙**: API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 같은 PR에서 함께 바꿉니다. 비즈니스 로직은 backend에만 두고, web은 조회와 표시만 합니다.
+**스택 간 규칙**: web이 쓰는 API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 같은 PR에서 함께 바꿉니다. P3 전에는 web이 PR Lens API를 쓰지 않으므로 backend만 바꿉니다. 비즈니스 로직은 backend에만 두고, web은 조회와 표시만 합니다.
 
 ## 자동으로 강제되는 것 vs 권고
 
@@ -84,9 +105,10 @@ docs/
 | 코드 변경 후 포맷과 테스트 통과 (바뀐 스택만) | **강제** (Stop hook, 실패 시 한 번 되돌려 보냄) | `VerifyOnStop.java` |
 | 모든 `build.gradle.kts`, `settings.gradle.kts`, `libs.versions.toml`, `package.json` 수정, `.claude/` 아래 파일 수정(settings, hooks, rules, skills, agents), `npm install`, `git push` | **확인 요청** (permissions ask) | `.claude/settings.json` |
 | 줄 끝 LF 통일 (`* text=auto eol=lf`) | **강제** (git) | `.gitattributes` |
+| 패키지 의존 규칙 (ADR 0003) | **강제 예정** (ArchUnit 테스트, P1 작업 1.2에서 추가). 그 전에는 권고 | `backend/CLAUDE.md`, P1 설계 문서 |
+| API 규칙, Next.js 규칙, 테스트 스타일, PR 단위 | 권고 (CLAUDE.md, rules) + reviewer 에이전트가 검토 | `CLAUDE.md`, `*/CLAUDE.md`, `.claude/rules/` |
 
 > **`claude`는 저장소 루트에서 실행하세요.** 권한 규칙의 `/`는 프로젝트 루트를 뜻하도록 `/**/` 형태로 적어 두었지만, 하위 폴더에서 시작하면 hook과 규칙의 기준 위치가 달라질 수 있습니다.
-| 레이어 규칙, API 규칙, Next.js 규칙, 테스트 스타일 | 권고 (CLAUDE.md, rules) + reviewer 에이전트가 검토 | `CLAUDE.md`, `*/CLAUDE.md`, `.claude/rules/` |
 
 ### 강제의 한계 (알고 쓰세요)
 - **deny 규칙이 막는 것**: Claude의 파일 도구(Read/Edit/Write), 그리고 Claude Code가 알아보는 Bash 파일 명령(`cat`, `head`, `sed`, `tee`, `> file` 리다이렉션 등).
@@ -132,6 +154,8 @@ docs/
 
 ## 다른 프로젝트에 적용하기: 공통 코어와 스택별 오버레이
 
+이 절은 스타터에서 온 설명입니다. 이 저장소의 Claude Code 설정을 다른 프로젝트에 가져갈 때 참고합니다.
+
 이 저장소는 "공통 코어 + Java/Gradle 오버레이 + Next.js 오버레이"가 합쳐진 상태입니다. 기존 프로젝트나 다른 스택에 가져갈 때는 아래 표를 기준으로 복사하고 수정하세요. **FE가 없는 프로젝트라면 `web/`, `.claude/rules/frontend/`, `skills/new-page`를 지우면 됩니다.** hook은 폴더가 없는 스택을 자동으로 건너뜁니다.
 
 | 파일 | 구분 | 다른 프로젝트에 적용할 때 |
@@ -172,6 +196,16 @@ docs/
 
 ## 검증 기록
 
+**2026-10-04 (PR Lens 저장소로 전환), Windows 11, JDK 17, Node 24**
+- backend `gradlew spotlessCheck test` 통과(테스트 11개), web `npm run verify` 통과(테스트 5개)
+- `ProtectFiles.java` 보강: 이름 끝의 점·공백(`gradlew.`, `.git./config`)과 심볼릭 링크·junction을 거친 경로를 차단. 훅에 경로를 직접 넣어 수정 전후를 비교했습니다
+- `settings.json`: `.claude/` 아래 수정은 ask, allow된 명령에 `--output`·`--init-script`·`-I`·`--config`·`-c`를 붙이는 형태는 deny. `git log --output`과 `npx vitest run --config`가 실제 세션에서 거부되는 것을 확인했습니다
+- `VerifyOnStop.java`: 복제본에서 실패 테스트를 넣으면 차단하고 고치면 통과하는 것을 확인했습니다
+- 의존성 조합(jqwik 1.10.1, ArchUnit 1.5.1, picocli, Anthropic SDK와 JUnit 6.0.3): [`docs/spikes/2026-10-04-build-stack.md`](docs/spikes/2026-10-04-build-stack.md)
+- **확인하지 못한 것**: macOS/Linux 실행, GitHub에서의 CI 실행(워크플로는 작성했지만 원격 저장소가 아직 없음. 같은 명령을 로컬에서 실행해 통과하는 것만 확인), `Edit(/.claude/**)` ask 규칙이 실제로 승인을 묻는지
+
+아래는 스타터 시절의 기록입니다.
+
 **2026-09-30 (QA 에이전트 검증 후 수정), Windows 11, JDK 17, Node 24, 한글·공백·괄호 경로의 복제본**
 - 별도 QA 에이전트가 찾은 버그 4건을 고치고 재현 시나리오로 확인했습니다.
   - Windows에서 `npm`이 PATH에 없으면 "코드 실패"로 막던 문제: `cmd /c`는 없는 명령에 종료 코드 1을 돌려줘서 실패와 구분되지 않았음 → 실행 전 확인으로 변경, 알림만
@@ -205,6 +239,8 @@ docs/
 - 실제 `claude -p` 실행: gradle wrapper 수정 시도를 PreToolUse hook이 차단, 테스트를 깨는 수정을 Stop hook이 전달했고 Claude는 테스트를 지우지 않고 원인을 분석함
 
 ## 팀 운영 규칙 (요약)
-- `CLAUDE.md`, `.claude/` 변경은 PR로 올리고, 최소 1명이 리뷰합니다. 관리자 1명을 정합니다 (순환 가능).
+자세한 규칙은 [플레이북](docs/study-project/PLAYBOOK.md)에 있습니다.
+
+- `CLAUDE.md`, `.claude/` 변경은 `context` 라벨을 붙여 PR로 올리고, 그 주의 컨텍스트 담당이 승인합니다.
 - Claude가 같은 실수를 반복하면 규칙을 추가하는 PR을, 규칙이 없어도 잘하는 것이 있으면 삭제하는 PR을 올립니다.
 - 개인 설정은 `CLAUDE.local.md`와 `.claude/settings.local.json`에 둡니다 (gitignore됨).

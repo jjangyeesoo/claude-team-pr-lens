@@ -21,7 +21,7 @@
   - P3: 요구사항만 있음. 작은 수정 후 설계 가능
 - **환경**: JDK 17, Node 24, git 설치됨. `web/node_modules` 설치됨. **Docker 없음**(P2의 PostgreSQL, Testcontainers에 필요).
 - **git 저장소로 만들었습니다**(`main`, 원격 없음). Stop hook(`VerifyOnStop`)이 동작할 조건은 됐지만 실제로 도는지는 아직 확인하지 않았습니다. Claude Code 보호 hook과 권한 규칙도 보강했습니다(커밋 `4589626`).
-- **CI와 PR 템플릿이 없습니다.** ROADMAP, PLAYBOOK의 지표 기록, `/pr-ready` 스킬이 이것에 의존합니다.
+- **CI 워크플로와 PR 템플릿은 작성했지만 GitHub 원격이 없어 CI를 실행해 보지 못했습니다.**
 
 ## 앞으로 할 것
 
@@ -81,10 +81,10 @@
 상세 순서는 `docs/spec-review/01-claude-usability.md`의 "착수 전 체크리스트"에 있습니다.
 
 1. GitHub 저장소 생성과 push (`git init`과 첫 커밋은 완료)
-2. `.github/workflows/ci.yml` 다시 만들기 (PR 템플릿은 작성함)
+2. `.github/workflows/ci.yml`과 PR 템플릿은 작성함. 원격에 올린 뒤 CI가 실제로 통과하는지 확인하고 브랜치 보호의 필수 체크(`backend`, `web`)를 설정
 3. ADR 작성 (0004~0007. 0001을 대체하는 0003은 작성함. 0004와 0005는 P1 작업 1.2의 의존성 추가 전에 필요)
 4. 패키지를 `com.prlens`로 변경
-5. `README.md`, `.claude/rules/backend/api-design.md`, `new-endpoint` 스킬을 PR Lens 기준으로 다시 쓰기 (루트 `CLAUDE.md`, `backend/CLAUDE.md`, `testing.md`, reviewer 에이전트, `/pr-ready`는 2026-10-04에 고침. PR 단위는 "상위 작업 하나 = PR 하나"로 정함)
+5. `.claude/rules/backend/api-design.md`, `new-endpoint`·`new-page` 스킬을 PR Lens 기준으로 다시 쓰기 (P2, P3 전에. `README.md`, 루트 `CLAUDE.md`, `backend/CLAUDE.md`, `testing.md`, reviewer 에이전트, `/pr-ready`는 2026-10-04에 고침. PR 단위는 "상위 작업 하나 = PR 하나"로 정함)
 6. 스펙 폴더별 색인과 `/task` 스킬 추가
 7. 남은 spike: Anthropic Java SDK 실제 호출(P1 작업 13.4). jqwik과 JUnit 6 호환은 확인함(`docs/spikes/`)
 

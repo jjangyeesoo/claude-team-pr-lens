@@ -1,0 +1,55 @@
+# PR과 main push에서 backend와 web을 검증한다. 실제 GitHub·Claude API는 호출하지 않는다 (비밀값 없음).
+# job 이름 `backend`, `web`은 브랜치 보호의 필수 체크 이름이다. 바꾸면 보호 설정도 함께 바꾼다.
+# 두 job을 항상 실행한다. 경로 필터를 걸면 필수 체크가 "대기"로 남아 문서만 바꾼 PR을 머지할 수 없다.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    # P1 작업 21에서 ubuntu·windows·macos 매트릭스로 넓힌다 (요구사항 22.7).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      # 로컬 Stop hook은 spotlessApply로 고치지만, CI는 고치지 않고 확인만 한다.
+      - run: ./gradlew spotlessCheck test --console=plain
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # `npm run verify`는 포맷을 고쳐 쓰므로 CI에서는 같은 단계를 확인 전용으로 실행한다.
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
