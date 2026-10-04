@@ -33,14 +33,14 @@
   - (A) GitHub API로 실제 PR의 diff 가져오기
   - (B) Claude API 구조화된 출력으로 리뷰 JSON 한 번 받기, 토큰과 비용 실측
   - (C) smee.io로 로컬에서 webhook 이벤트 받기
-- [ ] 2주차 스펙 3건 초안 (`/spec`으로 작성, 각자 2주차 자기 트랙: T1 B, T2 A, T3 C)
+- [ ] 2주차 스펙 검토와 승인 (세 트랙을 스펙 하나 [`pr-lens-p1-cli`](../specs/pr-lens-p1-cli/README.md)로 묶어 작성함. 각자 자기 트랙의 요구사항, 설계, 작업을 검토: T1 B, T2 A, T3 C)
 - [ ] (C) 지표 기록 방식 합의와 기준선 기록 ([플레이북 5장](PLAYBOOK.md#5-지표-기록)), PR 템플릿의 `AI 리뷰 지적 n건 / 반영 m건` 칸 확인
 - [ ] (C) GitHub 저장소 설정: 브랜치 보호(승인 1건 필수, CI 필수 체크 `backend`·`web`), 라벨(`context`, `track-1`, `track-2`, `track-3`)
   - 주의: GitHub 무료 플랜에서는 **비공개 저장소에 브랜치 보호와 ruleset을 쓸 수 없습니다**(API 403). 공개 저장소로 만들거나, GitHub 조직(Team 플랜)이나 Pro 계정에 만들거나, 보호 없이 [플레이북](PLAYBOOK.md#승인-규칙-요약)의 사람 규칙으로 운영할지 1주차에 정합니다
   - 공개로 만든다면 커밋 이메일이 공개됩니다. 전원이 GitHub의 noreply 주소(`<id>+<login>@users.noreply.github.com`)를 저장소 `user.email`로 설정하고 첫 커밋을 합니다
 - [ ] (A, 금요일) 1주차 회고 노트 `docs/retro/week-1.md`
 
-**완료 조건**: backend `./gradlew test`와 web `npm run verify` 통과(CI green), 스펙 3건 `approved`, ADR 4건 머지.
+**완료 조건**: backend `./gradlew test`와 web `npm run verify` 통과(CI green), 2주차 스펙(`pr-lens-p1-cli`) `approved`, ADR 4건 머지.
 
 ### 진행 상황 (2026-10-04 기준)
 
