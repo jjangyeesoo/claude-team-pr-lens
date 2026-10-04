@@ -2,8 +2,8 @@
 
 팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, PR에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구입니다. 3명이 5주 동안 Claude Code로 만들면서 팀 개발 방법론을 실험하는 연구회 프로젝트입니다.
 
-- **지금 상태 (2026-10-04)**: P1 스펙까지 준비됐고 PR Lens 코드는 아직 없습니다. 소스는 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
-- **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회
+- **지금 상태 (2026-10-04)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) PR Lens 코드는 아직 없습니다. 소스는 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
+- **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회. 2~4주차에 이 순서로 되는 데까지 개발하고 5주차에 발표합니다. 주차별 일정은 가이드이고 강제하지 않습니다
 - **구조**: 모노레포. `backend/`(CLI와 P2부터 서버), `web/`(P3부터 조회 화면)
 - backend: Spring Boot 4.1 · Java 17 · Gradle (Kotlin DSL) · Spotless(google-java-format)
 - web: Next.js 16 (App Router) · React 19 · TypeScript · ESLint · Prettier · Vitest
@@ -17,7 +17,7 @@
 | 문서 | 내용 |
 |---|---|
 | [`docs/product/PRD.md`](docs/product/PRD.md) | 제품 요구사항 (FR-1~14) |
-| [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) | 5주 계획과 주차별 트랙 |
+| [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) | 5주 계획과 주차별 트랙 (일정은 가이드), 진행 상황 |
 | [`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md) | 역할, 승인 규칙, 지표, 작업 규칙 |
 | [`docs/specs/`](docs/specs/README.md) | 단계별 스펙 (`pr-lens-p1-cli`, `pr-lens-p2-automation`, `pr-lens-p3-web`)과 읽는 법 |
 | [`docs/adr/`](docs/adr/README.md) | 아키텍처 결정 기록 |
@@ -39,7 +39,7 @@ claude                              # 저장소 루트에서 실행. 처음에�
 첫 세션에서 확인할 것:
 1. `/context`에 루트 `CLAUDE.md`가 로드되어 있는지. `backend/`나 `web/` 파일을 읽게 한 뒤 다시 보면 그 폴더의 `CLAUDE.md`와 해당 rules가 추가로 로드됩니다
 2. `/hooks`에 `PreToolUse`(ProtectFiles)와 `Stop`(VerifyOnStop)이 보이는지
-3. `/`를 입력하면 `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`와 `/new-page`는 아직 메모 샘플 기준이라 P2, P3 전에 고쳐야 합니다)
+3. `/`를 입력하면 `/task`, `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`와 `/new-page`는 아직 메모 샘플 기준이라 P2, P3 전에 고쳐야 합니다)
 
 ## 구성
 
@@ -62,6 +62,7 @@ web/
 │   ├── backend/api-design.md    REST API 규칙 (paths가 메모 샘플의 api 패키지 기준. P2 전에 수정)
 │   └── frontend/nextjs.md       web/src/** 를 다룰 때 로드
 ├── skills/
+│   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
 │   ├── spec/                    /spec <기능>: 인터뷰 후 docs/specs/에 작은 스펙 작성
 │   ├── new-endpoint/            /new-endpoint <API>: 컨벤션대로 TDD 방식 엔드포인트 추가
 │   ├── new-page/                /new-page <화면>: 컨벤션대로 backend 데이터를 보여 주는 페이지 추가
@@ -86,8 +87,9 @@ docs/
 ## 개발 흐름
 
 ```
-스펙의 tasks.md에서 작업을 고름        → 예: docs/specs/pr-lens-p1-cli/tasks.md 작업 5
-"pr-lens-p1-cli 작업 5.1 구현해"       → 작업 본문, 그 작업의 요구사항 인수 기준, design.md의 관련 절만 읽고 테스트 먼저, 구현
+/task pr-lens-p1-cli                   → 지금 시작할 수 있는 작업과 진행 중인 작업(원격 브랜치 기준)을 보고 작업을 고름
+/task pr-lens-p1-cli 5.1               → 브랜치(feat/t2-p1-5-diff-parser)를 만들어 push하고, 작업 본문과 그 작업의 요구사항 인수 기준,
+                                         design.md의 관련 절만 읽고 실패 테스트 먼저, 구현, tasks.md 체크박스 갱신
 (응답이 끝날 때마다)                    → Stop hook이 바뀐 스택만 검증 (backend: spotlessApply test, web: npm run verify)
 /pr-ready                              → 검증 증거, reviewer 리뷰, PR 설명 초안
 사람이 PR을 올리고 동료가 리뷰
