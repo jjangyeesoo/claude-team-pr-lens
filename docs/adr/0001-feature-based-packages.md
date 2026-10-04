@@ -1,5 +1,5 @@
 # 0001. 기능 단위 패키지 구조
-- 상태: accepted · 날짜: 2026-09-27
+- 상태: superseded by [0003](0003-role-based-flat-packages.md) (2026-10-04) · 날짜: 2026-09-27
 
 ## 배경
 계층 단위 패키지(controller/, service/, repository/)는 기능이 늘수록 한 기능의 코드가 흩어져, 사람과 AI 모두 변경 범위를 파악하기 어렵다.

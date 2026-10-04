@@ -144,7 +144,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 스타터에 이미 ADR 0001(기능 단위 패키지), 0002(표준 에러 응답)가 있으므로 새 ADR은 0003부터 번호를 매깁니다. 스타터 ADR을 유지할지도 1주차에 확인합니다.
 
 - [ ] 제품 이름 확정 (가칭 PR Lens)
-- [ ] ADR-0003 저장소 구조 (스타터의 모노레포 `backend/` + `web/` 그대로 사용 여부)
+- [ ] ADR-0007 저장소 구조 (스타터의 모노레포 `backend/` + `web/` 그대로 사용 여부. 번호 0003은 패키지 구조 결정에 썼습니다: [ADR 0003](../adr/0003-role-based-flat-packages.md))
 - [ ] ADR-0004 CLI 라이브러리 (picocli vs Spring Shell)
 - [ ] ADR-0005 LLM 모델과 effort 기본값, 비용 상한, refusal 처리(서버 측 fallback 사용 여부)
 - [ ] ADR-0006 DB와 테스트 전략
