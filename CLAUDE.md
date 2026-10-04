@@ -9,7 +9,7 @@
 - `docs/specs/<이름>/`: 스펙(`README.md` 색인, `requirements.md`, `design.md`, `tasks.md`), `docs/adr/`: 아키텍처 결정, `docs/spikes/`: 기술 검증 기록. 결정 목록: @docs/adr/README.md
 
 ## Workflow
-- 구현은 스펙의 `tasks.md` 작업 단위로 한다. 스펙 폴더의 `README.md`(색인)를 먼저 보고, 작업 본문, 그 작업이 가리키는 요구사항 인수 기준, `design.md`의 관련 절만 읽는다. 스펙 파일은 크므로 통째로 읽지 않는다
+- 구현은 스펙의 `tasks.md` 작업 단위로 한다. 스펙 폴더의 `README.md`(색인)를 먼저 보고, 작업 본문, 그 작업이 가리키는 요구사항 인수 기준, `design.md`의 관련 절만 읽는다. 스펙 파일은 크므로 통째로 읽지 않는다 (`/task <스펙> <번호>`가 이 절차를 따른다)
 - 스펙에서 결정 대기(D-n, G-n)로 표시된 항목은 임의로 확정하지 않는다. 제안값으로 구현하고, 바꿔야 하면 먼저 묻는다
 - 스펙에 없는 새 기능은 `/spec`으로 `docs/specs/`에 스펙을 먼저 만든다
 - 버그 수정은 재현하는 실패 테스트를 먼저 작성한다
@@ -21,7 +21,7 @@
 - 비즈니스 로직은 backend에만 둔다. web은 조회와 표시만 한다
 
 ## Conventions
-- 브랜치: `feat/<track>-<slug>` (예: `feat/t2-diff-filter`), `fix/<track>-<slug>`. 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>` · 커밋: Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`)
+- 브랜치: 스펙 작업은 `feat/<track>-<단계>-<번호>-<slug>` (예: `feat/t2-p1-5-diff-parser`, 공유 작업은 `feat/shared-p1-2.1-model-types`). 번호는 PR 단위의 `tasks.md` 작업 번호다. 버그 수정은 `fix/`로 같은 형식, 작업 번호가 없는 변경은 `feat/<track>-<slug>`, 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>`. 브랜치를 만들면 바로 push해 진행 중임을 알린다 · 커밋: Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`)
 - PR 하나 = `tasks.md`의 상위 작업 하나 (작업 목록에 "PR 경계"가 표시된 작업은 그 경계를 따른다). `src/main` 변경 400줄 이하를 목표로 하고, 넘으면 PR 설명에 이유를 적는다
 - 의존성 추가(`build.gradle.kts`, `package.json` 수정)는 사람의 승인이 필요하다. 먼저 이유를 설명하고 묻는다
 - IMPORTANT: 테스트를 통과시키려고 assertion을 지우거나 테스트를 skip하지 않는다

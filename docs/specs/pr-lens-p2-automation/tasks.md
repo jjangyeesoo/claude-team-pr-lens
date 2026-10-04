@@ -19,7 +19,7 @@
   - T3의 23.6(`feedback sync`)과 24.1(`--publish`)은 T2의 15.2(`DbMigrator`, `DbConnector`), 16.3(`findPullRequest`, `listFeedbackTargets`), 18.1(`P2ExitCodes`)을 쓰고, 24.1은 T1의 7.2(`config.AllowedRepositories`)와 11.2(`UsageRecordingLlmClient`)도 씁니다
   - `cli` 패키지는 T2(18.2, 18.3)와 T3(23.6, 24.1)가 함께 고칩니다. 옵션과 서브커맨드의 자리는 2.6에서 먼저 만들고, 각 트랙은 자기 명령의 처리 클래스만 고칩니다
 - PR 단위는 P1과 같습니다: 상위 작업 하나가 PR 하나이고, "PR 경계"가 적힌 작업은 그 경계대로 나눕니다. 크기 목표는 `src/main` 변경 400줄 이하입니다(루트 `CLAUDE.md`)
-- 브랜치는 `feat/<track>-<slug>`입니다. 선머지와 공유 작업(1~4)은 트랙 자리에 `shared`를 쓰고(`feat/shared-<slug>`, 제안. 킥오프에서 확정), 컨텍스트 작업(28)은 `chore/<slug>`입니다
+- 브랜치는 `feat/<track>-p2-<번호>-<slug>`입니다(플레이북 6장). 선머지와 공유 작업(1~4)은 트랙 자리에 `shared`를 쓰고(`feat/shared-p2-<번호>-<slug>`), 컨텍스트 작업(28)은 `chore/p2-28-<slug>`입니다
 
 ## Tasks
 
