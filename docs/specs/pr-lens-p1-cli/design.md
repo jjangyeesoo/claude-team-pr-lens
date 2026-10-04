@@ -96,7 +96,7 @@ flowchart TB
 | `cli` | T3 | `PrLensMain`, `ReviewCommand`, `CliPipeline`, `StderrReporter` | 15, 19, 22 |
 | `support` | 리드(인터페이스와 예외 기반 타입만 선머지, 구현은 병렬) | `RetryPolicy`, `RetryExecutor`, `RetryListener`, `Sleeper`, `SecretMasker`, `MaskingPrintStream`, `Warning`, `WarningSink`, `Attempt`, `PrLensException`과 재시도 관련 하위 예외 | 19, 21 |
 
-패키지 구조의 근거는 ADR 0003입니다. P2는 이 배치에 `webhook/`, `store/`, `query/`, `publish/`, `server/`를 추가하고 `github/`를 확장합니다(App 인증용 `GitHubCredentials` 구현 추가). 브랜치는 플레이북 형식 `feat/<track>-<slug>`(예: `feat/t2-diff-filter`)을 따릅니다.
+패키지 구조의 근거는 ADR 0003입니다. P2는 이 배치에 `webhook/`, `store/`, `query/`, `publish/`, `server/`, `execution/`을 추가하고 `github/`를 확장합니다(App 인증용 `GitHubCredentials` 구현 추가). 브랜치는 플레이북 형식 `feat/<track>-<slug>`(예: `feat/t2-diff-filter`)을 따릅니다.
 
 ### `prlens review` 실행 순서
 
