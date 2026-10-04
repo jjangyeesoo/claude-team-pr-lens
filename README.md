@@ -63,7 +63,7 @@ web/
 │   └── frontend/nextjs.md       web/src/** 를 다룰 때 로드
 ├── skills/
 │   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
-│   ├── spec/                    /spec <기능>: 인터뷰 후 docs/specs/에 작은 스펙 작성
+│   ├── spec/                    /spec <스펙> [문서]: 스펙 폴더의 다음 문서(요구사항 → 설계 → 작업 목록)를 /task가 읽는 형식으로 작성
 │   ├── new-endpoint/            /new-endpoint <API>: 컨벤션대로 TDD 방식 엔드포인트 추가
 │   ├── new-page/                /new-page <화면>: 컨벤션대로 backend 데이터를 보여 주는 페이지 추가
 │   ├── pr-ready/                /pr-ready: PR 단위·크기 확인, 바뀐 스택 검증, 리뷰, PR 설명 초안
@@ -73,7 +73,6 @@ docs/
 ├── README.md                    문서 지도
 ├── product/                     PRD, ROADMAP, PLAYBOOK
 ├── specs/pr-lens-*/             단계별 스펙 (README.md 색인, requirements.md, design.md, tasks.md)
-├── specs/_template.md           작은 스펙용 템플릿 (/spec이 사용)
 ├── adr/                         결정 기록 (README.md는 CLAUDE.md가 import)
 ├── spikes/                      기술 검증 기록
 ├── spec-review/                 스펙 검토 결과 중 남은 것 (P3 스펙을 고친 뒤 삭제)
@@ -96,7 +95,8 @@ docs/
 ```
 
 - PR 하나는 `tasks.md`의 상위 작업 하나입니다. 작업 목록에 "PR 경계"가 표시된 작업은 그 경계대로 나눕니다. 크기 목표는 `src/main` 변경 400줄 이하입니다.
-- 스펙에 없는 새 기능은 `/spec`으로 스펙을 먼저 만듭니다. 작은 변경(한 문장으로 설명되는 diff)은 스펙 없이 바로 요청해도 됩니다.
+- 스펙에 없는 새 기능은 그 단계의 스펙 폴더에 요구사항, 설계, 작업을 먼저 더합니다. 작은 변경(한 문장으로 설명되는 diff)은 스펙 없이 바로 요청해도 됩니다.
+- 스펙 문서는 `/spec <스펙>`으로 한 번에 하나씩 씁니다. P3는 P2가 끝나갈 때 `/spec pr-lens-p3-web`으로 요구사항 수정, 설계, 작업 목록 순서로 씁니다.
 - 스펙에서 결정 대기(D-n, G-n)로 표시된 항목은 팀이 정합니다. Claude는 제안값으로 구현하고 임의로 확정하지 않습니다.
 
 **스택 간 규칙**: web이 쓰는 API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 같은 PR에서 함께 바꿉니다. P3 전에는 web이 PR Lens API를 쓰지 않으므로 backend만 바꿉니다. 비즈니스 로직은 backend에만 두고, web은 조회와 표시만 합니다.
