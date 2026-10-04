@@ -15,7 +15,7 @@ ADR 0001의 `<feature>.{domain,api}` 구조는 메모 샘플처럼 REST 기능 �
 
 - 패키지 목록과 담당 트랙의 원본은 각 스펙 설계 문서의 "패키지 배치" 표다.
   - P1: `model`, `support`, `github`, `pullrequest`, `diff`, `glob`, `filter`, `context`, `llm`, `review`, `codec`, `output`, `config`, `cli`
-  - P2 추가: `webhook`, `store`(`store.db`, `store.memory`), `query`, `publish`, `server`
+  - P2 추가: `webhook`, `store`(`store.db`, `store.memory`), `query`, `publish`, `server`, `execution`
 - 의존 방향은 문서가 아니라 ArchUnit 테스트로 강제한다. 규칙의 원본은 각 설계 문서의 "의존 규칙"이다.
 - 공유 패키지는 두 개만 둔다.
   - `model`: 트랙 사이를 오가는 불변 데이터 타입. JDK 외에는 의존하지 않는다.
@@ -35,4 +35,5 @@ ADR 0001의 `<feature>.{domain,api}` 구조는 메모 샘플처럼 REST 기능 �
   - 패키지 이름을 `com.example.starter`에서 `com.prlens`로 바꾼다(ROADMAP 1주차).
   - 메모 샘플(`memo`)은 P1 작업 1에서 지운다(ROADMAP: 2주차 첫 기능 PR).
 - 아직 정하지 않은 것
-  - `common/error`(`ErrorResponse`, `ApiExceptionHandler`)와 `common/config`를 어느 패키지로 옮길지. HTTP API가 생기는 P2 스펙을 고칠 때 정한다. 그때까지 ArchUnit의 Spring 애너테이션 규칙에서 `common`을 예외로 둔다.
+  - `common/error`(`ErrorResponse`, `ApiExceptionHandler`)와 `common/config`를 어느 패키지로 옮길지. P2 설계가 제안을 적었다: `ErrorResponse`는 `support`로, `ApiExceptionHandler`와 `TimeConfig`는 `server`로, `@SpringBootApplication` 클래스는 루트 패키지 `com.prlens`에 그대로(P2 작업 1.1). P2 스펙 승인 때 확정한다. 그때까지 ArchUnit의 Spring 애너테이션 규칙에서 `common`을 예외로 둔다.
+  - P2가 `execution` 패키지를 추가한다(서버와 CLI가 함께 쓰는 취소, 제한 시간, usage 집계 도구). P2 설계 "패키지 배치"가 원본이다.

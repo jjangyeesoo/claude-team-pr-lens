@@ -6,10 +6,10 @@ PR Lens P2(3주차 마일스톤 M2)는 PR이 열리거나 커밋이 추가되면
 
 - 기반: P1 스펙(`docs/specs/pr-lens-p1-cli/requirements.md`)의 용어, 공유 타입(PullRequestSnapshot, ReviewContext, ReviewResult, Finding), 라인 판정(Inline_Eligible, Summary_Only), Incomplete_Reason, Configuration, 종료 코드, 비밀정보 치환, 재시도 규칙을 그대로 씁니다. 이 문서에서 "P1 요구사항 N"은 P1 스펙의 요구사항 N을 가리킵니다.
 - 리뷰 로직: P1의 Review_Engine을 수정 없이 재사용합니다(P1 요구사항 17.3). P2는 실행 방식(webhook, 비동기), 저장, 게시만 추가합니다.
-- 트랙 분할(3주차): T1 A webhook·비동기·중복 방지(요구사항 1~6, `webhook/`), T2 B DB 저장·CLI `--save`·조회 API 초안(요구사항 7~10, `store/`), T3 C GitHub 게시·채택/기각 수집(요구사항 11~15, `publish/`). 공용 GitHub 호출은 `github/`에 둡니다. 패키지 경계와 의존 규칙은 요구사항 16에 있습니다.
+- 트랙 분할(3주차): T1 A webhook·비동기·중복 방지(요구사항 1~6, `webhook/`), T2 B DB 저장·CLI `--save`·조회 API 초안(요구사항 7~10, `store/`), T3 C GitHub 게시·채택/기각 수집(요구사항 11~15, `publish/`). 공용 GitHub 호출은 `github/`, 조회 컨트롤러는 `query/`, Spring 조립과 서버 시작은 `server/`, 작업 범위 도구(취소, 제한 시간, usage 집계)는 `execution/`에 둡니다. 패키지 경계와 의존 규칙은 요구사항 16에 있고, 패키지 구조의 근거는 [ADR 0003](../../adr/0003-role-based-flat-packages.md)입니다.
 - 일정 메모: 월요일에 기능 리드 A가 패키지 경계(`webhook/`, `github/`, `store/`, `publish/`)와 T2의 Review_Store 인터페이스를 먼저 머지합니다. 이는 작업 순서 계획이며 시스템 요구사항이 아닙니다.
-- 대체 경로: 3주차에 webhook 수신이 막히면 GitHub Actions에서 CLI를 실행해 코멘트를 게시합니다(요구사항 20, ROADMAP 일정 위험). 이 경우 요구사항 1~2는 연기하고 나머지 요구사항은 유지합니다.
-- 범위 밖: 웹 화면(P3, FR-13·FR-14), 통계 집계 API(P3), 조회 API 페이지네이션(P3), 사용자 인증과 멀티 테넌시, 운영 배포와 가용성 보장.
+- 대체 경로: 3주차에 webhook 수신이 막히면 GitHub Actions에서 CLI를 실행해 코멘트를 게시합니다(요구사항 20, ROADMAP 일정 위험). 이 경우 서버가 필요한 요구사항(1, 2, 4, 6, 10, 17)은 연기합니다. 게시(11~14)는 `--publish`로 유지합니다. 저장(7~9)과 채택/기각 수집(15)은 DB가 필요한데, 호스팅 러너에서는 로컬 DB에 닿지 않으므로 대체 경로에서는 동작하지 않습니다. 중복 방지(5)도 `--save` 없이는 효과가 없습니다. 그래서 대체 경로에서는 FR-7·8뿐 아니라 FR-9, FR-11과 조회 API의 데이터도 비게 됩니다. 대체 경로에서 결과를 남기는 방법은 결정 대기 D-15입니다.
+- 범위 밖: 기각 사유 수집(PRD 9장. 요구사항 15는 채택/기각 상태만 모으고, 사유는 PLAYBOOK의 수기 기록으로 남김), 웹 화면(P3, FR-13·FR-14), 통계 집계 API(P3), 조회 API 페이지네이션(P3), 사용자 인증과 멀티 테넌시, 운영 배포와 가용성 보장.
 
 ## Glossary
 
@@ -32,7 +32,10 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 - **Run_Trigger**: Review_Run의 실행 경로. `webhook`, `cli`, `actions` 중 하나
 - **Run_Status**: Review_Run의 상태. `queued`, `running`, `succeeded`(ReviewResult `complete`), `incomplete`(ReviewResult `incomplete`), `failed`(ReviewResult를 만들지 못함), `superseded`(게시 시점에 PR head SHA가 바뀜) 중 하나
 - **Active_Run**: Run_Status가 `failed`가 아닌 Review_Run. `superseded`도 Active_Run이다
-- **Publish_Error**: Review_Run 게시 실패 기록. 게시 오류 종류(예: `github_auth`, `github_api`)와 GitHub 상태 코드(없으면 null)로 이루어진다
+- **Publish_Error**: Review_Run 게시 실패 기록. Publish_Error_Kind와 GitHub 상태 코드(없으면 null)로 이루어진다
+- **Run_Error_Kind**: `failed` Review_Run의 오류 종류. `github_auth`, `github_api`, `llm_api`, `network`, `retry_after_too_long`, `all_chunks_failed`, `timeout`, `interrupted`, `head_moved`, `internal` 중 하나 (설계 제안값. 조회 API와 P3가 이 목록에 의존한다)
+- **Publish_Error_Kind**: 게시 오류 종류. `github_auth`, `github_api`, `network`, `retry_after_too_long`, `store` 중 하나 (설계 제안값)
+- **Ack_Reason**: Webhook_Receiver가 202 응답에 담는 사유. `event_ignored`, `action_ignored`, `repository_not_allowed`, `duplicate`, `max_attempts_reached` 중 하나 (설계 제안값)
 - **Review_Store**: Review_Run과 Finding을 저장하고 조회하는 인터페이스 (`store/` 패키지, T2). 구현은 DB를 쓴다
 - **Stored_Finding**: Review_Store에 저장된 Finding. P1 Finding의 모든 필드와 Review_Run 안의 순번, Finding_Fingerprint, 게시된 Line_Comment ID, Publish_Outcome, Feedback_State를 가진다
 - **Publish_Outcome**: Stored_Finding의 게시 결과. `not_published`(기본값, 게시 전이거나 게시하지 않은 Review_Run), `line_comment_posted`, `line_comment_reused`, `summary_listed`, `below_threshold`, `duplicate_in_run`, `github_rejected`, `inline_disabled` 중 하나. Finding의 라인 판정(Inline_Eligible, Summary_Only)과 Summary_Only 사유와는 별개의 값이다
@@ -48,7 +51,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 - **Feedback_State**: Stored_Finding의 채택/기각 상태. `adopted`, `rejected`, `conflicted`, `none` 중 하나
 - **Allowed_Repository_List**: 리뷰를 허용하는 `owner/repo` 목록. Configuration 항목이며 대소문자를 무시해 비교한다
 - **Query_API**: 저장된 리뷰 데이터를 조회하는 REST API (T2)
-- **Standard_Error_Response**: 스타터 ADR 0002가 정의한 표준 에러 응답 형식
+- **Standard_Error_Response**: ADR 0002가 정의한 표준 에러 응답 형식 `ErrorResponse { code, message, details }`. `code`는 UPPER_SNAKE_CASE, `details`는 문자열 목록이다 ([ADR 0008](../../adr/0008-keep-api-conventions.md))
 
 ## Requirements
 
@@ -111,15 +114,15 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 
 1. WHEN Review_Job이 등록되면, THE Job_Runner SHALL Run_Status `queued`인 Review_Run을 webhook 수신 시각과 등록 시각과 함께 Review_Store에 저장한 뒤 webhook 응답과 분리된 작업자에서 Review_Job을 실행한다
 2. WHEN Review_Job 실행을 시작하면, THE Job_Runner SHALL Run_Status를 `running`으로 바꾸고 실행 시작 시각을 기록한다
-3. WHEN Review_Job을 실행하면, THE Job_Runner SHALL Installation_Token으로 P1의 PR_Fetcher, Context_Collector, Review_Engine을 Dedupe_Key의 head SHA와 payload의 base SHA 기준으로 실행한다
+3. WHEN Review_Job을 실행하면, THE Job_Runner SHALL Installation_Token으로 P1의 PR_Fetcher, Context_Collector, Review_Engine을 Dedupe_Key의 head SHA 기준으로 실행한다. PR_Fetcher가 가져온 base SHA가 payload와 다르면 가져온 값으로 리뷰하고 저장하며 차이를 서버 로그에 남긴다 (G-2 제안)
 4. WHEN Review_Engine이 ReviewResult를 만들면, THE Job_Runner SHALL ReviewResult를 저장하고 Run_Status를 ReviewResult가 `complete`이면 `succeeded`로, `incomplete`이면 `incomplete`로 바꾸고 리뷰 완료 시각과 종료 시각을 기록한 뒤 Comment_Publisher에 게시를 요청한다
-5. IF Review_Job이 ReviewResult를 만들지 못하면(P1 요구사항 15.11의 설정, 인증, 네트워크, API 오류), THEN THE Job_Runner SHALL Run_Status를 `failed`로 바꾸고 오류 종류, P1 요구사항 19.4로 치환한 오류 메시지, 종료 시각을 기록하고 Comment_Publisher에 실패 게시를 요청한다(요구사항 11.7, `github_auth`는 요구사항 6.7)
+5. IF Review_Job이 ReviewResult를 만들지 못하면(P1 요구사항 15.11의 설정, 인증, 네트워크, API 오류), THEN THE Job_Runner SHALL Run_Status를 `failed`로 바꾸고 Run_Error_Kind, P1 요구사항 19.4로 치환한 오류 메시지, 종료 시각을 기록하고 Comment_Publisher에 실패 게시를 요청한다(요구사항 11.7, `github_auth`는 요구사항 6.7). PR_Fetcher가 가져온 head SHA가 Dedupe_Key의 head SHA와 다르면 Claude API를 호출하지 않고 오류 종류 `head_moved`로 기록한다 (G-1 제안)
 6. THE Job_Runner SHALL Configuration의 작업자 수(기본 2, 허용 1~8)만큼 Review_Job을 동시에 실행하고, 나머지 Review_Job은 등록 순서대로 대기시킨다
 7. IF Review_Run이 `running`으로 바뀐 뒤 경과 시간(재시도 대기 시간 포함)이 Configuration의 작업 제한 시간(기본 600초, 허용 60~1,800초)을 넘으면, THEN THE Job_Runner SHALL 진행 중인 GitHub API와 Claude API 호출을 중단하고, Run_Status를 `failed`, 오류 종류를 `timeout`으로 기록하고, 그때까지 받은 usage를 저장하고(요구사항 8.2), Comment_Publisher에 실패 게시를 요청한다
 8. WHEN PR_Lens_Server가 시작되면, THE Job_Runner SHALL Run_Status가 `running`인 Review_Run을 `failed`, 오류 종류 `interrupted`로 바꾸고, Run_Status가 `queued`인 Review_Run을 등록 순서대로 다시 실행 대기열에 넣는다 (`interrupted`는 요구사항 5.5의 실패 횟수에 포함)
 9. THE Job_Runner SHALL Review_Job 하나의 실패나 예외가 다른 Review_Job의 실행과 Webhook_Receiver의 요청 처리에 영향을 주지 않게 한다
 10. THE Job_Runner SHALL GitHub API와 Claude API 재시도에 P1 요구사항 21의 규칙(재시도 대상, 백오프, `retry-after`, 제한 시간)을 적용하고, 재시도 로그를 표준 오류 대신 서버 로그에 남기고, 재시도 대기 시간의 합(ms)을 Review_Run에 기록한다
-11. WHEN Comment_Publisher가 Review_Run의 게시에 성공하면, THE Job_Runner SHALL 해당 Review_Run의 게시 완료 시각을 기록한다
+11. WHEN Comment_Publisher가 Run_Status `succeeded` 또는 `incomplete`인 Review_Run의 게시에 성공하면, THE Job_Runner SHALL 해당 Review_Run의 게시 완료 시각을 기록한다 (실패 코멘트를 게시한 `failed` Review_Run에도 기록할지는 D-13)
 12. THE Job_Runner SHALL 실행 대기 중인 Review_Job을 Queue_Capacity(기본 100, 허용 1~1,000)까지 보관한다
 13. IF Review_Job 등록 시점에 실행 대기 중인 Review_Job 수가 Queue_Capacity에 이르렀으면, THEN THE Job_Runner SHALL 해당 요청의 Review_Run을 남기지 않고 등록을 거부하고, THE Webhook_Receiver SHALL 503과 Standard_Error_Response 형식의 본문을 응답하고 delivery ID와 현재 대기열 크기를 로그에 남긴다
 14. WHEN PR_Lens_Server가 시작되면, THE Job_Runner SHALL Run_Status가 `succeeded` 또는 `incomplete`이고 게시 완료 시각이 null이고 Publish_Error가 없는 Review_Run을 Review_Engine 재실행 없이 게시만 하도록 대기열에 넣는다
@@ -156,10 +159,10 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 3. WHEN GitHub API 요청을 보내기 전에 Installation_Token의 남은 유효 시간이 5분 미만이면, THE GitHub_Client SHALL Installation_Token을 새로 발급받은 뒤 요청을 보낸다
 4. IF GitHub API가 401을 반환하면, THEN THE GitHub_Client SHALL Installation_Token을 한 번 다시 발급받아 요청을 한 번 다시 보낸다
 5. IF 다시 보낸 요청도 401을 반환하면, THEN THE GitHub_Client SHALL 추가 발급 없이 인증 오류를 반환한다
-6. IF Installation_Token 발급이 P1 요구사항 21의 재시도 후에도 실패하거나 GitHub_Client가 5번의 인증 오류를 반환하면, THEN THE Job_Runner SHALL Run_Status를 `failed`, 오류 종류를 `github_auth`로 기록한다
+6. IF Installation_Token 발급이 P1 요구사항 21의 재시도 후에도 실패하거나 GitHub_Client가 이 요구사항 5번(6.5)의 인증 오류를 반환하면, THEN THE Job_Runner SHALL Run_Status를 `failed`, 오류 종류를 `github_auth`로 기록한다
 7. WHEN 오류 종류가 `github_auth`인 Review_Run의 실패 게시를 요청받으면, THE Comment_Publisher SHALL 실패 코멘트 게시를 시도하지 않고 Review_Run의 Publish_Error 종류를 `github_auth`로 기록한다
-8. IF PR_Lens_Server 시작 시 `GITHUB_APP_ID`, App_Private_Key, Webhook_Secret 중 하나라도 없거나 빈 문자열 또는 공백 문자로만 이루어져 있거나 App_Private_Key가 PEM 형식이 아니면, THEN THE PR_Lens_Server SHALL 누락되거나 잘못된 환경변수 이름(값 제외)을 모두 담은 오류를 출력하고 0이 아닌 종료 코드로 시작을 중단한다
-9. THE PR_Lens_Server SHALL GitHub App에 Pull requests 읽기·쓰기, Contents 읽기, Metadata 읽기 권한만 요구하고, 필요한 권한 목록을 설치 문서에 적는다
+8. IF PR_Lens_Server 시작 시 `GITHUB_APP_ID`, App_Private_Key, Webhook_Secret, `ANTHROPIC_API_KEY`, `PRLENS_DB_URL` 중 하나라도 없거나 빈 문자열 또는 공백 문자로만 이루어져 있거나 App_Private_Key가 PEM 형식이 아니면, THEN THE PR_Lens_Server SHALL 누락되거나 잘못된 환경변수 이름(값 제외)을 모두 담은 오류를 출력하고 0이 아닌 종료 코드로 시작을 중단한다
+9. THE PR_Lens_Server SHALL GitHub App에 Pull requests 읽기·쓰기, Contents 읽기, Metadata 읽기 권한과 `pull_request` 이벤트 구독만 요구하고, 필요한 권한과 이벤트 목록을 설치 문서에 적는다
 
 ### Requirement 7: 결과 저장 스키마 (FR-9)
 
@@ -172,7 +175,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 3. WHEN 이미 저장된 GitHub 저장소 ID에 대해 다른 owner 또는 이름으로 저장을 요청받으면, THE Review_Store SHALL 기존 `repository` 행의 owner와 이름을 새 값으로 갱신한다
 4. THE Review_Store SHALL `pull_request`에 저장소 참조, PR 번호, 제목, 마지막으로 본 head SHA를 저장하고 `(저장소, PR 번호)`를 유일 키로 둔다
 5. WHEN Review_Run을 생성하면, THE Review_Store SHALL 해당 `pull_request` 행의 제목과 마지막으로 본 head SHA를 해당 Review_Run의 값으로 갱신한다
-6. THE Review_Store SHALL `review_run`에 Review_Run ID, PR 참조, head SHA, base SHA, Run_Trigger, Run_Status, 시도 번호, delivery ID(없으면 null), Review_Mode, Changed_Line_Count, 완전성 상태, Incomplete_Reason 목록, 불완전 상세 정보, `summary`, `excludedFiles`, 사용된 컨텍스트 파일의 경로와 출처 종류 목록, 모델 이름, effort, 입력·출력·캐시 쓰기·캐시 읽기 토큰 수, 추정 비용(USD, 알 수 없으면 null), webhook 수신·등록·실행 시작·리뷰 완료·게시 완료·종료 시각(UTC, 해당 없으면 null), 재시도 대기 시간 합(ms), 오류 종류와 치환된 오류 메시지, Publish_Error(게시 오류 종류와 GitHub 상태 코드), Summary_Comment ID를 저장한다
+6. THE Review_Store SHALL `review_run`에 Review_Run ID, PR 참조, head SHA, base SHA, Run_Trigger, Run_Status, 시도 번호, delivery ID(없으면 null), installation ID(Run_Trigger가 `webhook`일 때만, 재시작 복구에 사용, G-3 제안), Review_Mode, Changed_Line_Count, 완전성 상태, Incomplete_Reason 목록, 불완전 상세 정보, `summary`, `excludedFiles`, `excludedFileDetails`(P1 요구사항 3.7), 사용된 컨텍스트 파일의 경로와 출처 종류 목록, 모델 이름, effort, 입력·출력·캐시 쓰기·캐시 읽기 토큰 수, 추정 비용(USD, 알 수 없으면 null), webhook 수신·등록·실행 시작·리뷰 완료·게시 완료·종료 시각(UTC, 해당 없으면 null), 재시도 대기 시간 합(ms), 오류 종류와 치환된 오류 메시지, Publish_Error(게시 오류 종류와 GitHub 상태 코드), Summary_Comment ID를 저장한다
 7. THE Review_Store SHALL `finding`에 Review_Run 참조, Review_Run 안의 순번(0부터), P1 Finding의 모든 필드(`file`, `line`, `severity`, `category`, `message`, `suggestion`, `basis.type`, `basis.ref`, Demotion_Record, 라인 판정, Summary_Only 사유), Finding_Fingerprint, 게시된 Line_Comment ID(없으면 null), Publish_Outcome(기본 `not_published`), Feedback_State(기본 `none`), Feedback_State 갱신 시각을 저장한다
 8. WHEN Stored_Finding의 Publish_Outcome을 기록하면, THE Review_Store SHALL 해당 Stored_Finding의 라인 판정과 Summary_Only 사유를 저장된 원래 값으로 유지한다
 9. THE Review_Store SHALL 컨텍스트 파일의 내용과 diff 원문을 저장하지 않는다
@@ -183,7 +186,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 14. IF DB 연결이나 저장이 실패하면, THEN THE Review_Store SHALL 트랜잭션을 되돌리고 DB 비밀번호가 치환된 저장 오류를 반환한다
 15. IF Job_Runner의 ReviewResult 저장이 실패하면, THEN THE Job_Runner SHALL Review_Run을 Run_Status `running`으로 둔 채 치환된 저장 오류를 서버 로그에 남기고, 해당 Review_Run은 다음 서버 시작 시 요구사항 4.8에 따라 `interrupted`로 바뀐다
 16. FOR ALL 유효한 ReviewResult와 사용된 컨텍스트 파일 목록, Review_Store에 저장한 뒤 다시 읽은 결과 SHALL Finding 순서, 추정 비용, 완전성 정보, 라인 판정, Demotion_Record, Publish_Outcome을 포함한 모든 필드에서 원래 값과 같다 (round-trip 속성, P1 요구사항 17.8의 값 동등성 사용)
-17. FOR ALL 유효한 ReviewResult, 한글, 따옴표, 역슬래시, 줄바꿈, 이모지를 포함한 문자열 필드 SHALL 저장과 조회 후 코드 포인트 단위로 원래 문자열과 같다
+17. FOR ALL 유효한 ReviewResult, 한글, 따옴표, 역슬래시, 줄바꿈, 이모지를 포함한 문자열 필드 SHALL 저장과 조회 후 코드 포인트 단위로 원래 문자열과 같다. 단, DB가 저장할 수 없는 U+0000은 저장할 때 U+FFFD로 바꾸고 경고를 남기며 이 속성의 대상에서 뺀다 (G-4 제안)
 
 ### Requirement 8: 비용과 usage 기록 (PLAYBOOK 지표)
 
@@ -195,7 +198,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 2. WHEN Review_Run이 `failed`로 끝나고 실패 전까지 Claude API 응답을 하나 이상 받았으면, THE Review_Store SHALL 재시도한 호출을 포함해 받은 모든 Claude API 응답의 usage 합과 그 합으로 계산한 추정 비용(모델 가격을 알 수 없으면 null)을 저장하고, 응답을 받기 전에 중단된 호출(`timeout`, `interrupted`)은 합에서 제외한다
 3. WHEN Review_Run이 Claude API 응답을 하나도 받지 못하고 `failed`로 끝나면, THE Review_Store SHALL 네 가지 토큰 수와 추정 비용을 0으로 저장한다
 4. IF 추정 비용이 Configuration의 1회 리뷰 비용 상한(P1 요구사항 18.3의 항목)을 넘으면, THEN THE Job_Runner SHALL 리뷰와 게시를 중단하지 않고 추정 비용과 상한을 담은 경고를 서버 로그에 남기고, THE Comment_Publisher SHALL Run_Status가 `succeeded`, `incomplete`, `failed`인 Review_Run의 Summary_Comment에 비용 초과 표시, 추정 비용, 상한을 포함한다
-5. FOR ALL PR, Query_API의 Review_Run 목록(요구사항 10.3)이 반환한 추정 비용의 합(null 제외) SHALL Review_Store에 저장된 해당 PR Review_Run 추정 비용의 합(null 제외)과 같고, 저장된 모든 토큰 수와 추정 비용은 null이거나 0 이상이다 (불변 속성)
+5. FOR ALL Review_Run이 100개 이하인 PR(요구사항 10.5의 상한, G-8 제안), Query_API의 Review_Run 목록(요구사항 10.3)이 반환한 추정 비용의 합(null 제외) SHALL Review_Store에 저장된 해당 PR Review_Run 추정 비용의 합(null 제외)과 같고, 저장된 모든 토큰 수와 추정 비용은 null이거나 0 이상이다 (불변 속성)
 
 ### Requirement 9: CLI `--save` (FR-9)
 
@@ -203,7 +206,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 
 #### Acceptance Criteria
 
-1. WHEN `prlens review <PR URL> --save`로 실행되면, THE PR_Lens_CLI SHALL ReviewResult를 만든 뒤 Run_Trigger `cli`, 시도 번호 1, delivery ID null, ReviewResult가 `complete`이면 Run_Status `succeeded`이고 `incomplete`이면 `incomplete`, 등록 시각은 CLI 시작 시각, webhook 수신 시각은 null인 Review_Run으로 Review_Store에 저장하고, 저장한 Review_Run ID를 표준 오류에 한 줄로 출력한다
+1. WHEN `prlens review <PR URL> --save`로 `--publish` 없이 실행되면(함께 쓰면 요구사항 20.3에 따라 Run_Trigger `actions`로 등록), THE PR_Lens_CLI SHALL ReviewResult를 만든 뒤 Run_Trigger `cli`, 시도 번호 1, delivery ID null, ReviewResult가 `complete`이면 Run_Status `succeeded`이고 `incomplete`이면 `incomplete`, 등록 시각은 CLI 시작 시각, webhook 수신 시각은 null인 Review_Run으로 Review_Store에 저장하고, 저장한 Review_Run ID를 표준 오류에 한 줄로 출력한다
 2. THE PR_Lens_CLI SHALL DB 접속 정보를 환경변수 `PRLENS_DB_URL`, `PRLENS_DB_USER`, `PRLENS_DB_PASSWORD`에서만 읽는다
 3. IF `--save`가 지정되었고 `PRLENS_DB_URL`이 없거나 빈 문자열이거나 공백 문자로만 이루어져 있으면, THEN THE PR_Lens_CLI SHALL 모든 외부 API 호출과 DB 연결 전에 필요한 환경변수 이름을 담은 오류 메시지를 표준 오류에 출력하고 종료 코드 2로 종료한다
 4. WHEN `--save`로 저장하면, THE PR_Lens_CLI SHALL `--save` 없이 실행한 경우와 같은 표준 출력 내용을 출력한다
@@ -211,7 +214,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 6. WHILE `--save` 없이 실행되는 동안, THE PR_Lens_CLI SHALL DB에 연결하지 않는다
 7. WHEN `--save` 저장이 성공하면, THE PR_Lens_CLI SHALL `--save` 없이 실행한 경우와 같은 종료 코드(P1 요구사항 15.9~15.10, 16.7~16.8의 규칙)로 종료한다
 8. IF `--save` 실행 시작 시 DB 연결이 실패하면, THEN THE PR_Lens_CLI SHALL 모든 외부 API 호출 전에 DB 비밀번호가 치환된 연결 오류를 표준 오류에 출력하고 종료 코드 2로 종료한다 (마이그레이션 실패는 요구사항 7.12)
-9. IF `--save`가 지정되었고 ReviewResult를 만들지 못하면(P1 요구사항 15.11), THEN THE PR_Lens_CLI SHALL Run_Status `failed`, 오류 종류, P1 요구사항 19.4로 치환한 오류 메시지, 그때까지 받은 usage(요구사항 8.2~8.3)를 담은 Review_Run을 Review_Store에 저장하고 종료 코드 2로 종료한다
+9. IF `--save`가 지정되었고 ReviewResult를 만들지 못하면(P1 요구사항 15.11), THEN THE PR_Lens_CLI SHALL Run_Status `failed`, 오류 종류, P1 요구사항 19.4로 치환한 오류 메시지, 그때까지 받은 usage(요구사항 8.2~8.3)를 담은 Review_Run을 Review_Store에 저장하고 종료 코드 2로 종료한다. PR 조회 자체가 실패해 저장소 ID와 head SHA를 알 수 없으면 저장하지 않고 그 사실을 표준 오류에 출력한다 (G-6 제안)
 
 ### Requirement 10: 조회 REST API 초안 (FR-12 일부)
 
@@ -219,21 +222,21 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 
 #### Acceptance Criteria
 
-1. THE Query_API SHALL `GET /api/repositories`로 저장소 목록(owner, 이름, PR 수)을 소문자로 바꾼 owner 오름차순, 같으면 소문자로 바꾼 이름 오름차순으로 반환한다
-2. THE Query_API SHALL `GET /api/repositories/{owner}/{repo}/pulls`로 PR 목록(번호, 제목, 마지막 Review_Run의 Run_Status, 등록 시각, 심각도별 Finding 수)을 마지막 Review_Run 등록 시각 내림차순, 같으면 PR 번호 내림차순으로 반환하고, 심각도별 Finding 수는 Severity_Threshold와 관계없이 마지막 Review_Run의 모든 Stored_Finding으로 센다
-3. THE Query_API SHALL `GET /api/repositories/{owner}/{repo}/pulls/{number}/runs`로 PR의 Review_Run 목록(ID, head SHA, Run_Trigger, Run_Status, 시도 번호, Review_Mode, 완전성 상태, Incomplete_Reason, usage, 추정 비용, webhook 수신·등록·실행 시작·리뷰 완료·게시 완료·종료 시각)을 등록 시각 내림차순, 같으면 시도 번호 내림차순으로 반환한다
-4. THE Query_API SHALL `GET /api/runs/{runId}/findings`로 Review_Run의 Stored_Finding 목록을 순번 오름차순으로, 각 항목에 P1 Finding 필드, 라인 판정, Demotion_Record, Feedback_State, Line_Comment ID를 담아 반환한다
+1. THE Query_API SHALL `GET /api/v1/repositories`로 저장소 목록(owner, 이름, PR 수)을 소문자로 바꾼 owner 오름차순, 같으면 소문자로 바꾼 이름 오름차순으로 반환한다
+2. THE Query_API SHALL `GET /api/v1/repositories/{owner}/{repo}/pulls`로 PR 목록(번호, 제목, 마지막 Review_Run의 Run_Status, 등록 시각, 심각도별 Finding 수)을 마지막 Review_Run 등록 시각 내림차순, 같으면 PR 번호 내림차순으로 반환하고, 심각도별 Finding 수는 Severity_Threshold와 관계없이 마지막 Review_Run의 모든 Stored_Finding으로 센다
+3. THE Query_API SHALL `GET /api/v1/repositories/{owner}/{repo}/pulls/{number}/runs`로 PR의 Review_Run 목록(ID, head SHA, Run_Trigger, Run_Status, 시도 번호, Review_Mode, 완전성 상태, Incomplete_Reason, usage, 추정 비용, effort, Run_Error_Kind(`failed`일 때), Publish_Error(있을 때), webhook 수신·등록·실행 시작·리뷰 완료·게시 완료·종료 시각)을 등록 시각 내림차순, 같으면 시도 번호 내림차순으로 반환한다
+4. THE Query_API SHALL `GET /api/v1/runs/{runId}/findings`로 Review_Run의 Stored_Finding 목록을 순번 오름차순으로, 각 항목에 P1 Finding 필드, 라인 판정, Demotion_Record, Feedback_State, Line_Comment ID를 담아 반환한다
 5. THE Query_API SHALL 목록 응답마다 정렬 순서의 앞에서부터 최대 100개 항목과, 잘라내기 전 전체 항목 수를 반환한다 (페이지네이션은 P3 범위)
-6. THE Query_API SHALL `owner`와 `repo`를 대소문자를 무시해 조회한다
+6. THE Query_API SHALL `owner`와 `repo`를 대소문자를 무시해 조회하고, 저장소 이름 변경으로 같은 이름(대소문자 무시)의 저장소가 둘 이상이면 가장 최근에 갱신된 저장소를 쓴다 (G-9 제안)
 7. IF 조회 대상 저장소, PR, Review_Run이 없으면, THEN THE Query_API SHALL 404와 Standard_Error_Response 형식의 본문을 반환한다
 8. IF 경로 변수의 형식이 잘못되면(`owner`나 `repo`가 P1 요구사항 1.3의 문자 규칙을 어김, `number`가 양의 정수가 아님, `runId`가 Review_Run ID 범위(1 이상 2^63−1 이하)의 정수가 아님), THEN THE Query_API SHALL 400과 잘못된 경로 변수 이름을 담은 Standard_Error_Response 형식의 본문을 반환한다
 9. THE Query_API SHALL Query_API의 모든 엔드포인트, 요청 변수, 응답 스키마, 오류 응답을 기술한 OpenAPI 3 문서를 저장소의 `docs/api/openapi.yaml`로 두고, CI에서 실제 응답이 OpenAPI 문서의 스키마를 따르는지 검사한다
 10. THE Query_API SHALL 응답 JSON의 필드 이름과 열거형 값을 P1 Result_Codec의 JSON 직렬화와 같은 이름으로 쓴다
 11. THE PR_Lens_Server SHALL Configuration의 서버 바인딩 주소(기본 `127.0.0.1`)에 바인딩하고, 시작 로그에 Query_API가 인증 없이 동작한다는 경고를 남긴다
 12. IF 서버 바인딩 주소가 루프백 주소가 아니면, THEN THE PR_Lens_Server SHALL 시작 로그에 Query_API가 인증 없이 외부에 노출된다는 경고를 추가로 남긴다
-13. WHEN Review_Run에 Stored_Finding이 0개이면(`failed` Review_Run 포함), THE Query_API SHALL `GET /api/runs/{runId}/findings`에 200과 빈 목록, 전체 항목 수 0을 반환한다
+13. WHEN Review_Run에 Stored_Finding이 0개이면(`failed` Review_Run 포함), THE Query_API SHALL `GET /api/v1/runs/{runId}/findings`에 200과 빈 목록, 전체 항목 수 0을 반환한다
 14. IF 조회 중 Review_Store 오류가 발생하면, THEN THE Query_API SHALL 500과 DB 비밀번호가 치환된 Standard_Error_Response 형식의 본문을 반환한다
-15. FOR ALL 저장된 Review_Run, `GET /api/runs/{runId}/findings`가 반환한 Finding 목록 SHALL Review_Store에 저장한 Stored_Finding 목록과 순서와 필드가 같다 (round-trip 속성)
+15. FOR ALL 저장된 Review_Run, `GET /api/v1/runs/{runId}/findings`가 반환한 Finding 목록 SHALL Review_Store에 저장한 Stored_Finding 목록과 순서와 필드가 같다 (round-trip 속성)
 
 ### Requirement 11: 요약 코멘트 게시와 갱신 (FR-10)
 
@@ -254,7 +257,8 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 11. WHEN Review_Run을 게시하면, THE Comment_Publisher SHALL Line_Comment 게시(요구사항 12)를 먼저 마친 뒤 Summary_Comment를 게시해, 게시 거부 결과(요구사항 12.8~12.10)를 라인 밖 지적 목록에 반영한다
 12. WHEN Summary_Comment 게시에 성공하면, THE Comment_Publisher SHALL 라인 밖 지적 목록에 속한 Summary_Only Publishable_Finding의 Publish_Outcome을 `summary_listed`로 기록한다
 13. THE PR_Lens_Server SHALL 같은 PR에 webhook 경로와 GitHub Actions 경로(요구사항 20)를 함께 쓰면 게시 주체가 달라 Summary_Comment가 둘 생길 수 있다는 제한을 설치 문서에 적는다
-14. FOR ALL 같은 PR에 대한 게시 요청 순서열(길이 1 이상, 처리 전 게시 주체의 Summary_Marker 코멘트가 0개 또는 1개), 처리 후 게시 주체가 작성하고 Summary_Marker를 가진 코멘트 수 SHALL 1이고 그 본문은 마지막으로 게시한 Review_Run의 내용과 같다 (멱등 속성)
+14. FOR ALL 같은 PR에 대한 게시 요청 순서열(길이 1 이상, 실제로 Summary_Comment를 게시한 요청이 하나 이상, 처리 전 게시 주체의 Summary_Marker 코멘트가 0개 또는 1개), 처리 후 게시 주체가 작성하고 Summary_Marker를 가진 코멘트 수 SHALL 1이고 그 본문은 마지막으로 게시한 Review_Run의 내용과 같다 (멱등 속성)
+15. IF Summary_Comment 생성 또는 PR 리뷰 생성 요청이 GitHub에서 처리됐는지 알 수 없는 방식(5xx, 연결 실패, 제한 시간 초과)으로 실패하면, THEN THE Comment_Publisher SHALL 같은 요청을 그대로 다시 보내지 않고 게시 주체의 마커를 다시 조회해 해당 코멘트가 없을 때만 다시 보낸다 (재시도로 코멘트가 중복되지 않게 한다)
 
 ### Requirement 12: 라인 코멘트 게시 (FR-10)
 
@@ -272,7 +276,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 8. IF GitHub PR 리뷰 API가 리뷰 전체를 422로 거부하면, THEN THE Comment_Publisher SHALL 응답에서 식별할 수 있는 거부 원인 Finding을 빼고 나머지로 리뷰를 한 번 다시 게시한다
 9. IF 422 응답에서 거부 원인 Finding을 식별할 수 없거나 다시 게시한 리뷰도 422로 거부되면, THEN THE Comment_Publisher SHALL 해당 Review_Run의 Line_Comment를 게시하지 않는다
 10. WHEN 8~9번 때문에 게시되지 않은 Finding이 있으면, THE Comment_Publisher SHALL 게시되지 않은 모든 Finding의 Publish_Outcome을 `github_rejected`로 기록하고 라인 밖 지적 목록(요구사항 11.3)에 포함한다
-11. IF PR 리뷰 게시가 P1 요구사항 21의 재시도 후에도 422가 아닌 오류로 실패하면, THEN THE Comment_Publisher SHALL Run_Status를 바꾸지 않고 게시 오류 종류와 GitHub 상태 코드를 Publish_Error로 기록하고, 해당 Finding의 Line_Comment ID를 null로 두고, Summary_Comment 게시를 계속한다
+11. IF PR 리뷰 게시가 P1 요구사항 21의 재시도 후에도 422가 아닌 오류로 실패하면, THEN THE Comment_Publisher SHALL Run_Status를 바꾸지 않고 게시 오류 종류와 GitHub 상태 코드를 Publish_Error로 기록하고, 해당 Finding의 Line_Comment ID를 null, Publish_Outcome을 `not_published`로 두고, Summary_Comment에 게시하지 못한 Finding 수를 한 줄로 표시하고(G-11 제안), Summary_Comment 게시를 계속한다
 12. WHEN Inline_Eligible인 Publishable_Finding이 0개이면, THE Comment_Publisher SHALL PR 리뷰를 만들지 않는다
 13. WHERE 라인 코멘트 게시가 꺼져 있으면, THE Comment_Publisher SHALL Inline_Eligible인 Publishable_Finding의 Publish_Outcome을 `inline_disabled`로 기록한다
 14. FOR ALL Review_Run, 같은 Review_Run을 두 번 게시한 뒤의 게시 주체 Line_Comment 집합 SHALL 한 번 게시한 뒤의 집합과 같다 (멱등 속성)
@@ -317,7 +321,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 3. WHEN `pull_request` 이벤트(Target_Action 또는 `closed`)가 서명 검증과 payload 필드 검증(요구사항 1, 2)과 허용 저장소 검사(요구사항 3)를 통과하면, THE Feedback_Collector SHALL webhook 응답과 분리된 작업에서 해당 PR의 Line_Comment ID가 있는 모든 Stored_Finding의 Feedback_State를 비동기로 갱신한다
 4. WHEN `prlens feedback sync <PR URL>`로 실행되면, THE PR_Lens_CLI SHALL 해당 PR의 Stored_Finding Feedback_State를 2번 규칙으로 갱신하고 `adopted`, `rejected`, `conflicted`, `none` 네 상태의 개수를 0개인 상태까지 모두 표준 오류에 출력한다
 5. WHEN Feedback_State가 바뀌면, THE Review_Store SHALL 새 Feedback_State와 갱신 시각을 저장하고, 바뀌지 않으면 갱신 시각을 바꾸지 않는다
-6. THE Review_Store SHALL 같은 Line_Comment ID를 가진 Stored_Finding(요구사항 12.4의 재사용, 12.5의 `duplicate_in_run`)의 Feedback_State를 같은 값으로 저장한다
+6. THE Review_Store SHALL 같은 Line_Comment ID를 가진 Stored_Finding(요구사항 12.4의 재사용, 12.5의 `duplicate_in_run`)의 Feedback_State를 같은 값으로 저장하고, Line_Comment를 재사용한 새 Stored_Finding에는 게시 결과를 기록할 때 기존 Stored_Finding의 Feedback_State와 갱신 시각을 복사한다
 7. IF 리액션 조회가 404(코멘트 삭제)로 실패하거나 P1 요구사항 21의 재시도 후에도 다른 오류로 실패하면, THEN THE Feedback_Collector SHALL 해당 Stored_Finding의 Feedback_State, 갱신 시각, Line_Comment ID를 바꾸지 않고, Line_Comment ID와 오류 종류를 로그(PR_Lens_CLI에서는 표준 오류)에 남기고, 나머지 Stored_Finding의 갱신을 계속한다
 8. WHEN Stored_Finding에 Line_Comment ID가 없으면(Summary_Only, 하한 미만, 게시 거부, 라인 코멘트 게시 꺼짐), THE Feedback_Collector SHALL 해당 Finding의 Feedback_State를 `none`으로 유지하고, 해당 Finding은 PLAYBOOK 5장의 PR 설명 수기 기록으로 집계한다
 9. WHEN `prlens feedback sync`로 실행되면, THE PR_Lens_CLI SHALL DB 접속 정보를 요구사항 9.2의 환경변수에서, GitHub API 인증 정보를 환경변수 `GITHUB_TOKEN`에서 읽는다
@@ -333,7 +337,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 
 #### Acceptance Criteria
 
-1. THE PR_Lens_Server SHALL webhook 수신·서명 검증·Review_Job 등록을 `webhook/` 패키지에, GitHub REST 호출과 App 인증을 `github/` 패키지에, Review_Store 인터페이스와 구현을 `store/` 패키지에, Comment_Publisher와 Feedback_Collector를 `publish/` 패키지(T3)에 둔다
+1. THE PR_Lens_Server SHALL webhook 수신·서명 검증·Review_Job 등록을 `webhook/` 패키지에, GitHub REST 호출과 App 인증을 `github/` 패키지에, Review_Store 인터페이스와 구현을 `store/` 패키지에, Comment_Publisher와 Feedback_Collector를 `publish/` 패키지(T3)에, Query_API 컨트롤러를 `query/` 패키지에, Spring 조립과 서버 시작 검증을 `server/` 패키지에, 서버와 CLI가 함께 쓰는 작업 범위 도구(취소, 제한 시간, usage 집계)를 `execution/` 패키지에 둔다
 2. THE PR_Lens_Server SHALL `webhook/`과 `publish/` 패키지가 Review_Store 인터페이스에만 의존하고 `store/`의 구현 클래스와 DB 라이브러리에 의존하지 않게 하고, 이 규칙을 위반하면 CI의 자동 아키텍처 검사가 빌드를 실패시킨다
 3. THE PR_Lens_Server SHALL Comment_Publisher와 Feedback_Collector가 GitHub API를 GitHub_Client로만 호출하게 하고, 이 규칙을 위반하면 CI의 자동 아키텍처 검사가 빌드를 실패시킨다
 4. THE PR_Lens_Server SHALL P1 Review_Engine을 수정 없이 호출하고, 트랙 사이 데이터를 P1 공유 타입과 Review_Run, Stored_Finding 타입으로 주고받으며, P2 PR마다 P1 Review_Engine 소스에 변경이 없음을 PR 체크리스트로 확인한다
@@ -396,6 +400,7 @@ P1 Glossary의 모든 용어(PR_Lens_CLI, PR_Fetcher, Context_Collector, Review_
 7. IF `--publish`가 지정되었고 `GITHUB_TOKEN`이 없거나 빈 문자열이거나 공백 문자로만 이루어져 있으면, THEN THE PR_Lens_CLI SHALL 모든 외부 API 호출 전에 환경변수 이름 `GITHUB_TOKEN`을 담은 오류를 표준 오류에 출력하고 종료 코드 2로 종료한다
 8. WHEN `--publish` 게시 시점에 Review_Run이 `superseded`가 되면(요구사항 14.2), THE PR_Lens_CLI SHALL 게시 실패로 취급하지 않고 `superseded` 안내만 표준 오류에 출력한다
 9. WHEN `--publish --save`의 중복 판정 결과가 `duplicate` 또는 `max_attempts_reached`이면, THE PR_Lens_CLI SHALL Claude API를 호출하지 않고 사유(`duplicate`이면 기존 Review_Run ID 포함)를 표준 오류에 출력하고 종료 코드 0으로 종료한다
+10. WHEN 중복 판정 시점에 Run_Trigger가 `actions`이고 Run_Status가 `queued` 또는 `running`인 Review_Run의 등록 시각이 작업 제한 시간(요구사항 4.7)보다 오래됐으면, THE Review_Store SHALL 해당 Review_Run을 `failed`, 오류 종류 `interrupted`로 바꾼 뒤 중복을 판정한다 (중단된 Actions 실행이 같은 커밋의 리뷰를 영구히 막지 않게 한다. G-7 제안)
 
 ## 결정 대기 항목
 
@@ -404,14 +409,22 @@ PRD가 정하지 않은 항목은 설정 가능하게 두고, 결정 전까지 �
 | ID | 항목 | 결정 주체 | 이 스펙의 처리 |
 |---|---|---|---|
 | D-1 | 채택/기각 자동 수집 방식 (FR-11) | 3주차 T3 스펙 검토 | 후보인 Line_Comment의 👍/👎 리액션으로 진행(요구사항 15). GitHub는 리액션 webhook을 보내지 않으므로 PR 이벤트 수신 시와 `prlens feedback sync`로 수집. 여러 사람이 다르게 누르면 `conflicted`. 범위에서 빠지면 요구사항 15를 연기하고 PLAYBOOK 수기 기록 유지 |
-| D-2 | DB와 테스트 전략 | ADR-0006 | 제안: PostgreSQL(로컬 Docker Compose), 저장 테스트는 Testcontainers, 빠른 단위 테스트는 Review_Store 메모리 구현(요구사항 16.6). H2 사용 여부와 마이그레이션 도구(Flyway 제안)는 ADR에서 확정 |
+| D-2 | DB와 테스트 전략 | ADR-0006 | 제안: PostgreSQL(로컬 Docker Compose), 저장 테스트는 Testcontainers, 빠른 단위 테스트는 Review_Store 메모리 구현(요구사항 16.6). H2 사용 여부와 마이그레이션 도구(Flyway 제안)는 ADR에서 확정. ADR-0006은 아직 없고(ROADMAP 1주차의 B 담당), 작업 1.2(의존성 추가)가 이 결정을 기다리므로 킥오프 전에 작성·승인(작업 0.1). 승인에는 작성자를 뺀 2명이 필요함(PLAYBOOK) |
 | D-3 | draft PR 자동 리뷰 여부 | 3주차 T1 스펙 검토 | 제안: draft도 리뷰(P1 요구사항 1.1과 같은 기준). 비용이 문제되면 draft는 건너뛰고 `ready_for_review` action을 Target_Action에 추가 |
 | D-4 | 비동기 실행 방식 | 3주차 T1 | 제안: 서버 프로세스 안 작업자 풀 + DB에 저장한 `queued` 상태로 재시작 복구(요구사항 4.8). 외부 큐는 쓰지 않음 |
 | D-5 | `--save`/`--publish`/`feedback sync` 실패 시 CLI 종료 코드 | 3주차 T2·T3 스펙 검토 | 제안값 4. 우선순위: 결과 생성 전 실패(DB 연결·마이그레이션 실패 포함) 2 → `blocker` 있음 1 → 리뷰 후 저장·게시·feedback 조회 일부 실패 4 → `incomplete` 3 → 정상 0. `--publish --save`에서 중복으로 건너뛰면 0(요구사항 20.9). P1 D-4의 순서에 4를 추가 |
 | D-6 | CLI 단독 실행(`--save`, `--publish` 없음)에 Allowed_Repository_List 적용 여부 | 3주차 킥오프 | P1 호환을 위해 미적용. PRD 6장의 "리뷰 대상 한정"은 사람이 지키는 규칙(PLAYBOOK 6장)으로 유지 |
-| D-7 | Finding_Fingerprint 구성 | 3주차 T3 | 제안: `file`, `category`, `basis.ref`, `message`(줄 번호 제외). 커밋 추가로 줄이 밀려도 같은 지적을 다시 달지 않기 위함. 메시지가 조금만 바뀌어도 새 코멘트가 달리는 한계는 도그푸딩 후 재검토 |
-| D-8 | Query_API 노출 범위 | 3주차 킥오프 | 인증이 범위 밖이므로 `127.0.0.1` 바인딩 기본(요구사항 10.11). webhook은 smee.io 클라이언트가 로컬로 전달. 데모 환경에서 외부 노출이 필요하면 별도 결정 |
+| D-7 | Finding_Fingerprint 구성 | 3주차 T3 | 제안: `file`, `category`, `basis.ref`, `message`(줄 번호 제외). 커밋 추가로 줄이 밀려도 같은 지적을 다시 달지 않기 위함. 메시지가 조금만 바뀌어도 새 코멘트가 달리는 한계는 도그푸딩 후 재검토. 줄 번호가 없어서 생기는 다른 한계: 같은 파일에서 같은 메시지로 여러 줄을 지적하면 순번이 가장 작은 하나만 게시되고 나머지(`duplicate_in_run`)는 PR에서 보이지 않음. 실행 안의 중복 판정에만 줄 번호를 넣거나, 대표 코멘트 본문에 다른 줄 번호를 나열하는 방안을 함께 정함 |
+| D-8 | Query_API 노출 범위 | 3주차 킥오프 | 인증이 범위 밖이므로 `127.0.0.1` 바인딩 기본(요구사항 10.11). webhook은 smee.io 클라이언트가 로컬로 전달. 데모 환경에서 외부 노출이 필요하면 별도 결정. 함께 정할 것: 도그푸딩용 서버는 한 대만 띄워야 함(중복 방지와 게시 직렬화가 "DB 하나, 프로세스 하나" 기준). 누구의 PC에서 띄우고 DB를 어디에 둘지. 데이터가 그 한 대의 DB에만 쌓이므로, 4주차에 나머지 두 사람이 실제 데이터를 볼 방법도 정함: `pg_dump` 파일을 주고받기(제안. 절차를 설치 문서에 추가) 또는 세 사람이 닿는 공용 DB |
 | D-9 | `superseded`를 Active_Run에 포함할지 | 3주차 T1 스펙 검토 | 현재 포함(Glossary Active_Run, 요구사항 5.11). 한계: force-push로 이전 head SHA로 돌아가면 해당 SHA는 다시 리뷰되지 않고 Summary_Comment도 그 SHA 기준으로 갱신되지 않음. 대안은 `superseded`를 중복 판정에서 빼는 것(비용 증가) |
 | D-10 | `superseded` Review_Run과 게시되지 않은 Finding(Publish_Outcome `not_published`, `below_threshold`, `github_rejected`, `inline_disabled` 등)을 채택률 분모에 넣는 방식 | 3주차 T3·PLAYBOOK 지표 담당 | 결정 전까지 Review_Store는 모든 Finding과 Publish_Outcome을 저장하고(요구사항 7.7, 13.3) 집계 기준은 정하지 않음. P3 통계 API 스펙 전까지 확정 |
 | D-11 | 저장소 이름(`owner/repo`) 기준 허용 판정 유지 여부 | 3주차 킥오프 | 현재 이름 기준(요구사항 3.1, 3.8). 한계: 저장소 이름 변경·이전 시 Allowed_Repository_List를 갱신하고 재시작해야 하며(요구사항 19.5) 그 전까지 리뷰가 거부됨. 대안은 GitHub 저장소 ID 기준 판정 |
 | D-12 | Publish_Error를 Review_Run당 하나만 둘지 | 3주차 T2·T3 스펙 검토 | 현재 하나(요구사항 7.6, 11.9, 12.11, 14.6). 한계: 라인 코멘트 리뷰 게시와 Summary_Comment 게시가 모두 실패하면 나중에 기록한 Summary_Comment 오류 하나만 남음. 대안은 게시 단계별 Publish_Error 목록 |
+| D-13 | 게시 실패 뒤의 복구 | 3주차 T1·T3 스펙 검토 | 지금은 복구 경로가 없음: Publish_Error가 기록된 Review_Run은 재시작 때 다시 게시하지 않고(요구사항 4.14), 같은 커밋의 재전송은 `duplicate`가 됨. 실패 코멘트를 게시해도 게시 완료 시각이 기록되지 않음(요구사항 4.11의 대상이 `succeeded`·`incomplete`뿐). 제안: 재전송된 요청의 Active_Run이 게시되지 않은 상태면 Review_Engine 재실행 없이 게시만 다시 하고, 실패 코멘트 게시 성공도 게시 완료 시각으로 기록 |
+| D-14 | 유실된 이벤트의 재시작 수단, `interrupted`의 시도 횟수 포함 여부 | 3주차 T1 스펙 검토 | GitHub는 실패한 전달을 자동으로 다시 보내지 않으므로 503 응답, 서버 중단 중 이벤트, `interrupted`는 사람이 GitHub에서 재전송해야 함. 현재 `interrupted`는 시도 횟수에 포함(요구사항 4.8, 5.5)이라 재시작이 잦은 로컬 개발에서 3회 만에 `max_attempts_reached`가 됨. 제안: 설치 문서에 재전송 방법을 적고 `interrupted`는 횟수에서 뺌 |
+| D-15 | Actions 대체 경로에서 결과를 저장하는 방법 | 3주차 킥오프 | 호스팅 러너는 로컬 DB에 닿지 않아 대체 경로에서는 저장(FR-9), 채택/기각 수집(FR-11), 조회 API 데이터가 모두 비고, 4주차 완료 조건인 "3주차부터 쌓인 실제 리뷰 데이터"도 채워지지 않음. 제안: 러너가 `--format json` 결과를 아티팩트로 남기고 로컬에서 DB로 가져오는 명령을 둠. 다만 P1 결과 JSON에는 저장소 ID, PR 번호, head·base SHA, 컨텍스트 파일 목록, Line_Comment ID가 없어 그대로는 Review_Run을 만들 수 없으므로 아티팩트에 담을 항목도 정해야 함. 다른 선택지: 대체 경로를 쓰면 4주차는 CLI `--save`로 쌓은 데이터로 시연. 함께 정할 것: (1) 대체 경로로 바꾸는 기준(제안: 수요일의 작업 10.7 스모크나 12.2의 첫 종단 확인이 실패하면 전환) (2) 대체 경로의 완료 확인. 지금은 워크플로가 설치 문서의 예시뿐이고(작업 26.5), 팀 저장소에 워크플로·`ANTHROPIC_API_KEY` 비밀·`repositories.allowed`를 넣는 작업과 "2분"을 재는 방법이 없음(요구사항 17과 작업 26.6은 webhook 경로 전용) |
+| D-16 | webhook 수신 경로와 조회 API의 페이지네이션·검증 규칙 | 3주차 킥오프 ([ADR 0008](../../adr/0008-keep-api-conventions.md)의 미결 항목) | 조회 API는 `/api/v1/`과 `ErrorResponse`를 따름(확정). 미결: `POST /webhooks/github`은 GitHub가 호출하는 엔드포인트라 `/api/v1/` 규칙 밖으로 둠(제안). 목록은 앞 100개와 전체 수만 반환하고 `page`·`size`는 P3에서 추가(요구사항 10.5 그대로). 경로 변수는 Bean Validation 대신 직접 검사해 잘못된 이름을 모두 모음(요구사항 10.8 그대로). `query`의 예외는 전역 핸들러가 아니라 `query` 전용 처리기가 매핑(ADR 0002는 한곳에 매핑하라고 함). webhook도 같은 예외: `WebhookProcessor`가 413·401·400·503의 `ErrorResponse`를 예외를 거치지 않고 직접 만들고, `code` 값 넷(`PAYLOAD_TOO_LARGE`, `INVALID_SIGNATURE`, `QUEUE_FULL`, `STORE_UNAVAILABLE`)을 새로 씀(설계 "요청 처리 순서와 응답"). ADR 0002의 예외로 인정할지, 예외를 던져 `ApiExceptionHandler`가 매핑하게 바꿀지 정함 |
+| D-17 | P3가 P2에 요구하는 추가·변경을 P2에 먼저 넣을지 | 3주차 킥오프 | P3 요구사항 검토(`docs/spec-review/06-p3-requirements.md` "P3가 P2에 요구하는 추가·변경")가 페이지네이션, DTO 필드, `ReviewStore` 시그니처 등 16항목을 꼽음. 이 스펙에는 아직 반영하지 않음. P2 구현 전에 반영하면 재작업이 줄어듦. 현재 P3 요구사항과 직접 대조해 확인한 차이: (1) 목록 봉투가 P2는 `{items, total}`과 앞 100개, P3는 `page`·`size`·`totalCount`·`totalPages`. 이름이 바뀌면 OpenAPI, DTO, Property 12, `ReviewStore.list*` 시그니처를 다시 씀 (2) `RunDto`에 `baseSha`, `summary`, `summaryCommentId`가 없음 (3) PR 단건과 Review_Run 단건 조회가 없음 (4) 실패한 Review_Run의 오류 메시지를 P2는 내보내지 않고 P3는 치환된 메시지를 요구함 (5) 게시하지 못한 지적의 `publishOutcome`이 P2는 `not_published`, P3는 null (6) PR 번호의 앞자리 0을 P2는 허용하고 P3는 거부. 정할 시점은 작업 17.1과 17.3을 시작하기 전(수요일) |
+| D-18 | `feedback sync`에서 리액션을 제외할 주체 | 3주차 T3 스펙 검토 | 현재 "게시 주체"의 리액션을 뺌(요구사항 15.2). 개인 PAT로 `feedback sync`를 실행하면 실행한 사람의 👍/👎가 빠져 채택률이 왜곡됨. 제안: 제외 대상을 "해당 Line_Comment의 작성자"로 바꿈(설계 G-12) |
+
+G-n으로 표시한 인수 기준은 설계가 요구사항 공백을 메우려고 제안한 내용을 옮긴 것입니다(설계 "요구사항 공백 요약"). 스펙 승인 때 함께 확정합니다.

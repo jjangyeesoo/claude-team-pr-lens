@@ -3,7 +3,7 @@
 | 스펙 | 범위 | 문서 | 상태 (2026-10-04) |
 |---|---|---|---|
 | [pr-lens-p1-cli](pr-lens-p1-cli/README.md) | P1 CLI (`prlens review`), FR-1~6, 2주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 |
-| [pr-lens-p2-automation](pr-lens-p2-automation/README.md) | P2 webhook 자동 리뷰, 저장, 게시, FR-7~11, 3주차 | 요구사항, 설계, 작업 목록 | 검토만 함. 수정 전 |
+| [pr-lens-p2-automation](pr-lens-p2-automation/README.md) | P2 webhook 자동 리뷰, 저장, 게시, FR-7~11, 3주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 |
 | [pr-lens-p3-web](pr-lens-p3-web/README.md) | P3 웹 조회, FR-12~14, 4주차 | 요구사항 | 검토만 함. 수정 후 설계와 작업 목록 작성 필요 |
 
 ## 스펙의 두 가지 형태
