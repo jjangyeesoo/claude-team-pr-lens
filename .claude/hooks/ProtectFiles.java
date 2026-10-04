@@ -3,7 +3,7 @@
 // 종료 코드 2 = 차단. stderr 메시지는 Claude에게 피드백으로 전달된다.
 //
 // 1차 방어선은 settings.json의 deny 규칙이고, 이 hook은 2차 방어선이다.
-// 이 hook은 파일 편집 도구만 본다. 스크립트가 간접적으로 파일을 쓰는 경우는 막지 못한다 (README 참고).
+// 이 hook은 파일 편집 도구만 본다. 스크립트가 간접적으로 파일을 쓰는 경우는 막지 못한다 (docs/guide/claude-code-setup.md 참고).
 // 입력을 해석하지 못하면 예외로 종료 코드 1이 되어 편집이 허용된다(fail-open). 도구가 멈추는 것보다 낫다고 판단했다.
 
 import java.io.PrintStream;

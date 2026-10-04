@@ -2,7 +2,7 @@
 
 [← 목차](README.md)
 
-대상: `P2-req`, `P2-des`, `docs/study-project/PRD.md`, `ROADMAP.md`. 이 문서에서 `R`은 `P2-req`, `D`는 `P2-des`입니다.
+대상: `P2-req`, `P2-des`, `docs/product/PRD.md`, `ROADMAP.md`. 이 문서에서 `R`은 `P2-req`, `D`는 `P2-des`입니다.
 
 ## 총평
 

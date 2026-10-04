@@ -36,7 +36,7 @@
 
 ## A. 요구사항 자체
 
-대조한 문서: `docs/study-project/PRD.md`, `ROADMAP.md`, `PLAYBOOK.md` 전체.
+대조한 문서: `docs/product/PRD.md`, `ROADMAP.md`, `PLAYBOOK.md` 전체.
 
 ### 총평
 

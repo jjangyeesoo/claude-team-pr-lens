@@ -187,7 +187,7 @@
 **B-9. [모순] 422 예외가 P1 예외 계층에 얹힐 수 있는지 불명확합니다.**
 - 위치: `P2-des:843` / `P1-des:798`, `P1-des:808`, `P1-tasks:54`
 - 문제: `GitHubUnprocessableException extends NonRetryableApiException`인데 P1은 "`PrLensException`(sealed) 하위 타입"이고, `NonRetryableApiException`의 위치가 설계는 `github`·`llm`, task는 `support`로 다릅니다.
-- 수정안: 상속이 가능한지(non-sealed 여부), `StoreException`과 `JobTimeoutException`이 계층 밖이어도 되는지 정합니다. [02번 문서의 발견 2](02-p1-internal.md#중요)와 함께 처리합니다.
+- 수정안: 상속이 가능한지(non-sealed 여부), `StoreException`과 `JobTimeoutException`이 계층 밖이어도 되는지 정합니다. P1에서는 처리했습니다(`PrLensException`을 sealed가 아닌 추상 클래스로 바꾸고 재시도 예외를 `support`에 둠).
 
 **B-10. [모순] `ReviewEngine` 등록 방식이 다릅니다.**
 - 위치: `P1-des:75` / `P2-des:14`

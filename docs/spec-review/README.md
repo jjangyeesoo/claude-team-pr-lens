@@ -18,7 +18,7 @@
 | 문서 | 범위 | 판정 | 지적 수 |
 |---|---|---|---|
 | [01-claude-usability.md](01-claude-usability.md) | Claude Code에서 활용 가능한지, 스타터와의 충돌, 착수 전 체크리스트 | 읽을 수 있음. 위치와 작업 방식은 바꿔야 함 | 대조 19항목 (2항목은 수정 불필요) |
-| [02-p1-internal.md](02-p1-internal.md) | P1: PRD → 요구사항 → 설계 → 작업 목록 | 작은 수정 후 시작 가능 | 치명 1, 중요 11, 경미 13 |
+| 02-p1-internal.md (삭제) | P1: PRD → 요구사항 → 설계 → 작업 목록 | P1 스펙에 반영하고 삭제(커밋 `282d1ab`). 원문은 그 커밋 이전 이력에 있음 | 치명 1, 중요 11, 경미 13 |
 | [03-p2-requirements-design.md](03-p2-requirements-design.md) | P2: PRD → 요구사항 → 설계 | 수정 후 구현 가능 | 중요 12, 경미 13 |
 | [04-p2-tasks-and-p1-link.md](04-p2-tasks-and-p1-link.md) | P2 설계 → 작업 목록, P1 ↔ P2 연계 | 조건부 통과 / 조립 지점 불일치 | 치명 1, 중요 15, 경미 12 |
 | [05-external-facts.md](05-external-facts.md) | P1·P2의 GitHub API, Claude API, 라이브러리 관련 주장을 공식 문서와 대조 | 43건 중 36건 맞음 | 틀리거나 부분적으로 맞음 7 |
@@ -61,7 +61,7 @@
 3. **API 경로**: `/api/v1/`을 넣을지, 규칙 예외를 ADR로 남길지. P2와 P3에 함께 적용되고, OpenAPI 작성 전에 정해야 합니다.
 4. **ADR 0003~0006**: 저장소 구조, CLI 라이브러리, 모델·effort·최대 출력 토큰, DB·테스트 전략(Docker 테스트 분리 포함).
 5. **결정 대기 항목**
-   - P1: D-1~D-7과 G-1~G-7 ([02](02-p1-internal.md#결정-대기-항목))
+   - P1: D-1~D-8과 G-1~G-12 ([P1 스펙 색인](../specs/pr-lens-p1-cli/README.md))
    - P2: D-1~D-12와 spike 13건 ([03](03-p2-requirements-design.md#결정-대기와-spike-항목))
    - P3: D-1~D-12 ([06](06-p3-requirements.md#결정-대기-항목)). 통계 기준인 D-3, D-4, D-12는 4주차 킥오프 전에 확정해야 합니다.
 6. **가장 먼저 할 spike**: jqwik이 JUnit 6에서 도는지([05](05-external-facts.md#구현에-영향이-큰-누락)). 안 돌면 속성 테스트 계획 전체가 막힙니다.

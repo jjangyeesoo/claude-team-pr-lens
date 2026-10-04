@@ -2,9 +2,9 @@
 
 - 상태: **draft** (1주차에 팀 검토 후 approved로 변경) · 작성일: 2026-09-30
 - 팀: 시니어 개발자 3명 (A, B, C) · 기간: 5주 · 투입: 1인당 주 __시간 (1주차 킥오프에서 합의하고, 그 값에 맞춰 ROADMAP 범위를 조정)
-- 관련 문서: [ROADMAP](ROADMAP.md) · [진행 방식(플레이북)](PLAYBOOK.md) · [팀 방법론 가이드](../claude-code-team-methodology.md)
+- 관련 문서: [ROADMAP](ROADMAP.md) · [진행 방식(플레이북)](PLAYBOOK.md) · [팀 방법론 가이드](../guide/claude-code-team-methodology.md)
 
-> 이 문서는 프로젝트 저장소의 `docs/study-project/PRD.md`에 있고, 이후 변경은 PR로 합니다. 가이드(`docs/claude-code-team-methodology.md`)도 같은 저장소에 있어 상대 링크가 그대로 동작합니다.
+> 이 문서는 프로젝트 저장소의 `docs/product/PRD.md`에 있고, 이후 변경은 PR로 합니다. 가이드(`docs/guide/claude-code-team-methodology.md`)도 같은 저장소에 있어 상대 링크가 그대로 동작합니다.
 
 ---
 
@@ -16,7 +16,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 - 반대로 팀이 의도적으로 허용한 패턴을 문제로 지적해서 노이즈가 생깁니다.
 - 지적의 근거가 없어서, 사람이 "이걸 반영해야 하나"를 매번 판단해야 합니다.
 
-한편 Claude Code를 쓰는 팀은 이미 `CLAUDE.md`, `.claude/rules/`, `docs/adr/`, `docs/specs/`에 **팀의 기준을 글로 적어 두고** 있습니다([가이드 2장](../claude-code-team-methodology.md#2-팀-컨텍스트-공유-핵심-장)). 이 문서들을 리뷰 기준으로 쓰면 위 문제를 줄일 수 있습니다.
+한편 Claude Code를 쓰는 팀은 이미 `CLAUDE.md`, `.claude/rules/`, `docs/adr/`, `docs/specs/`에 **팀의 기준을 글로 적어 두고** 있습니다([가이드 2장](../guide/claude-code-team-methodology.md#2-팀-컨텍스트-공유-핵심-장)). 이 문서들을 리뷰 기준으로 쓰면 위 문제를 줄일 수 있습니다.
 
 ## 2. 목표
 
@@ -119,7 +119,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 | GitHub 연동 | REST API. P1은 PAT, P2는 GitHub App | 로컬 webhook 테스트는 smee.io |
 | DB | PostgreSQL (로컬은 Docker Compose), 테스트는 Testcontainers 또는 H2 | ADR로 확정 |
 | FE | Next.js (App Router), TypeScript | **조회 전용**. 비즈니스 로직은 BE에만 둔다 |
-| 저장소 구조 | 모노레포: `backend/`, `web/` | 스택별 rules를 경로로 분리 ([가이드 부록 A](../claude-code-team-methodology.md#7-부록-a-공통-코어와-스택별-오버레이-구분표)) |
+| 저장소 구조 | 모노레포: `backend/`, `web/` | 스택별 rules를 경로로 분리 ([가이드 부록 A](../guide/claude-code-team-methodology.md#7-부록-a-공통-코어와-스택별-오버레이-구분표)) |
 
 ## 8. 범위 밖 (Out of scope)
 

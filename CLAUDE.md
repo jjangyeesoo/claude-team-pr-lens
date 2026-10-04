@@ -6,10 +6,10 @@
 ## Structure
 - `backend/`: Spring Boot 4.1 / Java 17 / Gradle. CLI와 (P2부터) 서버. 명령은 `backend/`에서 실행한다 (`cd backend && ./gradlew test`)
 - `web/`: Next.js 16 / TypeScript. P3부터 사용. 명령은 `web/`에서 실행한다 (`cd web && npm run verify`)
-- `docs/specs/<이름>/`: 스펙(`requirements.md`, `design.md`, `tasks.md`), `docs/adr/`: 아키텍처 결정, `docs/spikes/`: 기술 검증 기록. 결정 목록: @docs/adr/README.md
+- `docs/specs/<이름>/`: 스펙(`README.md` 색인, `requirements.md`, `design.md`, `tasks.md`), `docs/adr/`: 아키텍처 결정, `docs/spikes/`: 기술 검증 기록. 결정 목록: @docs/adr/README.md
 
 ## Workflow
-- 구현은 스펙의 `tasks.md` 작업 단위로 한다. 작업 본문, 그 작업이 가리키는 요구사항 인수 기준, `design.md`의 관련 절만 읽는다. 스펙 파일은 크므로 통째로 읽지 않는다
+- 구현은 스펙의 `tasks.md` 작업 단위로 한다. 스펙 폴더의 `README.md`(색인)를 먼저 보고, 작업 본문, 그 작업이 가리키는 요구사항 인수 기준, `design.md`의 관련 절만 읽는다. 스펙 파일은 크므로 통째로 읽지 않는다
 - 스펙에서 결정 대기(D-n, G-n)로 표시된 항목은 임의로 확정하지 않는다. 제안값으로 구현하고, 바꿔야 하면 먼저 묻는다
 - 스펙에 없는 새 기능은 `/spec`으로 `docs/specs/`에 스펙을 먼저 만든다
 - 버그 수정은 재현하는 실패 테스트를 먼저 작성한다

@@ -35,8 +35,8 @@
 
 | 위치 | 가리키는 곳 | 문제 |
 |---|---|---|
-| `docs/study-project/ROADMAP.md:5` | `../../claude-team-starter/README.md` | 실제 폴더는 `claude-team-prlen` |
-| `docs/claude-code-team-methodology.md:664` | `../claude-team-starter/README.md` | 같음 |
+| `docs/product/ROADMAP.md:5` | `../../claude-team-starter/README.md` | 실제 폴더는 `claude-team-prlen` |
+| `docs/guide/claude-code-team-methodology.md:664` | `../claude-team-starter/README.md` | 같음 |
 | `repo/.claude/skills/pr-ready/SKILL.md:15` | `.github/pull_request_template.md` | 없음 |
 | `repo/README.md:57-59` | `.github/` | 없음 |
 | `P2-tasks:332`, `P2-des:1067` | `./gradlew :backend:generateWebhookFixtures` | `repo/backend/settings.gradle.kts:1`은 단일 프로젝트라 `:backend` 경로가 없음 |

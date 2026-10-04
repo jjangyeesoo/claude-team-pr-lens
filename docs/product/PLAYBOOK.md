@@ -1,7 +1,7 @@
 # 연구회 진행 방식 (플레이북)
 
 - 작성일: 2026-09-30 · 관련 문서: [PRD](PRD.md) · [ROADMAP](ROADMAP.md)
-- 이 문서는 [팀 방법론 가이드](../claude-code-team-methodology.md)를 3명이 5주 동안 실제로 적용하는 규칙입니다. 일반 원칙은 [가이드 5.5 역할 순환 운영](../claude-code-team-methodology.md#55-역할-순환-운영-겸직-모델)에 있고, 여기에는 이 연구회만의 구체적인 운영 방식을 적습니다.
+- 이 문서는 [팀 방법론 가이드](../guide/claude-code-team-methodology.md)를 3명이 5주 동안 실제로 적용하는 규칙입니다. 일반 원칙은 [가이드 5.5 역할 순환 운영](../guide/claude-code-team-methodology.md#55-역할-순환-운영-겸직-모델)에 있고, 여기에는 이 연구회만의 구체적인 운영 방식을 적습니다.
 
 ---
 
@@ -34,7 +34,7 @@
 
 ### 컨텍스트 담당
 
-팀의 AI 컨텍스트(`CLAUDE.md`, `.claude/`, `docs/adr/`)를 관리합니다. [가이드 2.2](../claude-code-team-methodology.md#22-claudemd-설계-무엇을-넣고-무엇을-뺄까)의 운영 규칙을 이번 주에 책임지는 사람입니다.
+팀의 AI 컨텍스트(`CLAUDE.md`, `.claude/`, `docs/adr/`)를 관리합니다. [가이드 2.2](../guide/claude-code-team-methodology.md#22-claudemd-설계-무엇을-넣고-무엇을-뺄까)의 운영 규칙을 이번 주에 책임지는 사람입니다.
 
 - `context` 라벨이 붙은 PR(`.claude/`, `CLAUDE.md` 변경)의 **필수 승인자**
 - "실수 → 규칙" 루프 운영: 팀원이 "Claude가 또 이걸 틀렸다"고 알리면 규칙 PR로 만든다. 반대로 없어도 되는 규칙은 지운다
@@ -48,7 +48,7 @@
 
 - 자기 PR과 `context` PR을 뺀 모든 PR의 **기본 승인자** (영업일 기준 24시간 안에 첫 리뷰)
 - AI 리뷰 결과(reviewer 서브에이전트, 3주차부터는 PR Lens) 중 무엇을 반영할지 판단하고, 기각한 이유를 PR에 남긴다
-- [가이드 4.1](../claude-code-team-methodology.md#41-ai-생성-코드-리뷰-기준-팀-pr-체크리스트)의 "사람이 특히 볼 것"(그럴듯하지만 틀린 코드, 과잉 설계, 테스트 약화, 의존성 추가) 확인
+- [가이드 4.1](../guide/claude-code-team-methodology.md#41-ai-생성-코드-리뷰-기준-팀-pr-체크리스트)의 "사람이 특히 볼 것"(그럴듯하지만 틀린 코드, 과잉 설계, 테스트 약화, 의존성 추가) 확인
 - 같은 지적이 두 번 나오면 컨텍스트 담당에게 규칙화를 요청
 - 작성자가 PR 설명에 적은 `AI 리뷰 지적 n건 / 반영 m건`이 맞는지 확인하고, 틀리면 고친다 ([5장](#5-지표-기록))
 
@@ -116,13 +116,13 @@
 
 ## 6. 작업 규칙
 
-[가이드 3장](../claude-code-team-methodology.md#3-개발-프로세스)과 [5장](../claude-code-team-methodology.md#5-역할-분담병렬-작업)을 따르되, 이 연구회에서 정한 값은 다음과 같습니다.
+[가이드 3장](../guide/claude-code-team-methodology.md#3-개발-프로세스)과 [5장](../guide/claude-code-team-methodology.md#5-역할-분담병렬-작업)을 따르되, 이 연구회에서 정한 값은 다음과 같습니다.
 
 - **상위 작업 하나 = 브랜치 하나 = PR 하나.** 스펙이 작업 목록(`tasks.md`)을 가진 경우, 상위 작업 하나를 PR 하나로 냅니다. 작업 목록에 "PR 경계"가 표시된 작업은 그 경계대로 나눕니다. 구현과 그 테스트는 같은 PR에 넣습니다. 작업 목록이 없는 작은 스펙은 스펙 하나가 PR 하나입니다. 한 문장으로 설명되는 변경은 스펙 없이 진행
 - **크기 목표는 `src/main` 변경 400줄 이하**(테스트, 픽스처, 문서는 세지 않음). 넘으면 PR 설명에 이유를 적습니다
 - 브랜치: `feat/<track>-<slug>` (예: `feat/t2-diff-filter`), `fix/<track>-<slug>`. 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>`. 커밋: Conventional Commits. 루트 `CLAUDE.md`도 같은 형식입니다
 - 병렬 세션은 `claude --worktree <이름>`으로 분리. 이 명령은 `worktree-<이름>` 브랜치를 만드므로, worktree 안에서 `git branch -m feat/<track>-<slug>`로 이름을 바꾼 뒤 push합니다
 - PR 전에 `/pr-ready` 실행, 검증 증거(테스트 명령과 결과)를 PR에 첨부
-- 구현 세션과 리뷰 세션은 분리 ([가이드 5.3](../claude-code-team-methodology.md#53-작성자와-리뷰어-세션-분리))
+- 구현 세션과 리뷰 세션은 분리 ([가이드 5.3](../guide/claude-code-team-methodology.md#53-작성자와-리뷰어-세션-분리))
 - 리뷰 대상은 연구회 저장소와 공개 저장소만. 회사 코드를 외부 LLM에 보내지 않음
 - API 키는 각자 `.env`나 환경변수로 두고 커밋하지 않음 (deny 규칙과 hook으로 강제)
