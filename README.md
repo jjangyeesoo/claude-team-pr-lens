@@ -75,7 +75,7 @@ docs/
 ├── specs/_template.md           작은 스펙용 템플릿 (/spec이 사용)
 ├── adr/                         결정 기록 (README.md는 CLAUDE.md가 import)
 ├── spikes/                      기술 검증 기록
-├── spec-review/                 P2·P3 스펙 검토 결과 (P2·P3 스펙을 고친 뒤 삭제)
+├── spec-review/                 스펙 검토 결과 중 남은 것 (P3 스펙을 고친 뒤 삭제)
 └── guide/                       팀 방법론 가이드, Claude Code 설정 설명
 .github/
 ├── pull_request_template.md     작업 번호, 검증 증거, AI 리뷰 지적·반영 건수

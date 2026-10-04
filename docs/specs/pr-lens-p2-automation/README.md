@@ -72,5 +72,5 @@ D-13과 D-14는 도그푸딩 중에 바로 드러나는 문제라 3주차 킥오
 - **P1에 의존하는 것**: `PrFetcher.fetch(RepoRef, int)`, 생성자 주입, `Attempt`, `CostCalculator.estimate`, sealed가 아닌 `PrLensException`(P1 설계 "공유 경계"). P2는 P1의 `HttpGitHubClient` 생성자, `CliPipeline.preflight`, `MaskingPrintStream`, `ConfigLoader` 반환형, `PullRequestUrl`을 고칩니다(작업 2.3, 2.6, 3.1, 4.1)
 
 ## 관련 문서
-- 이 스펙을 고친 근거: `docs/spec-review/`의 01, 03, 04, 05
+- 이 스펙을 고친 근거: `docs/spec-review/`의 01, 05와 커밋 `f67a6b1`. 함께 근거로 쓴 03과 04는 반영 뒤 지웠습니다(원문은 `f67a6b1`까지의 이력)
 - P3가 이 스펙에 요구하는 것: [P3 색인](../pr-lens-p3-web/README.md)

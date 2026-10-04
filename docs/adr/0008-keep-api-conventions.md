@@ -2,7 +2,7 @@
 - 상태: accepted · 날짜: 2026-10-04
 
 ## 배경
-P2·P3 스펙은 저장소를 보지 못한 채 쓰여서 두 곳이 저장소 규칙과 다르다(스펙 검토 `docs/spec-review/` 01, 03, 04, 06에서 공통으로 지적).
+P2·P3 스펙은 저장소를 보지 못한 채 쓰여서 두 곳이 저장소 규칙과 다르다(스펙 검토 `docs/spec-review/` 01, 03, 04, 06에서 공통으로 지적. 03과 04는 P2 스펙에 반영한 뒤 지웠고 원문은 커밋 `f67a6b1`까지의 이력에 있다).
 
 - 에러 형식: 스펙은 `ProblemDetail`을 가정하거나 정하지 않았다. 저장소는 ADR 0002로 `ErrorResponse { code, message, details }`를 쓰고, web의 API 클라이언트(`web/src/lib/api/http.ts`)가 이 형식을 파싱한다. P2 요구사항도 원래 ADR 0002를 따르라고 적고 있다.
 - API 경로: 스펙은 `/api/repositories`, `/api/stats`처럼 버전이 없다. 저장소 규칙(`.claude/rules/backend/api-design.md`)은 `/api/v1/<복수형-kebab-case>`다.
