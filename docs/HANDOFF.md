@@ -81,10 +81,10 @@
 상세 순서는 `docs/spec-review/01-claude-usability.md`의 "착수 전 체크리스트"에 있습니다.
 
 1. GitHub 저장소 생성과 push (`git init`과 첫 커밋은 완료)
-2. `.github/workflows/ci.yml`과 PR 템플릿 다시 만들기
+2. `.github/workflows/ci.yml` 다시 만들기 (PR 템플릿은 작성함)
 3. ADR 작성 (0004~0007. 0001을 대체하는 0003은 작성함. 0004와 0005는 P1 작업 1.2의 의존성 추가 전에 필요)
 4. 패키지를 `com.prlens`로 변경
-5. `CLAUDE.md`, `backend/CLAUDE.md`, `README.md`, rules, reviewer 에이전트를 PR Lens 기준으로 다시 쓰기 (지금은 메모 샘플 기준)
+5. `README.md`, `.claude/rules/backend/api-design.md`, `new-endpoint` 스킬을 PR Lens 기준으로 다시 쓰기 (루트 `CLAUDE.md`, `backend/CLAUDE.md`, `testing.md`, reviewer 에이전트, `/pr-ready`는 2026-10-04에 고침. PR 단위는 "상위 작업 하나 = PR 하나"로 정함)
 6. 스펙 폴더별 색인과 `/task` 스킬 추가
 7. 남은 spike: Anthropic Java SDK 실제 호출(P1 작업 13.4). jqwik과 JUnit 6 호환은 확인함(`docs/spikes/`)
 

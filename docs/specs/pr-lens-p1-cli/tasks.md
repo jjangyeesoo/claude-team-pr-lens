@@ -14,12 +14,14 @@
   - `DiffFilter`(6.3) ← T1 `ReviewEngine`(12.1)
 - 작업 3의 구현을 쓰는 작업은 7.1(`RetryExecutor`), 13.2(`RetryExecutor`), 18.2(`SecretMasker`)입니다. 이 셋은 3.1 또는 3.3이 머지된 뒤 시작합니다
 - 명령은 `backend/`에서 실행합니다(`cd backend && ./gradlew test`). 서브프로젝트는 없습니다
+- PR 단위: 상위 작업 하나가 PR 하나입니다. 구현과 그 구현의 테스트(`*` 작업 포함)를 같은 PR에 넣습니다. 큰 상위 작업에는 "PR 경계"를 적어 두었고, 그 작업은 경계대로 나눠서 냅니다. 크기 목표는 `src/main` 변경 400줄 이하이고(테스트, 픽스처, 문서는 세지 않음), 넘으면 PR 설명에 이유를 적습니다
 
 ## Tasks
 
 ### 공유 경계 (리드 B, 월요일 선머지)
 
 - [ ] 1. 프로젝트 골격과 의존성 준비
+  - PR 경계: 1.1 / 1.2 (1.1은 월요일 선머지. 패키지 이름 변경이 크면 그 부분만 먼저 따로 냄)
   - [ ] 1.1 패키지 이름 변경, 메모 샘플 제거, 패키지 뼈대 (월요일 선머지. 새 의존성 없음)
     - 패키지를 `com.example.starter`에서 `com.prlens`로 바꿉니다(ROADMAP 1주차 항목. 이미 돼 있으면 건너뜀). `build.gradle.kts`의 group, `settings.gradle.kts`의 프로젝트 이름, `application.properties`를 함께 바꿉니다. 변경 줄 수가 많으면 이 부분만 별도 PR로 먼저 냅니다
     - backend의 메모 샘플(`memo` 패키지와 그 테스트)을 지웁니다(ROADMAP: 2주차 첫 기능 PR에서 제거). `common/error/ApiExceptionHandler`가 `MemoNotFoundException`을 import하므로 그 처리 메서드도 함께 지웁니다. `common`의 나머지는 P2 스펙에서 위치를 정할 때까지 둡니다(ADR 0003)
@@ -35,6 +37,7 @@
     - _Requirements: 17.3, 22.5_
 
 - [ ] 2. 공유 타입과 경계 인터페이스 정의
+  - PR 경계: 2.1~2.3 / 2.4~2.6 (앞쪽은 월요일 선머지)
   - [ ] 2.1 `model` 패키지 레코드 작성
     - `RepoRef`, `PullRequestSnapshot`, `ChangedFile`, `FileStatus`, `PatchContent`(sealed: `Parsed`, `Absent`, `Unparseable`), `Hunk`, `DiffLine`, `LineKind`
     - `ReviewContext`(경로 중복 시 생성 거부), `ContextFile`, `ContextSource`, `Revision`
@@ -132,6 +135,7 @@
     - **Validates: Requirements 3.8, 3.9, 3.10**
 
 - [ ] 7. GitHub 클라이언트와 PR 가져오기
+  - PR 경계: 7.1 / 7.2~7.5 / 7.6~7.7
   - [ ] 7.1 `HttpGitHubClient`, PAT용 `GitHubCredentials` 구현
     - 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`. 요청 제한 시간 30초, 모든 요청을 `GitHubCredentials`로 인증(P1은 `GITHUB_TOKEN`)
     - `RetryExecutor` 적용. rate limit 분류(design.md "재시도 정책"의 표): 403/429에 `retry-after`가 있으면 그 값, 없고 `x-ratelimit-remaining == 0`이면 `x-ratelimit-reset`까지 남은 시간, 둘 다 아니고 본문이 secondary rate limit을 알리면 60초를 `Attempt.Retryable`의 대기 시간으로 전달. 그 밖의 403은 권한 부족
@@ -161,6 +165,7 @@
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
 - [ ] 8. 컨텍스트 수집
+  - PR 경계: 8.1~8.5 / 8.6~8.8 / 8.9~8.12
   - [ ] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
     - _Requirements: 4.1, 4.9_
   - [ ] 8.2 `CLAUDE.md` 수집 구현
@@ -228,6 +233,7 @@
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
 
 - [ ] 11. 청크 계획, 프롬프트, 비용, 병합
+  - PR 경계: 11.1~11.4 / 11.5~11.9
   - [ ] 11.1 모드 결정과 `ChunkPlanner` 구현
     - 모드: 대상 0개 `NO_TARGET`, count ≤ L 단일(count 0 포함, 설계 G-2), ≤ 3L 분할, 초과 요약 전용
     - 분할: head 경로 코드 포인트 정렬 후 결정적 순차 greedy, L 초과 파일은 단독 Chunk
@@ -327,6 +333,7 @@
     - **Validates: Requirements 15.9, 15.10, 16.7, 16.8**
 
 - [ ] 18. CLI 명령과 파이프라인
+  - PR 경계: 18.1~18.2 / 18.3~18.6 / 18.7
   - [ ] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
     - _Requirements: 15.1, 15.7, 15.12, 22.1_
   - [ ] 18.2 `CliPipeline.preflight` 구현
@@ -358,7 +365,8 @@
 ### 컨텍스트 (컨텍스트 담당 A, 트랙과 병렬)
 
 - [ ] 23. Claude Code 컨텍스트를 PR Lens에 맞추기 (ROADMAP 2주차 "컨텍스트 담당 A의 추가 작업")
-  - [ ] 23.1 ADR 0003 후속 정리 (월요일, 1.1과 함께)
+  - PR 경계: 23.1 / 23.2
+  - [ ] 23.1 ADR 0003 후속 정리 (월요일, 1.1과 함께. `backend/CLAUDE.md`, `testing.md`, `reviewer.md`, 루트 `CLAUDE.md`는 2026-10-04에 반영했으므로 남은 것은 `new-endpoint` 스킬)
     - `backend/CLAUDE.md`의 Architecture 절과 단일 테스트 예시, `.claude/agents/reviewer.md`의 레이어 규칙, `.claude/skills/new-endpoint`를 평면 패키지 기준으로 고침
     - `.claude/rules/backend/testing.md`에 jqwik(속성 하나 = `@Property` 하나, 태그 주석), ArchUnit, `testkit` 위치, 픽스처 규칙(실제 `.env`나 `secrets/` 경로의 파일을 만들지 않음, 반례는 예시 테스트로 고정)을 추가하고 메모 예시를 교체
     - 루트 `CLAUDE.md`의 브랜치 규칙(`feat/<track>-<slug>`), 워크플로 문구(tasks.md 작업 단위 구현), web `types.ts` 규칙의 P3 전 예외를 고침
@@ -369,6 +377,7 @@
 ### 통합 (T3 주도, 전원, 목~금)
 
 - [ ] 20. 골든 픽스처와 전체 파이프라인 테스트
+  - PR 경계: 20.1 / 20.2~20.3 (20.4는 실행 기록이라 코드 PR이 아님)
   - [ ] 20.1 테스트 픽스처 작성 (`src/test/resources/fixtures/<name>/`) (수요일부터 시작 가능. 공유 타입과 `ResultCodec`만 있으면 됨)
     - 실제 PR diff 샘플 3~5개: 단일 모드, 분할 모드, 제외 파일 포함
     - 인젝션 픽스처 4개: diff 추가 줄, PR 제목, PR 본문, diff 안 닫는 Delimiter_Tag. 기대 결과에 인젝션 위치 `security` Finding과 심어 둔 `blocker` Finding
@@ -417,7 +426,7 @@
   | D-6 생성 코드 기본 패턴 | 6.3, 6.4, 6.6, 20.1 |
   | D-7 스펙 head SHA fallback | 2.1, 8.9, 8.10, 11.5 |
   | D-8 리뷰 대상 저장소 한정 | 결정되면 요구사항과 작업을 추가 |
-- 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 3건 초안"에 해당). 플레이북의 "스펙 하나 = PR 하나"를 그대로 적용할 수 없으므로, PR은 말단 작업 1~3개를 묶어 400줄 이하로 내는 것을 제안합니다(팀 확정 필요).
+- 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 3건 초안"에 해당). 플레이북의 "스펙 하나 = PR 하나"를 그대로 적용할 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
   2. FR-6 분할: 11.1의 분할 계획과 12.1의 `chunk_failed`·누적 비용 경고. 미루는 동안 Size_Limit 초과 PR은 요약 전용 모드로 처리

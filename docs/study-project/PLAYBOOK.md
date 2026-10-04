@@ -118,8 +118,9 @@
 
 [가이드 3장](../claude-code-team-methodology.md#3-개발-프로세스)과 [5장](../claude-code-team-methodology.md#5-역할-분담병렬-작업)을 따르되, 이 연구회에서 정한 값은 다음과 같습니다.
 
-- **스펙 하나 = 브랜치 하나 = PR 하나**, 변경 400줄 이하. 한 문장으로 설명되는 변경은 스펙 없이 진행
-- 브랜치: `feat/<track>-<slug>` (예: `feat/t2-diff-filter`), 커밋: Conventional Commits. 스타터 CLAUDE.md의 브랜치 규칙(`feat/<issue>-<slug>`)은 1주차에 이 형식으로 바꿉니다
+- **상위 작업 하나 = 브랜치 하나 = PR 하나.** 스펙이 작업 목록(`tasks.md`)을 가진 경우, 상위 작업 하나를 PR 하나로 냅니다. 작업 목록에 "PR 경계"가 표시된 작업은 그 경계대로 나눕니다. 구현과 그 테스트는 같은 PR에 넣습니다. 작업 목록이 없는 작은 스펙은 스펙 하나가 PR 하나입니다. 한 문장으로 설명되는 변경은 스펙 없이 진행
+- **크기 목표는 `src/main` 변경 400줄 이하**(테스트, 픽스처, 문서는 세지 않음). 넘으면 PR 설명에 이유를 적습니다
+- 브랜치: `feat/<track>-<slug>` (예: `feat/t2-diff-filter`), `fix/<track>-<slug>`. 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>`. 커밋: Conventional Commits. 루트 `CLAUDE.md`도 같은 형식입니다
 - 병렬 세션은 `claude --worktree <이름>`으로 분리. 이 명령은 `worktree-<이름>` 브랜치를 만드므로, worktree 안에서 `git branch -m feat/<track>-<slug>`로 이름을 바꾼 뒤 push합니다
 - PR 전에 `/pr-ready` 실행, 검증 증거(테스트 명령과 결과)를 PR에 첨부
 - 구현 세션과 리뷰 세션은 분리 ([가이드 5.3](../claude-code-team-methodology.md#53-작성자와-리뷰어-세션-분리))
