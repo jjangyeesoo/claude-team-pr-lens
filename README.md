@@ -2,12 +2,12 @@
 
 팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, PR에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구입니다. 3명이 5주 동안 Claude Code로 만들면서 팀 개발 방법론을 실험하는 연구회 프로젝트입니다.
 
-- **지금 상태 (2026-10-04)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) PR Lens 코드는 아직 없습니다. 소스는 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
+- **지금 상태 (2026-10-04)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) PR Lens 코드는 아직 없습니다. backend는 패키지 뼈대(`com.prlens`)만 있고 web은 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
 - **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회. 2~4주차에 이 순서로 되는 데까지 개발하고 5주차에 발표합니다. 주차별 일정은 가이드이고 강제하지 않습니다
 - **구조**: 모노레포. `backend/`(CLI와 P2부터 서버), `web/`(P3부터 조회 화면)
 - backend: Spring Boot 4.1 · Java 17 · Gradle (Kotlin DSL) · Spotless(google-java-format)
 - web: Next.js 16 (App Router) · React 19 · TypeScript · ESLint · Prettier · Vitest
-- 메모 샘플: 스타터의 메모 API(`/api/v1/memos`)와 메모 화면(`/memos`)이 남아 있습니다. backend는 P1 작업 1.1에서, web은 P3에서 지웁니다.
+- 메모 샘플: web에 스타터의 메모 화면(`/memos`)이 남아 있고 P3에서 지웁니다. backend의 메모 API(`/api/v1/memos`)는 P1 작업 1.1에서 지웠으므로 이 화면은 데이터를 불러오지 못합니다.
 - 필요한 것: JDK 17+, Node 24+(`web/.nvmrc`), git. hook은 Java 단일 파일 스크립트(`java Hook.java`)라 hook 자체에는 Node가 필요 없습니다.
 
 이 저장소의 Claude Code 설정(`.claude/`, hooks, 스킬)은 `claude-team-starter`에서 가져와 PR Lens에 맞게 고친 것입니다.
@@ -34,7 +34,7 @@ cd ../web && npm ci && npm run verify
 claude                              # 저장소 루트에서 실행. 처음에는 폴더 신뢰(trust)를 묻습니다. 신뢰해야 팀 allow 규칙이 적용됩니다
 ```
 
-메모 샘플 화면을 보려면 `backend`에서 `./gradlew bootRun`, `web`에서 `npm run dev`를 실행하고 http://localhost:3000/memos 를 엽니다. backend 주소는 `web/.env.local`의 `API_BASE_URL`로 바꿀 수 있습니다(기본 `http://localhost:8080`).
+web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:3000). backend 주소는 `web/.env.local`의 `API_BASE_URL`로 바꿀 수 있습니다(기본 `http://localhost:8080`).
 
 첫 세션에서 확인할 것:
 1. `/context`에 루트 `CLAUDE.md`가 로드되어 있는지. `backend/`나 `web/` 파일을 읽게 한 뒤 다시 보면 그 폴더의 `CLAUDE.md`와 해당 rules가 추가로 로드됩니다
@@ -47,7 +47,7 @@ claude                              # 저장소 루트에서 실행. 처음에�
 CLAUDE.md                        팀 공용 지시문 (구조, 워크플로, 스택 간 규칙, 컨벤션)
 backend/
 ├── CLAUDE.md                    backend 명령·아키텍처 (backend 파일을 다룰 때만 로드)
-└── build.gradle.kts, src/ ...   CLI와 서버 (지금은 메모 샘플)
+└── build.gradle.kts, src/ ...   CLI와 서버 (지금은 패키지 뼈대)
 web/
 ├── CLAUDE.md                    web 명령·아키텍처 (web 파일을 다룰 때만 로드). 첫 줄의 @AGENTS.md는 Next.js가 관리
 ├── AGENTS.md                    Next.js가 생성: "번들된 문서(node_modules/next/dist/docs)를 먼저 읽어라"

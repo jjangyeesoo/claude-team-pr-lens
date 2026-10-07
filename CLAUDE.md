@@ -1,6 +1,6 @@
 # Project: PR Lens
 팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구다. 모노레포이고 단계별로 만든다: P1 CLI(`prlens review <PR URL>`), P2 webhook 자동 리뷰와 저장, P3 웹 조회.
-스타터에서 출발해 메모 샘플(`memo`)이 아직 남아 있다(backend는 P1 작업 1.1에서, web은 P3에서 제거). 메모 코드를 새 코드의 본보기로 삼지 않는다.
+스타터에서 출발해 web에 메모 샘플(`memos`)이 아직 남아 있다(backend는 P1 작업 1.1에서 제거했고, web은 P3에서 제거). 메모 코드를 새 코드의 본보기로 삼지 않는다.
 스택별 명령과 구조는 각 폴더의 CLAUDE.md에 있다 (그 폴더의 파일을 다룰 때 로드된다).
 
 ## Structure
