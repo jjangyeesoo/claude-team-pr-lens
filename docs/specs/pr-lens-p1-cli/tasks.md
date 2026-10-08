@@ -366,7 +366,7 @@
 
 - [ ] 23. Claude Code 컨텍스트를 PR Lens에 맞추기 (ROADMAP 2주차 "컨텍스트 담당 A의 추가 작업")
   - PR 경계: 23.1 / 23.2
-  - [ ] 23.1 ADR 0003 후속 정리 (월요일, 1.1과 함께. `backend/CLAUDE.md`, `testing.md`, `reviewer.md`, 루트 `CLAUDE.md`는 2026-10-04에 반영했으므로 남은 것은 `new-endpoint` 스킬)
+  - [x] 23.1 ADR 0003 후속 정리 (월요일, 1.1과 함께. `backend/CLAUDE.md`, `testing.md`, `reviewer.md`, 루트 `CLAUDE.md`는 2026-10-04에 반영했으므로 남은 것은 `new-endpoint` 스킬)
     - `backend/CLAUDE.md`의 Architecture 절과 단일 테스트 예시, `.claude/agents/reviewer.md`의 레이어 규칙, `.claude/skills/new-endpoint`를 평면 패키지 기준으로 고침
     - `.claude/rules/backend/testing.md`에 jqwik(속성 하나 = `@Property` 하나, 태그 주석), ArchUnit, `testkit` 위치, 픽스처 규칙(실제 `.env`나 `secrets/` 경로의 파일을 만들지 않음, 반례는 예시 테스트로 고정)을 추가하고 메모 예시를 교체
     - 루트 `CLAUDE.md`의 브랜치 규칙(`feat/<track>-<단계>-<번호>-<slug>`), 워크플로 문구(tasks.md 작업 단위 구현), web `types.ts` 규칙의 P3 전 예외를 고침
