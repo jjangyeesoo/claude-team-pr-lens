@@ -52,7 +52,7 @@
 | 저장소 생성, 이름 변경 | 완료 | GitHub 저장소를 만들어 push함. 패키지는 `com.prlens`로 바꾸고 backend 메모 샘플을 지움(P1 작업 1.1) |
 | CLAUDE.md, hooks | 부분 | 루트·backend `CLAUDE.md`, `testing.md`, reviewer, `/pr-ready`를 PR Lens 기준으로 고침. 보호 hook 보강. hook은 직접 실행으로 확인했고 전원의 `/context`·`/hooks` 확인은 남음 |
 | ADR | 부분 | 0003(패키지 구조, 0001 대체), 0004(CLI 라이브러리, picocli), 0005(LLM 설정), 0008(API 규약 유지) 작성. 0006 DB·테스트, 0007 저장소 구조는 미작성 |
-| spike | 부분 | 의존성 조합과 실행 jar만 확인(`docs/spikes/`). 계획한 세 건(GitHub diff 조회, Claude 구조화 출력과 비용 실측, smee webhook)은 미수행 |
+| spike | 부분 | 의존성 조합과 실행 jar, Claude 구조화 출력과 비용 실측을 확인(`docs/spikes/`). 계획한 세 건 중 GitHub diff 조회와 smee webhook은 미수행 |
 | 2주차 스펙 | 부분 | 세 트랙을 한 건(`docs/specs/pr-lens-p1-cli/`)으로 작성하고 검토 지적을 반영. 팀 승인 전 |
 | 지표, PR 템플릿 | 부분 | PR 템플릿 작성. 기록 방식 합의와 기준선은 미완 |
 | GitHub 저장소 설정 | 미완 | CI 워크플로(`.github/workflows/ci.yml`)는 작성했지만 GitHub에서 실행해 보지 못함. 브랜치 보호와 라벨 미설정 |

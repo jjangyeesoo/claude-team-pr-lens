@@ -42,8 +42,9 @@ ADR-0005(모델, effort, 최대 출력 토큰, refusal fallback, 캐시 지점)�
 
 | 질문 | 결과 |
 |---|---|
-| 1회 리뷰 비용이 상한 $0.50 안인가 | 안입니다. 300줄대 PR에서 $0.06~$0.16입니다. 비용의 대부분은 입력입니다(pr1 medium에서 입력 약 $0.105, 출력 약 $0.04). effort를 `low`에서 `high`로 올려도 차이는 $0.04 정도입니다 |
+| 1회 리뷰 비용이 상한 $0.50 안인가 | 안입니다. 300줄대 PR에서 $0.06~$0.16입니다. 캐시를 쓰는 큰 diff(pr1)에서는 입력이 대부분입니다(pr1 medium에서 입력 약 $0.105, 출력 약 $0.04). 캐시를 읽거나 diff가 작으면 출력이 절반 이상입니다(sec medium에서 입력 약 $0.008, 출력 약 $0.05). effort를 `low`에서 `high`로 올려도 차이는 $0.04 정도입니다 |
 | effort별 응답 시간 | `low` 10~15초, `medium` 18~29초, `high` 27~33초입니다. P1의 120초(요구사항 9.7), P2의 Claude 호출 예산 90초보다 훨씬 짧습니다 |
+| 출력 속도 | 출력 토큰을 응답 시간으로 나누면 초당 44~111 토큰입니다(pr1 44~99, add·sec 103~111). 입력 처리 시간이 포함된 값입니다. 이 속도로 180초에 받는 양은 약 8,000~20,000 토큰입니다 |
 | thinking 토큰은 얼마나 되는가 | `usage.outputTokensDetails.thinkingTokens`로 읽습니다. add 입력에서 `low` 0, `medium` 507(출력 2,033 중), `high` 1,979(출력 3,374 중)였습니다. `high`에서 늘어난 출력은 거의 thinking입니다 |
 | 최대 출력 토큰 16,000이 충분한가 | 충분합니다. 가장 큰 출력이 3,374 토큰이었고 `max_tokens`에 닿은 적이 없습니다. 지적이 수십 건인 PR은 재지 못했습니다 |
 | effort에 따라 지적이 달라지는가 | 이 표본에서는 `low`가 지적 수가 적고(pr1 1건 대 2건) `medium`과 `high`는 비슷했습니다. 표본이 작아 품질 차이는 판단하지 않습니다 |
@@ -53,7 +54,7 @@ ADR-0005(모델, effort, 최대 출력 토큰, refusal fallback, 캐시 지점)�
 | 단일 모드에서 캐시 쓰기의 추가 비용 | 6,712 토큰 기준 약 $0.007입니다(캐시 지점 없음 $0.1430, 있음 $0.1414~$0.1478로 편차 안). 읽으면 약 $0.026을 아낍니다 |
 | 보안 관련 diff에서 refusal이 나오는가 | 이 한 건에서는 나오지 않았습니다. 공격 문자열(셸 주입, SQL 주입)이 든 테스트를 정상적으로 리뷰했고, 남은 `sort` 주입 경로를 blocker로 지적했습니다. refusal 자체는 재현하지 못했습니다 |
 | `fallbacks: "default"`를 Java SDK로 보낼 수 있는가 | 요청은 받아들여집니다. 전용 빌더 메서드를 찾지 않고 `putAdditionalHeader("anthropic-beta", "server-side-fallback-2026-07-01")`와 `putAdditionalBodyProperty("fallbacks", JsonValue.from("default"))`로 보냈습니다. refusal이 없었으므로 대체 모델로 넘어가는 동작은 확인하지 못했습니다 |
-| 출력이 `max_tokens`에 닿으면 어떻게 되는가 | `max_tokens`를 1,200으로 낮춰 재현했습니다(sec, medium, 표에는 없는 15번째 호출, $0.0639). HTTP 200에 `stop_reason`이 `max_tokens`, `usage.outputTokens`가 한도와 같은 1,200이었고 본문 JSON은 첫 지적의 `message` 중간에서 끊겼습니다. 1,200 중 797이 thinking 토큰이었습니다. thinking도 한도에 포함됩니다 |
+| 출력이 `max_tokens`에 닿으면 어떻게 되는가 | `max_tokens`를 1,200으로 낮춰 재현했습니다(sec, medium, 표에는 없는 15번째 호출, $0.0639. 캐시가 만료돼 6,712 토큰을 다시 썼습니다). HTTP 200에 `stop_reason`이 `max_tokens`, `usage.outputTokens`가 한도와 같은 1,200이었고 본문 JSON은 첫 지적의 `message` 중간에서 끊겼습니다. 1,200 중 797이 thinking 토큰이었습니다. thinking도 한도에 포함됩니다 |
 | 규칙 근거(`basis`)가 붙는가 | 붙습니다. `basis.ref`가 team_context 머리줄의 `path`와 같은 글자로 나왔습니다(`backend/CLAUDE.md`, `.claude/rules/backend/testing.md` 등). M1 완료 조건인 "규칙 근거 지적 1건 이상"은 세 입력 모두에서 나왔습니다 |
 
 ## SDK에서 확인한 것 (작업 13.1에 반영)
