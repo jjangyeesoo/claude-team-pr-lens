@@ -1,7 +1,7 @@
 # PRD: PR Lens, 팀 컨텍스트 기반 PR 리뷰어
 
 - 상태: **draft** (1주차에 팀 검토 후 approved로 변경) · 작성일: 2026-09-30
-- 팀: 시니어 개발자 3명 (A, B, C) · 기간: 5주 · 투입: 1인당 주 6시간 (2026-10-08 합의. ROADMAP 범위는 이 값에 맞춰 조정)
+- 팀: 시니어 개발자 3명 (A, B, C) · 기간: 5주 · 투입: 1인당 주 6시간 (2026-10-08 합의. 이 값에 맞춘 ROADMAP 범위 조정은 아직 하지 않음)
 - 관련 문서: [ROADMAP](ROADMAP.md) · [진행 방식(플레이북)](PLAYBOOK.md) · [팀 방법론 가이드](../guide/claude-code-team-methodology.md)
 
 > 이 문서는 프로젝트 저장소의 `docs/product/PRD.md`에 있고, 이후 변경은 PR로 합니다. 가이드(`docs/guide/claude-code-team-methodology.md`)도 같은 저장소에 있어 상대 링크가 그대로 동작합니다.

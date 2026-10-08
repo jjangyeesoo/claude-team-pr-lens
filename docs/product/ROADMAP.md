@@ -48,7 +48,7 @@
 
 | 항목 | 상태 | 내용 |
 |---|---|---|
-| PRD 확정 | 부분 | 검토는 마침(2026-10-08). PRD 10장의 제품 이름(PR Lens), 투입 시간(1인당 주 6시간), API 키 발급 주체와 월 예산(jjangyeesoo, 월 $20)도 정함(2026-10-08). 상태를 `approved`로 바꾸는 것이 남음 |
+| PRD 확정 | 부분 | 검토는 마침(2026-10-08). PRD 10장의 제품 이름(PR Lens), 투입 시간(1인당 주 6시간), API 키 발급 주체와 월 예산(jjangyeesoo, 월 $20)도 정함(2026-10-08). 남은 것: 주 6시간에 맞춘 범위 조정, 상태를 `approved`로 바꾸기 |
 | 저장소 생성, 이름 변경 | 완료 | GitHub 저장소를 만들어 push함. 패키지는 `com.prlens`로 바꾸고 backend 메모 샘플을 지움(P1 작업 1.1) |
 | CLAUDE.md, hooks | 부분 | 루트·backend `CLAUDE.md`, `testing.md`, reviewer, `/pr-ready`를 PR Lens 기준으로 고침. 보호 hook 보강. hook은 직접 실행으로 확인했고 전원의 `/context`·`/hooks` 확인은 남음 |
 | ADR | 부분 | 0003(패키지 구조, 0001 대체), 0004(CLI 라이브러리, picocli), 0005(LLM 설정), 0008(API 규약 유지) 작성. 0006 DB·테스트, 0007 저장소 구조는 미작성 |
