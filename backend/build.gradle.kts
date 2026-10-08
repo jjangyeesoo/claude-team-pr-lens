@@ -21,8 +21,13 @@ repositories {
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	// Spring Boot BOM이 관리하지 않으므로 버전을 고정한다 (함께 동작을 확인한 조합: docs/spikes/2026-10-04-build-stack.md).
+	implementation("info.picocli:picocli:4.7.7")
+	implementation("com.anthropic:anthropic-java:2.68.0")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("net.jqwik:jqwik:1.10.1")
+	testImplementation("com.tngtech.archunit:archunit-junit5:1.5.1")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

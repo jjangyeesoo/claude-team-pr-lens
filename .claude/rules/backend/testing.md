@@ -3,7 +3,8 @@ paths:
   - "backend/**"
 ---
 # 테스트 규칙
-- 도구: JUnit Jupiter 6 + AssertJ. 속성 기반 테스트는 jqwik, 아키텍처 규칙은 ArchUnit을 쓴다 (둘 다 P1 작업 1.2에서 추가한다. 추가되기 전에는 쓰지 않는다)
+- 도구: JUnit Jupiter 6 + AssertJ. 속성 기반 테스트는 jqwik, 아키텍처 규칙은 ArchUnit을 쓴다
+- 아키텍처 규칙은 `src/test/java/com/prlens/ArchitectureTest.java`에 모은다. 대상 클래스가 생긴 규칙에서는 `allowEmptyShould(true)`를 뗀다. ArchUnit이 못 보는 것(문자열 리터럴의 `%n`)은 `SourceConventionsTest`가 소스를 읽어 검사한다
 - 순수 함수(diff, glob, 필터, 검증, 직렬화, 비용 계산)는 Spring 없이 테스트한다
 - 속성 테스트: 설계 문서의 Property 하나를 `@Property` 메서드 하나로 구현하고, 바로 위에 태그 주석을 단다: `// Feature: pr-lens-p1-cli, Property N: <이름>`. `tries`는 100 이상. 실패한 반례는 예시 테스트로 고정한다
 - 공용 생성기는 `src/test/java/com/prlens/testkit/`에 둔다
