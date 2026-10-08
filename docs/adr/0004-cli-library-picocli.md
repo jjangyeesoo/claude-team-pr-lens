@@ -7,7 +7,7 @@ P1은 `prlens review <PR URL> [--format markdown|json] [--config <path>]` 한 �
 이 결정이 필요한 이유는 둘이다.
 
 - P1 작업 1.2가 CLI 라이브러리를 `build.gradle.kts`에 버전 고정으로 추가한다. 의존성 추가 전에 정해야 한다.
-- CLI의 종료 코드는 계약이다(blocker 1, 불완전 결과 3, 사용법·설정 오류 2 등. P1 설계 "예외 계층과 종료 코드"). P2의 GitHub Actions 실행도 이 값을 쓴다. 인자 오류를 포함한 모든 오류가 한 곳(`CliPipeline`)의 종료 코드 결정을 거쳐야 한다.
+- CLI의 종료 코드는 계약이다(blocker 1, 사용법·설정 오류 2. 불완전 결과 3은 결정 대기 D-4의 제안값이다. 원본은 P1 설계 "예외 계층과 종료 코드"). P2의 GitHub Actions 실행도 이 값을 쓴다. 인자 오류를 포함한 모든 오류가 한 곳(`CliPipeline`)의 종료 코드 결정을 거쳐야 한다.
 
 확인한 사실(`docs/spikes/2026-10-04-build-stack.md`, 한 대의 Windows 실행 결과):
 
@@ -39,5 +39,5 @@ CLI 명령 해석에 picocli를 쓴다.
   - P1 작업 18.1, 18.5: 명령 정의와 예외 → 종료 코드 매핑.
   - P1 작업 18.7: 시작 클래스 지정과 실행 패키징.
 - 아직 확인하지 않은 것
-  - picocli의 자동 오류 처리를 끄는 방법(`setParameterExceptionHandler`)은 문서 요약으로만 확인했다(`docs/spec-review/05-external-facts.md`). 작업 18.1에서 실제로 확인한다.
+  - picocli의 자동 오류 처리를 끄는 방법(`setParameterExceptionHandler`)은 확인하지 않았다(2026-10-04 스펙 검토가 "확인하지 않은 주장"으로 분류). 작업 18.1에서 실제로 확인한다.
   - macOS와 Linux에서의 실행. P1 작업 21의 CI 매트릭스에서 확인한다.

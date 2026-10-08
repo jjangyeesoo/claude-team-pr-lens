@@ -33,7 +33,7 @@ Glossary 용어는 밑줄 표기(`Diff_Parser`), 클래스는 붙여 쓴 이름(
 
 | ID | 내용 | 결정할 곳 | 제안값 |
 |---|---|---|---|
-| D-1 | CLI 라이브러리 | 결정됨: [ADR 0004](../../adr/0004-cli-library-picocli.md) | picocli |
+| D-1 | CLI 라이브러리 | 확정: [ADR 0004](../../adr/0004-cli-library-picocli.md) | picocli |
 | D-2 | 모델, effort, 최대 출력 토큰, refusal fallback | ADR-0005 | `claude-opus-5-5`, `medium`, 16,000, fallback 미사용 |
 | D-3 | 1회 비용 상한 | 1주차 합의 | $0.50 |
 | D-4 | 불완전 결과와 요약 전용 모드의 종료 코드 | T3 스펙 검토 | 불완전 3. 요약 전용은 지금 0 |

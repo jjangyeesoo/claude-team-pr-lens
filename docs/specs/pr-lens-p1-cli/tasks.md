@@ -29,7 +29,7 @@
     - `backend/src/main/java/com/prlens/` 아래 패키지 뼈대 생성(ADR 0003): `model`, `support`, `github`, `pullrequest`, `diff`, `glob`, `filter`, `context`, `llm`, `review`, `codec`, `output`, `config`, `cli`
     - `src/test/java/com/prlens/testkit/` 패키지 생성
     - _Requirements: 17.3_
-  - [ ] 1.2 의존성 추가와 아키텍처 규칙 (선머지 대상 아님. ADR-0005 결정 후 리드가 진행. ADR 0004는 결정됨)
+  - [ ] 1.2 의존성 추가와 아키텍처 규칙 (선머지 대상 아님. ADR-0005 결정 후 리드가 진행. ADR 0004는 확정)
     - `backend/build.gradle.kts`에 picocli, jqwik, ArchUnit, Anthropic Java SDK를 버전 고정으로 추가 (PR 설명에 추가 이유 기록). 의존성 추가는 사람의 승인이 필요합니다. YAML 파서(snakeyaml)와 Jackson 3은 Spring Boot가 이미 가져오므로 추가하지 않습니다. 임시 프로젝트에서 함께 동작을 확인한 버전은 jqwik 1.10.1, archunit-junit5 1.5.1, picocli 4.7.7, anthropic-java 2.68.0입니다
     - ArchUnit 규칙 작성: `model`은 JDK 외 의존 금지, `review`는 `cli`·`output`·`github`·`config` 의존 금지, `review`는 `AnthropicLlmClient` 참조 금지, `context`·`pullrequest`는 `HttpGitHubClient` 참조 금지, Spring 애너테이션은 `cli` 조립 코드에만(스타터의 `common`과 Application 클래스는 예외로 둠), `println` 사용 금지, `com.fasterxml.jackson.databind` 사용 금지(Jackson 3 `tools.jackson`만 사용)
     - 대상 클래스가 아직 없는 규칙은 `allowEmptyShould(true)`로 둡니다(ArchUnit은 기본값에서 대상이 없는 규칙을 실패 처리)
@@ -418,7 +418,7 @@
 
   | 항목 | 막는 작업 |
   |---|---|
-  | D-1 CLI 라이브러리 (결정됨: ADR 0004, picocli) | 막는 작업 없음. picocli를 쓰는 작업은 1.2, 18.1, 18.2, 18.3, 18.5, 18.6, 18.7 |
+  | D-1 CLI 라이브러리 (확정: ADR 0004, picocli) | 없음 |
   | D-2 모델·effort·최대 출력 토큰·fallback (ADR-0005) | 1.2, 2.1, 11.5, 13.1, 13.3, 16.1, 16.2 |
   | D-3 비용 상한 | 2.1, 16.1, 18.4 |
   | D-4 불완전 결과와 요약 전용 모드의 종료 코드 | 17.3, 17.4, 18.5, 20.1, 20.2 |
