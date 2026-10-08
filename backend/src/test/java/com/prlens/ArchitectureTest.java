@@ -1,6 +1,6 @@
 package com.prlens;
 
-import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -80,8 +80,18 @@ class ArchitectureTest {
           .dependOnClassesThat(SPRING_ANNOTATIONS)
           .allowEmptyShould(true);
 
+  // ADR 0004
   @ArchTest
-  static final ArchRule noPrintln = noClasses().should().callMethodWhere(target(name("println")));
+  static final ArchRule picocliOnlyInCli =
+      noClasses()
+          .that()
+          .resideOutsideOfPackage("com.prlens.cli..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("picocli..");
+
+  @ArchTest
+  static final ArchRule noPrintln = noClasses().should().accessTargetWhere(target(name("println")));
 
   // Anthropic SDK가 Jackson 2도 끌어온다. Jackson 3(tools.jackson)만 쓴다.
   @ArchTest
