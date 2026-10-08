@@ -362,9 +362,9 @@ Review_Target_File이 0개인 경우의 동작은 요구사항 13.11에서 한 �
 1. WHEN `--config <경로>` 옵션이 있으면, THE Config_Loader SHALL 해당 파일만 읽고, 옵션이 없으면 D-5의 기본 위치를 현재 작업 폴더, 사용자 홈 순서로 찾아 처음 발견한 파일 하나만 읽어 Configuration으로 해석한다
 2. WHEN 설정 파일이 없으면, THE Config_Loader SHALL 모든 항목에 기본값을 쓴 Configuration을 만든다
 3. THE Configuration SHALL 추가 제외 패턴, 해제 제외 패턴, Size_Limit, 모델 이름, effort, 최대 출력 토큰, 재시도 횟수, 1회 리뷰 비용 상한(USD), 모델별 입력·출력·캐시 쓰기·캐시 읽기 토큰 단가를 항목으로 가진다
-4. THE Config_Loader SHALL 기본값으로 추가·해제 제외 패턴 없음, Size_Limit 400, 모델 `claude-opus-5-5`, effort는 ADR-0005 값(D-2, 제안 `medium`), 최대 출력 토큰은 ADR-0005 값(D-2, 제안 16,000), 재시도 횟수 3, 1회 리뷰 비용 상한 $0.50, 토큰 단가는 `claude-opus-5-5`의 입력 $4.00, 출력 $20.00, 캐시 쓰기 $5.00, 캐시 읽기 $0.20(1M 토큰당)을 사용한다
+4. THE Config_Loader SHALL 기본값으로 추가·해제 제외 패턴 없음, Size_Limit 400, 모델 `claude-opus-5-5`, effort `medium`(D-2, ADR 0005), 최대 출력 토큰 16,000(D-2, ADR 0005), 재시도 횟수 3, 1회 리뷰 비용 상한 $0.50, 토큰 단가는 `claude-opus-5-5`의 입력 $4.00, 출력 $20.00, 캐시 쓰기 $5.00, 캐시 읽기 $0.20(1M 토큰당)을 사용한다
 5. WHEN 설정 파일이 일부 항목만 지정하면, THE Config_Loader SHALL 지정되지 않은 항목에 기본값을 채운다
-6. THE Config_Loader SHALL Size_Limit을 1~10,000 정수, 재시도 횟수를 0~10 정수, 최대 출력 토큰을 1~128,000 정수, 1회 리뷰 비용 상한을 0.01~100.00 USD, 토큰 단가를 0 이상, 모델 이름을 빈 문자열이 아닌 값으로, effort를 `low`, `medium`, `high`, `xhigh`, `max` 중 하나로 허용한다. 설정 파일이 토큰 단가를 지정하면 모델 이름 단위로 기본 단가표에 합치고, 지정한 모델은 네 단가를 모두 적어야 한다 (G-10)
+6. THE Config_Loader SHALL Size_Limit을 1~10,000 정수, 재시도 횟수를 0~10 정수, 최대 출력 토큰을 1~20,000 정수(ADR 0005), 1회 리뷰 비용 상한을 0.01~100.00 USD, 토큰 단가를 0 이상, 모델 이름을 빈 문자열이 아닌 값으로, effort를 `low`, `medium`, `high`, `xhigh`, `max` 중 하나로 허용한다. 설정 파일이 토큰 단가를 지정하면 모델 이름 단위로 기본 단가표에 합치고, 지정한 모델은 네 단가를 모두 적어야 한다 (G-10)
 7. IF 설정 파일에 문법 오류, 알 수 없는 항목, 6번 범위 밖의 값이 있으면, THEN THE Config_Loader SHALL 문제가 있는 모든 항목의 이름, 문제, 허용 범위를 담은 오류 메시지를 출력하고, THE PR_Lens_CLI SHALL API를 호출하지 않고 종료 코드 2로 종료한다
 8. IF 설정 파일에 GitHub 토큰이나 Anthropic API 키에 해당하는 항목이 있으면, THEN THE Config_Loader SHALL 항목 값을 출력하지 않고 항목 이름과 대신 사용할 환경변수 이름(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`)을 담은 오류 메시지를 출력하고, THE PR_Lens_CLI SHALL 종료 코드 2로 종료한다
 9. IF `--config`로 지정한 파일이 없거나 읽을 수 없으면, THEN THE Config_Loader SHALL 기본 위치로 대체하지 않고 경로와 원인을 담은 오류 메시지를 출력하고, THE PR_Lens_CLI SHALL 종료 코드 2로 종료한다
@@ -399,7 +399,7 @@ Review_Target_File이 0개인 경우의 동작은 요구사항 13.11에서 한 �
 6. THE Review_Engine SHALL 요청 앞부분에 시스템 프롬프트와 Common_Context를 두고 그 끝에 prompt caching 지점을 지정하며, diff, PR 제목, PR 본문은 caching 지점 뒤에 둔다
 7. WHILE 분할 모드로 리뷰하는 동안, THE Review_Engine SHALL 모든 Chunk 요청에서 caching 지점 앞부분을 바이트 단위로 같게 만든다
 8. THE Review_Engine SHALL 모든 Claude API 요청에 Configuration의 모델 이름과 effort 값을 명시적으로 지정한다
-9. WHERE Configuration에 모델 이름이나 effort가 지정되지 않으면, THE Review_Engine SHALL 모델 `claude-opus-5-5`와 ADR-0005에서 정한 effort 기본값을 사용한다 (D-2)
+9. WHERE Configuration에 모델 이름이나 effort가 지정되지 않으면, THE Review_Engine SHALL 모델 `claude-opus-5-5`와 effort 기본값 `medium`을 사용한다 (D-2, ADR 0005)
 10. FOR ALL 분할 모드 결과, 합친 `usage`의 토큰 수와 추정 비용 SHALL Chunk별 값의 합과 같고, 추정 비용은 0 이상이다 (불변 속성)
 
 ### Requirement 21: API 재시도 (신뢰성)
@@ -442,7 +442,7 @@ PRD가 정하지 않은 항목은 설정 가능하게 두고, 결정 전까지 �
 | ID | 항목 | 결정 주체 | 이 스펙의 처리 |
 |---|---|---|---|
 | D-1 | CLI 라이브러리: picocli로 확정 | [ADR 0004](../../adr/0004-cli-library-picocli.md) | 요구사항은 라이브러리에 독립적으로 작성. 명령 해석 코드와 Review_Engine을 분리(요구사항 17.3) |
-| D-2 | 모델과 effort 기본값, refusal 시 서버 측 fallback 사용 여부 | ADR-0005 | 모델 기본값은 PRD의 `claude-opus-5-5`, effort는 Configuration으로 받고 요청에 항상 명시(요구사항 20.8, 20.9). fallback은 미사용 가정 |
+| D-2 | 모델과 effort 기본값, refusal 시 서버 측 fallback 사용 여부 | 확정 ([ADR 0005](../../adr/0005-llm-settings.md)) | 모델 기본값은 PRD의 `claude-opus-5-5`, effort 기본값은 `medium`이고 Configuration으로 받아 요청에 항상 명시(요구사항 20.8, 20.9). fallback은 P1에서 미사용 |
 | D-3 | 1회 리뷰 비용 상한과 월 예산 | 1주차 합의 | 1회 상한 기본 $0.50(PRD 성공 기준, 요구사항 18.4). 월 예산은 P1 범위 밖 |
 | D-4 | 불완전 결과의 종료 코드, 요약 전용 모드의 종료 코드 | 2주차 T3 스펙 검토 | 제안값 3으로 진행. 종료 코드 우선순위: 결과 생성 실패 2 → `blocker` 있음 1(완전성 무관) → `incomplete`이고 `blocker` 없음 3 → 정상 0 (요구사항 15.9~15.11, 16.7, 16.8). PRD는 blocker 1, 없음 0만 정의. 요약 전용 모드는 `findings`가 항상 비어 있고 `complete`라서 지금 규칙으로는 항상 종료 코드 0이다(상한의 3배를 넘는 PR이 CI를 통과함). 3으로 바꿀지 함께 정한다 |
 | D-5 | 설정 파일 형식과 기본 위치 | 2주차 T3 | 제안: YAML, 현재 작업 폴더의 `.prlens.yml` 후 사용자 홈 `~/.prlens.yml` (요구사항 18.1) |

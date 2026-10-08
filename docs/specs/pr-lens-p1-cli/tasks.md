@@ -29,7 +29,7 @@
     - `backend/src/main/java/com/prlens/` 아래 패키지 뼈대 생성(ADR 0003): `model`, `support`, `github`, `pullrequest`, `diff`, `glob`, `filter`, `context`, `llm`, `review`, `codec`, `output`, `config`, `cli`
     - `src/test/java/com/prlens/testkit/` 패키지 생성
     - _Requirements: 17.3_
-  - [ ] 1.2 의존성 추가와 아키텍처 규칙 (선머지 대상 아님. ADR-0005 결정 후 리드가 진행. ADR 0004는 확정)
+  - [ ] 1.2 의존성 추가와 아키텍처 규칙 (선머지 대상 아님. 리드가 진행. ADR 0004와 ADR 0005는 확정)
     - `backend/build.gradle.kts`에 picocli, jqwik, ArchUnit, Anthropic Java SDK를 버전 고정으로 추가 (PR 설명에 추가 이유 기록). 의존성 추가는 사람의 승인이 필요합니다. YAML 파서(snakeyaml)와 Jackson 3은 Spring Boot가 이미 가져오므로 추가하지 않습니다. 임시 프로젝트에서 함께 동작을 확인한 버전은 jqwik 1.10.1, archunit-junit5 1.5.1, picocli 4.7.7, anthropic-java 2.68.0입니다
     - ArchUnit 규칙 작성: `model`은 JDK 외 의존 금지, `review`는 `cli`·`output`·`github`·`config` 의존 금지, `review`는 `AnthropicLlmClient` 참조 금지, `context`·`pullrequest`는 `HttpGitHubClient` 참조 금지, Spring 애너테이션은 `cli` 조립 코드에만(스타터의 `common`과 Application 클래스는 예외로 둠), `println` 사용 금지, `com.fasterxml.jackson.databind` 사용 금지(Jackson 3 `tools.jackson`만 사용)
     - 대상 클래스가 아직 없는 규칙은 `allowEmptyShould(true)`로 둡니다(ArchUnit은 기본값에서 대상이 없는 규칙을 실패 처리)
@@ -411,7 +411,8 @@
   - 13.1, 13.2, 3.1: SDK 빌더 이름, `retry-after` 헤더 접근 방법
   - 7.1: secondary rate limit 본문 문구
   - 18.7: 래퍼 스크립트
-  - 2.1: `Configuration.defaults()`의 effort와 최대 출력 토큰(ADR-0005)
+  - 2.1: `Configuration.defaults()`의 effort(`medium`)와 최대 출력 토큰(16,000, 범위 1~20,000). [ADR 0005](../../adr/0005-llm-settings.md)
+  - 13.1: 스키마 직렬화 순서 고정, 첫 text 블록 선택, SDK 빌더 이름. [spike 2026-10-08](../../spikes/2026-10-08-llm-settings.md)의 "SDK에서 확인한 것"
 - 실제 API를 쓰는 확인은 세 번 있습니다: 7.7과 13.4(수요일, 어댑터 단위), 20.4(목요일, 전체 리허설). 400줄 120초 측정(요구사항 9.7), 실제 모델의 인젝션 픽스처 동작, 규칙 근거가 붙은 지적 1건 이상(M1 완료 조건)은 20.4에서 확인합니다.
 - design.md "요구사항 공백" G-1~G-7과 G-9, G-10, G-12의 잠정 처리는 해당 작업에 반영했습니다. G-8과 G-11은 결정 전이라 작업이 없습니다. 요구사항을 고치기로 하면 관련 작업도 함께 수정합니다.
 - 결정 대기 항목이 막는 작업은 다음과 같습니다. 결정 전에는 제안값으로 진행하고, 결정이 바뀌면 이 작업들을 다시 봅니다.
@@ -419,7 +420,7 @@
   | 항목 | 막는 작업 |
   |---|---|
   | D-1 CLI 라이브러리 (확정: ADR 0004, picocli) | 없음 |
-  | D-2 모델·effort·최대 출력 토큰·fallback (ADR-0005) | 1.2, 2.1, 11.5, 13.1, 13.3, 16.1, 16.2 |
+  | D-2 모델·effort·최대 출력 토큰·fallback ([ADR 0005](../../adr/0005-llm-settings.md)) | 1.2, 2.1, 11.5, 13.1, 13.3, 16.1, 16.2 |
   | D-3 비용 상한 | 2.1, 16.1, 18.4 |
   | D-4 불완전 결과와 요약 전용 모드의 종료 코드 | 17.3, 17.4, 18.5, 20.1, 20.2 |
   | D-5 설정 파일 형식·위치 | 16.1, 16.2, 16.3, 18.2 |

@@ -51,7 +51,7 @@
 | PRD 확정 | 부분 | 검토는 마침(2026-10-08). PRD 10장의 제품 이름, 투입 시간, API 키 발급 주체와 월 예산이 남아 상태는 `draft` |
 | 저장소 생성, 이름 변경 | 완료 | GitHub 저장소를 만들어 push함. 패키지는 `com.prlens`로 바꾸고 backend 메모 샘플을 지움(P1 작업 1.1) |
 | CLAUDE.md, hooks | 부분 | 루트·backend `CLAUDE.md`, `testing.md`, reviewer, `/pr-ready`를 PR Lens 기준으로 고침. 보호 hook 보강. hook은 직접 실행으로 확인했고 전원의 `/context`·`/hooks` 확인은 남음 |
-| ADR | 부분 | 0003(패키지 구조, 0001 대체), 0004(CLI 라이브러리, picocli), 0008(API 규약 유지) 작성. 0005 LLM 설정, 0006 DB·테스트, 0007 저장소 구조는 미작성 |
+| ADR | 부분 | 0003(패키지 구조, 0001 대체), 0004(CLI 라이브러리, picocli), 0005(LLM 설정), 0008(API 규약 유지) 작성. 0006 DB·테스트, 0007 저장소 구조는 미작성 |
 | spike | 부분 | 의존성 조합과 실행 jar만 확인(`docs/spikes/`). 계획한 세 건(GitHub diff 조회, Claude 구조화 출력과 비용 실측, smee webhook)은 미수행 |
 | 2주차 스펙 | 부분 | 세 트랙을 한 건(`docs/specs/pr-lens-p1-cli/`)으로 작성하고 검토 지적을 반영. 팀 승인 전 |
 | 지표, PR 템플릿 | 부분 | PR 템플릿 작성. 기록 방식 합의와 기준선은 미완 |
@@ -61,7 +61,7 @@
 **P1 작업 1.1을 시작하기 전에 남은 것**
 
 1. GitHub 저장소를 만들고 push한 뒤 CI가 통과하는지 확인, 브랜치 보호의 필수 체크(`backend`, `web`)와 라벨 설정
-2. ADR-0005(LLM 설정). 작업 1.2의 의존성 추가 전에 필요하고, 선머지(1.1, 2.1~2.3)는 이 결정 없이 시작할 수 있음 (ADR-0004 CLI 라이브러리는 작성함)
+2. ADR-0005(LLM 설정). 작업 1.2의 의존성 추가 전에 필요하고, 선머지(1.1, 2.1~2.3)는 이 결정 없이 시작할 수 있음 (ADR-0004 CLI 라이브러리는 작성함. ADR-0005 LLM 설정도 실측 spike와 함께 작성함)
 3. P1 스펙 승인
 
 **그 뒤에 할 것**: P2 스펙 승인(수정은 끝남, [색인](../specs/pr-lens-p2-automation/README.md)), P3 요구사항 수정과 설계 작성([색인](../specs/pr-lens-p3-web/README.md). P1·P2의 작업량이 많아 P2가 끝나거나 어느 정도 진행된 뒤로 미룸), `new-endpoint`·`new-page` 스킬과 `api-design.md`를 PR Lens 기준으로 수정(P2, P3 전), ADR-0006·0007.
