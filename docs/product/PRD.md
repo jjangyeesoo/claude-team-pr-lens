@@ -114,7 +114,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 | 영역 | 선택 | 비고 |
 |---|---|---|
 | BE / 리뷰 엔진 | Java 17, Spring Boot 4.1, Gradle(Kotlin DSL) | `claude-team-starter`의 `backend/`를 그대로 사용 |
-| CLI | BE와 같은 코드베이스 (picocli 또는 Spring Shell) | 리뷰 로직을 CLI와 서버가 공유 |
+| CLI | BE와 같은 코드베이스 (picocli, [ADR 0004](../adr/0004-cli-library-picocli.md)) | 리뷰 로직을 CLI와 서버가 공유 |
 | LLM | Anthropic Java SDK (`com.anthropic`), 구조화된 출력 | ADR: 모델·effort 선택 |
 | GitHub 연동 | REST API. P1은 PAT, P2는 GitHub App | 로컬 webhook 테스트는 smee.io |
 | DB | PostgreSQL (로컬은 Docker Compose), 테스트는 Testcontainers 또는 H2 | ADR로 확정 |
@@ -145,7 +145,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 
 - [ ] 제품 이름 확정 (가칭 PR Lens)
 - [ ] ADR-0007 저장소 구조 (스타터의 모노레포 `backend/` + `web/` 그대로 사용 여부. 번호 0003은 패키지 구조 결정에 썼습니다: [ADR 0003](../adr/0003-role-based-flat-packages.md))
-- [ ] ADR-0004 CLI 라이브러리 (picocli vs Spring Shell)
+- [x] ADR-0004 CLI 라이브러리: picocli ([ADR 0004](../adr/0004-cli-library-picocli.md))
 - [ ] ADR-0005 LLM 모델과 effort 기본값, 비용 상한, refusal 처리(서버 측 fallback 사용 여부)
 - [ ] ADR-0006 DB와 테스트 전략
 - [ ] 채택/기각 **수기** 기록 형식 (PR 설명의 칸 이름과 기록 주체). 자동 수집(FR-11) 방식은 3주차 스펙에서 결정

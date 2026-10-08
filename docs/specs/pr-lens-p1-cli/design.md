@@ -21,7 +21,7 @@
 
 | ID | 권고 | 근거 | 상태 |
 |---|---|---|---|
-| D-1 CLI 라이브러리 | **picocli** | 단발 실행 CLI에 맞고(Spring Shell은 대화형 셸 중심), Spring 컨텍스트 없이 시작할 수 있어 시작 시간이 짧고, 종료 코드 제어가 명시적입니다. 명령 해석은 `cli` 패키지에만 두므로 결정이 바뀌어도 다른 패키지는 영향이 없습니다 | ADR-0004 대기 |
+| D-1 CLI 라이브러리 | **picocli** | 단발 실행 CLI에 맞고(Spring Shell은 대화형 셸 중심), Spring 컨텍스트 없이 시작할 수 있어 시작 시간이 짧고, 종료 코드 제어가 명시적입니다. 명령 해석은 `cli` 패키지에만 두므로 결정이 바뀌어도 다른 패키지는 영향이 없습니다 | 결정됨 ([ADR 0004](../../adr/0004-cli-library-picocli.md)) |
 | D-2 effort 기본값 | `medium`을 설정 기본값으로 두고 **요청에 항상 명시** | PRD 6장: 이 모델의 기본값이 `medium`이라 명시하지 않으면 모델 교체 시 조용히 바뀝니다. 1주차 spike의 비용 실측 후 확정 | ADR-0005 대기 |
 | D-2 최대 출력 토큰 | 기본 16,000 | thinking 토큰이 출력으로 과금되고(PRD 6장) `max_tokens` 도달 시 불완전 처리되므로 여유를 둡니다. 요구사항 18.4에도 제안값으로 적었습니다 | ADR-0005 대기 |
 | D-4 불완전 종료 코드 | 3 (요구사항 제안값 그대로) | | T3 스펙 검토 |
@@ -428,7 +428,7 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 ### T3 CLI 출력 (요구사항 15, 16, 18, 22)
 
-**ReviewCommand (picocli 가정)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 자동 오류 처리는 끄고(`setParameterExceptionHandler`), 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다. Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동). Spring Shell로 결정되면 `cli` 패키지만 바뀝니다.
+**ReviewCommand (picocli, ADR 0004)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 자동 오류 처리는 끄고(`setParameterExceptionHandler`), 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다. Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동).
 
 **MarkdownFormatter**: 순수 함수 `String format(ReviewResult, ReviewContext)`. 구역 순서는 `[불완전 경고] → 요약 → 심각도별 지적 수 → 파일별 지적 → 라인 밖 지적 → 제외 파일 → 사용된 컨텍스트 파일 (N) → 토큰 사용량과 추정 비용`입니다. 요약 전용 모드면 요약 구역에 "PR을 나누세요" 안내와 Changed_Line_Count, 3×Size_Limit를 넣습니다(`ReviewStats`에서 읽음). 강등된 Finding 수는 심각도별 구역 아래 한 줄로 표시합니다. "제외 파일" 구역은 `excludedFileDetails`의 경로와 사유를 함께 씁니다(요구사항 15.14). 줄바꿈은 `\n` 고정입니다.
 
