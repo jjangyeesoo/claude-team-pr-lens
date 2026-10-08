@@ -22,7 +22,7 @@
 
 - [ ] 1. 프로젝트 골격과 의존성 준비
   - PR 경계: 1.1 / 1.2 (1.1은 월요일 선머지. 패키지 이름 변경이 크면 그 부분만 먼저 따로 냄)
-  - [ ] 1.1 패키지 이름 변경, 메모 샘플 제거, 패키지 뼈대 (월요일 선머지. 새 의존성 없음)
+  - [x] 1.1 패키지 이름 변경, 메모 샘플 제거, 패키지 뼈대 (월요일 선머지. 새 의존성 없음)
     - 패키지를 `com.example.starter`에서 `com.prlens`로 바꿉니다(ROADMAP 1주차 항목. 이미 돼 있으면 건너뜀). `build.gradle.kts`의 group, `settings.gradle.kts`의 프로젝트 이름, `application.properties`를 함께 바꿉니다. 변경 줄 수가 많으면 이 부분만 별도 PR로 먼저 냅니다
     - backend의 메모 샘플(`memo` 패키지와 그 테스트)을 지웁니다(ROADMAP: 2주차 첫 기능 PR에서 제거). `common/error/ApiExceptionHandler`가 `MemoNotFoundException`을 import하므로 그 처리 메서드도 함께 지웁니다. `common`의 나머지는 P2 스펙에서 위치를 정할 때까지 둡니다(ADR 0003)
     - web의 메모 화면(`web/src/app/memos`, `web/src/lib/api/memos.ts`)은 4주차까지 그대로 둡니다(ROADMAP 4주차 T1). backend에서 메모 API가 사라지지만 이 PR에서 `web/`은 고치지 않습니다("API가 바뀌면 `types.ts`도 같은 PR" 규칙의 예외)

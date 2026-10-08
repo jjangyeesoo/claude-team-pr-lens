@@ -24,7 +24,7 @@ P1은 `prlens review <PR URL>` CLI이고 Spring 컨텍스트 없이 실행한다
 - 오류는 `PrLensException` 하위 타입으로 던지고 `cli`에서 한 번만 종료 코드로 바꾼다. HTTP API의 에러 응답(P2부터)은 `ErrorResponse { code, message, details }`다 (ADR 0002)
 
 ## Gotchas
-- 전환 중: P1 작업 1.1 전까지 소스는 `com.example.starter`와 메모 샘플(`memo`, `common`)이다. 새 코드를 메모 샘플의 `{domain,api}` 구조로 만들지 않는다
+- 전환 중: 스타터의 `common`(`ErrorResponse`, `ApiExceptionHandler`, `TimeConfig`)과 `StarterApplication`은 P2 스펙에서 위치를 정할 때까지 그대로 둔다 (ADR 0003). 새 코드를 `common` 아래에 두지 않는다
 - 출력: stdout에는 최종 결과만 쓴다. 진행·경고·오류는 stderr. `println`과 `%n`을 쓰지 않고 `\n`을 직접 붙인다 (OS와 무관하게 같은 바이트)
 - 저장소 내 경로는 `/` 구분자의 `String`으로만 다룬다. `java.nio.file.Path`로 바꾸지 않는다
 - Jackson은 3(`tools.jackson`)만 쓴다. Anthropic SDK가 Jackson 2(`com.fasterxml.jackson.databind`)도 끌어오므로 import를 확인한다

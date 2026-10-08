@@ -5,7 +5,7 @@ plugins {
 	id("com.diffplug.spotless") version "8.10.3"
 }
 
-group = "com.example"
+group = "com.prlens"
 version = "0.0.1-SNAPSHOT"
 
 java {
