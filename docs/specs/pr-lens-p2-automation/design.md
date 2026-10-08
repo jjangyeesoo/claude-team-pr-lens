@@ -1144,7 +1144,7 @@ ORDER BY registered_at DESC LIMIT 10;
 ```
 
 - 120초 경고는 T1 `ReviewJob` 6단계에서 같은 식으로 계산하고 Review_Run ID, Changed_Line_Count, 세 구간(ms)을 남깁니다(요구사항 17.4).
-- 절차(요구사항 17.1, 17.2): Testing Strategy의 "응답 시간 측정 절차"를 따릅니다(작업 26.6). 통과 여부는 그 절의 SQL(`elapsed_ms`)로 판정하고, 위 SQL은 구간별 원인을 볼 때 씁니다. 예산 가정: 수신·등록 1초 미만, GitHub 조회 5초, Claude 단일 호출 30~90초, 게시 API 5~7회 5초. **spike**: effort별 Claude 응답 시간이 90초를 넘는지 확인하고, 넘으면 400줄 PR의 effort 기본값을 조정합니다(ADR-0005).
+- 절차(요구사항 17.1, 17.2): Testing Strategy의 "응답 시간 측정 절차"를 따릅니다(작업 26.6). 통과 여부는 그 절의 SQL(`elapsed_ms`)로 판정하고, 위 SQL은 구간별 원인을 볼 때 씁니다. 예산 가정: 수신·등록 1초 미만, GitHub 조회 5초, Claude 단일 호출 30~90초, 게시 API 5~7회 5초. **spike**: effort별 Claude 응답 시간이 90초를 넘는지 확인하고, 넘으면 400줄 PR의 effort 기본값을 조정합니다(ADR-0005). 300줄대 PR의 실측은 `medium` 18~29초, `high` 27~33초로 90초 안이었습니다([spike 2026-10-08](../../spikes/2026-10-08-llm-settings.md)).
 
 #### 비밀정보 (요구사항 18)
 
@@ -1673,7 +1673,7 @@ ORDER BY r.received_at;
 | 11 | 코멘트 65,536자 제한에서 GitHub가 세는 단위 | T3 65,536자 제한 | 실험 필요 (T3). REST 문서에 길이 제한 언급 없음 | 현재 UTF-16 계산이 보수적이므로 그대로 둠 |
 | 12 | Actions에서 `pull-requests: write`만으로 PR issue comment 생성·수정 | 공통 `--publish` | 문서로 확인(App 권한 표). Actions 토큰으로 한 번 실행해 확인 | `issues: write` 추가, 요구사항 6.9 갱신 |
 | 13 | ArchUnit 버전 | 공통 패키지 경계 검사 | 확인함: `archunit-junit5` 1.5.1이 JUnit 6.0.3에서 동작(`docs/spikes/2026-10-04-build-stack.md`). P1에서 추가한 버전을 그대로 씀 | — |
-| 14 | effort별 Claude 응답 시간이 90초를 넘는지 | 응답 시간 측정 | 실험 필요. P1 작업 13.4·20.4의 측정값을 씀 | 400줄 PR의 effort 기본값 조정(ADR-0005) |
+| 14 | effort별 Claude 응답 시간이 90초를 넘는지 | 응답 시간 측정 | 300줄대 PR에서 `low` 10~15초, `medium` 18~29초, `high` 27~33초([spike 2026-10-08](../../spikes/2026-10-08-llm-settings.md)). 분할 모드와 400줄 이상은 P1 작업 20.4에서 확인 | 300줄대 실측으로는 조정 불필요([ADR 0005](../../adr/0005-llm-settings.md)). 20.4에서 재확인 |
 | 15 | smee 클라이언트가 webhook 본문의 원문 바이트를 보존하는지: 한글 제목 PR의 이벤트를 받아 HMAC을 다시 계산하고 `X-Hub-Signature-256`과 비교 | T1 SignatureVerifier (요구사항 2.1) | 실험 필요 (작업 0.1, 킥오프 전). 검증 에이전트의 추정이고 smee의 실제 동작은 확인하지 않음 | 다른 터널 도구를 쓰거나 Actions 대체 경로로 전환(D-15) |
 | 16 | jqwik `@Property` 안에서 MockMvc와 Testcontainers를 쓸 수 있는지. jqwik은 Jupiter와 다른 엔진이라 `@WebMvcTest`, `@Testcontainers` 같은 Jupiter 확장이 적용되지 않을 수 있음 | 속성 기반 테스트 규칙 (속성 9의 DB 변형, 11~14) | 실험 필요 (T2, 작업 0.3). P1 spike는 jqwik과 Jupiter의 공존만 확인함 | 속성 안에서 `MockMvcBuilders.standaloneSetup`과 컨테이너를 직접 만들어 씀. `jqwik-spring`을 쓰려면 의존성 승인과 Spring Boot 4 지원 확인이 필요 |
 

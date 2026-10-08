@@ -146,7 +146,7 @@ AI PR 리뷰 도구(CodeRabbit, Claude Code GitHub Action 등)는 이미 많습�
 - [ ] 제품 이름 확정 (가칭 PR Lens)
 - [ ] ADR-0007 저장소 구조 (스타터의 모노레포 `backend/` + `web/` 그대로 사용 여부. 번호 0003은 패키지 구조 결정에 썼습니다: [ADR 0003](../adr/0003-role-based-flat-packages.md))
 - [x] ADR-0004 CLI 라이브러리: picocli ([ADR 0004](../adr/0004-cli-library-picocli.md))
-- [ ] ADR-0005 LLM 모델과 effort 기본값, 비용 상한, refusal 처리(서버 측 fallback 사용 여부)
+- [x] ADR-0005 LLM 설정: `claude-opus-5-5`, effort `medium`, 최대 출력 토큰 16,000(상한 20,000), 비용 상한 $0.50, refusal fallback은 P1에서 미사용 ([ADR 0005](../adr/0005-llm-settings.md))
 - [ ] ADR-0006 DB와 테스트 전략
 - [ ] 채택/기각 **수기** 기록 형식 (PR 설명의 칸 이름과 기록 주체). 자동 수집(FR-11) 방식은 3주차 스펙에서 결정
 - [ ] API 키 발급 주체와 월 예산
