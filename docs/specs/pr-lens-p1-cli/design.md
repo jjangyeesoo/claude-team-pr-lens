@@ -67,7 +67,8 @@ flowchart TB
   CLI --> SUP
   GH --> SUP
   LLM --> SUP
-  PRF & CTX & ENG & OUT & CFG & CODEC & FIL --> MODEL
+  PRF & CTX & FIL --> SUP
+  PRF & CTX & ENG & OUT & CFG & CODEC & FIL & GH & DIFF --> MODEL
 ```
 
 의존 규칙(ArchUnit 테스트로 CI에서 강제, 제안):
@@ -154,8 +155,18 @@ public interface GitHubCredentials { String authorizationHeader(RepoRef repo); }
 public interface GitHubClient {
   PullRequestMeta getPullRequest(RepoRef repo, int number);
   FilePage listFiles(RepoRef repo, int number, int page);          // per_page=100 고정
-  Optional<RepoTree> getTree(RepoRef repo, String sha);            // recursive, truncated 여부 포함
+  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 다른 조회처럼 GitHubApiException (Optional로 감싸지 않음)
   FileFetch getFile(RepoRef repo, String path, String sha);        // Found(content) | NotFound | IsDirectory | TooLarge
+}
+public record PullRequestMeta(String title, /*@Nullable*/ String body, String baseSha, String headSha, int changedFiles) {}
+public record FilePage(List<Entry> files, boolean hasNext) {       // hasNext = Link 헤더 rel="next"
+  // GitHub가 준 값 그대로. 상태 매핑과 patch 해석은 PrFetcher가 한다
+  public record Entry(String filename, /*@Nullable*/ String previousFilename, String status,
+                      int additions, int deletions, /*@Nullable*/ String patch) {}
+}
+public record RepoTree(List<Entry> entries, boolean truncated) {
+  public record Entry(String path, Kind kind) {}
+  public enum Kind { BLOB, TREE, COMMIT }                          // COMMIT은 서브모듈
 }
 
 // pullrequest, context 패키지 (T2 구현, T3가 조립)
@@ -196,13 +207,14 @@ public abstract class PrLensException extends RuntimeException { ... }   // seal
 public sealed interface Attempt<T> {
   record Success<T>(T value) implements Attempt<T> {}
   record Retryable<T>(String statusOrError, /*@Nullable*/ String retryAfter,   // 헤더 원문. 유효성은 실행기가 판단
-                      /*@Nullable*/ Duration wait) implements Attempt<T> {}   // 호출자가 정한 대기(GitHub rate limit)
+                      /*@Nullable*/ Duration delay) implements Attempt<T> {}  // 호출자가 정한 대기(GitHub rate limit). `wait`는 record 구성 요소 이름으로 쓸 수 없음
   record Fatal<T>(String api, int status) implements Attempt<T> {}             // 실행기가 NonRetryableApiException으로 던진다
 }
 // RetryExecutor: public <T> T execute(String api, Supplier<Attempt<T>> call)
 
 // T2가 구현하고 T1·T3가 쓰는 순수 함수의 시그니처 (2.3에서 스텁으로 선머지, 본문은 UnsupportedOperationException)
-public final class GlobMatcher { public static boolean matches(String pattern, String path); public static void validate(String pattern); }
+public final class GlobMatcher { public static boolean matches(String pattern, String path); public static void validate(String pattern) throws GlobSyntaxException; }
+public class GlobSyntaxException extends PrLensException { public GlobSyntaxException(String pattern, String reason); public String pattern(); public String reason(); }   // 타입은 2.3에서 선머지, 던지는 조건은 6.1
 public final class DiffPrinter { public static String print(List<Hunk> hunks); }
 public final class LineRanges  { public static LineRanges of(List<Hunk> hunks); public boolean contains(int line); }
 public final class DiffFilter  { public static FilterOutcome apply(List<ChangedFile> files, Configuration config); }
@@ -912,14 +924,14 @@ for attempt in 1..(maxRetries+1):
     outcome = call()                              // Attempt<T>. 호출자가 분류와 대기 시간을 함께 돌려준다
     if Success: return value
     if Fatal (429 외 4xx 등): throw NonRetryable
-    wait = outcome.wait ?? retryAfter(0 이상 정수) ?? min(2^(attempt-1), 30)      // Retryable
+    wait = outcome.delay ?? retryAfter(0 이상 정수) ?? min(2^(attempt-1), 30)     // Retryable
     if wait > 60: throw RetryAfterTooLong         // 마지막 시도 여부보다 먼저 검사한다
     if attempt == maxRetries+1: throw RetriesExhausted
     listener.onRetry(api, attempt+1, maxRetries+1, status, wait); sleeper.sleep(wait)
 ```
 
 - 60초 초과 검사를 "마지막 시도" 검사보다 먼저 합니다. 순서가 반대면 같은 응답이 마지막 시도에서는 `RetriesExhausted`(분할 모드에서 `chunk_failed`로 흡수)가 되고 그 전 시도에서는 즉시 종료 코드 2가 되어 결과가 시도 순번에 따라 달라집니다.
-- GitHub rate limit(요구사항 21.9~21.11)은 `HttpGitHubClient`가 응답을 분류해 `outcome.wait`를 정합니다.
+- GitHub rate limit(요구사항 21.9~21.11)은 `HttpGitHubClient`가 응답을 분류해 `outcome.delay`를 정합니다.
 
   | GitHub 403 또는 429 응답 | 분류 | 대기 시간 |
   |---|---|---|

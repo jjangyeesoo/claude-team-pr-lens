@@ -49,13 +49,13 @@
   - [x] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
     - 여러 패키지가 쓰므로 `model`에 둡니다(설계 문서에 위치가 없어 정한 값)
     - _Requirements: 4.8, 11.1, 22.2, 22.6_
-  - [ ] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)
+  - [x] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)
     - `github`: `GitHubCredentials`, `GitHubClient`(`getPullRequest`, `listFiles`, `getTree`, `getFile`), `PullRequestMeta`, `FilePage`, `RepoTree`, `FileFetch`(`Found`/`NotFound`/`IsDirectory`/`TooLarge`)
     - `pullrequest`, `context`: `PrFetcher.fetch(RepoRef, int)`, `ContextCollector.collect(PullRequestSnapshot, Configuration)`의 생성자와 시그니처(본문은 `UnsupportedOperationException`)
     - `llm`: `LlmClient`, `LlmRequest`(모델, 최대 출력 토큰, effort, system, 캐시 블록, 데이터 블록, JSON 스키마), `LlmResponse`(stopReason, text, usage), `LlmUsage`, `LlmApiException`(상태 코드, 오류 종류, `retry-after` 원문)
     - `review`: `ReviewEngine` 생성자와 `review(snapshot, context, config)` 시그니처(본문은 `UnsupportedOperationException`), `ReviewListener`
     - `support`: `RetryListener`(대기 시간은 `Duration`), `Sleeper`, `Warning(code, message)`, `WarningSink`, `PrLensException`(sealed가 아닌 추상 클래스), `Attempt<T>`(`Success`/`Retryable`/`Fatal`)와 `RetryExecutor.execute(api, call)` 시그니처
-    - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
+    - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. `GlobMatcher.validate`가 던지는 `GlobSyntaxException(pattern, reason)`(`PrLensException` 하위 타입)도 여기서 만듭니다(T3 `ConfigLoader`가 6.1을 기다리지 않고 잡을 수 있게). T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
     - 생성자 시그니처만 먼저 고정: `RetryExecutor(RetryPolicy, Sleeper, RetryListener)`, `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`, `RetryingLlmClient(LlmClient, RetryExecutor)` (P2가 작업마다 다시 조립)
     - _Requirements: 17.2, 17.3, 17.9_
   - [ ]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
