@@ -9,6 +9,8 @@ paths:
 - 고치기 전에 같은 내용을 적은 곳을 찾는다. 바꾸는 skill·agent 이름, 단계 번호, 용어로 `.claude/`, 모든 `CLAUDE.md`, 루트 `README.md`, `docs/guide/`, `docs/product/PLAYBOOK.md`, `.github/pull_request_template.md`를 Grep한다
 - 서로 맞물린 파일은 같은 PR에서 함께 고친다
   - `/task` ↔ `/pr-ready` ↔ `reviewer`: 용어, 단계 번호, 보고 그룹("반드시 수정", "선택", "뒤 작업에 넘길 것")
+  - `/pr-ready` 3·4번 ↔ `context-reviewer`(보고 그룹 두 개), 이 파일의 Grep 대상 목록 ↔ `context-reviewer` 2번
+  - 브랜치 이름 형식 ↔ 루트 `CLAUDE.md` Conventions, `/task`의 진행 중 판정과 브랜치 맞추기, `/pr-ready` 5번의 진행 중 판정
   - `/pr-ready`가 만드는 PR 설명 ↔ `.github/pull_request_template.md`
   - skill과 agent의 절차 ↔ `docs/guide/task-workflow.md` (사람이 읽는 안내서. 원본은 skill이다)
   - `.claude/settings.json`, `.claude/hooks/` ↔ `docs/guide/claude-code-setup.md`

@@ -15,14 +15,14 @@
 - 버그 수정은 재현하는 실패 테스트를 먼저 작성한다
 - 작업이 끝나면 Stop hook이 **바뀐 스택만** 검증한다 (backend: `spotlessApply test`, web: `npm run verify`). 실패하면 근본 원인을 고친다
 - PR 전에 `/pr-ready`를 실행한다
-- `.claude/`나 `CLAUDE.md`를 고칠 때는 먼저 `.claude/rules/context/editing.md`를 읽는다
+- `.claude/`나 `CLAUDE.md`를 고칠 때는 먼저 `.claude/rules/context/editing.md`를 읽는다 (그 규칙의 `paths`는 `.claude/`와 루트 `CLAUDE.md`에서 자동 로드되지 않는 것을 확인했으므로 이 줄을 지우지 않는다)
 
 ## Cross-stack rules
 - web이 쓰는 API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 **같은 PR에서** 함께 바꾼다. P3 전에는 web이 PR Lens API를 쓰지 않으므로 backend만 바꾼다 (메모 API를 지울 때도 web은 고치지 않는다)
 - 비즈니스 로직은 backend에만 둔다. web은 조회와 표시만 한다
 
 ## Conventions
-- 브랜치: 스펙 작업은 `feat/<track>-<단계>-<번호>-<slug>` (예: `feat/t2-p1-5-diff-parser`, 공유 작업은 `feat/shared-p1-2.1-model-types`). 번호는 PR 단위의 `tasks.md` 작업 번호다. 버그 수정은 `fix/`로 같은 형식, 작업 번호가 없는 변경은 `feat/<track>-<slug>`, 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>`. 브랜치를 만들면 바로 push해 진행 중임을 알린다 · 커밋: Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`)
+- 브랜치: 스펙 작업은 `feat/<track>-<단계>-<번호>-<slug>` (예: `feat/t2-p1-5-diff-parser`, 공유 작업은 `feat/shared-p1-2.1-model-types`). 번호는 PR 단위의 `tasks.md` 작업 번호다. 버그 수정은 `fix/`로 같은 형식, 작업 번호가 없는 변경은 `feat/<track>-<slug>`, 트랙과 무관한 변경은 `docs/<slug>`, `chore/<slug>`, 스펙의 컨텍스트 작업은 `chore/<단계>-<번호>-<slug>`. 브랜치를 만들면 바로 push해 진행 중임을 알린다 · 커밋: Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`)
 - PR 하나 = `tasks.md`의 상위 작업 하나 (작업 목록에 "PR 경계"가 표시된 작업은 그 경계를 따른다). `src/main` 변경 400줄 이하를 목표로 하고, 넘으면 PR 설명에 이유를 적는다
 - 의존성 추가(`build.gradle.kts`, `package.json` 수정)는 사람의 승인이 필요하다. 먼저 이유를 설명하고 묻는다
 - IMPORTANT: 테스트를 통과시키려고 assertion을 지우거나 테스트를 skip하지 않는다
