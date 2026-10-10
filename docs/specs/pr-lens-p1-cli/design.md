@@ -76,6 +76,7 @@ flowchart TB
 - `review`는 `cli`, `output`, `github`, `config`(로더)에 의존하지 않습니다. `llm`은 인터페이스(`LlmClient`)에만 의존하고 `AnthropicLlmClient`는 참조하지 않습니다.
 - `context`, `pullrequest`는 `GitHubClient` 인터페이스에만 의존합니다.
 - Spring 애너테이션은 `cli`의 조립 코드(또는 P2의 설정 클래스)에만 둡니다. `ReviewEngine`은 상태가 없는 일반 Java 클래스이고, P2는 Review_Job마다 새 인스턴스를 만듭니다(P2 설계 Overview). 스타터의 `common` 패키지는 P2 스펙에서 위치를 정할 때까지 이 규칙의 예외로 둡니다(ADR 0003).
+- picocli 타입은 `cli`에서만 씁니다([ADR 0004](../../adr/0004-cli-library-picocli.md)).
 
 ### 패키지 배치 (`backend/src/main/java/com/prlens/`)
 
@@ -974,7 +975,7 @@ G-8~G-12는 스펙 검토(2026-10-04)에서 추가한 항목입니다. "미정"�
 |---|---|---|
 | 단위·통합 테스트 | JUnit Jupiter 6 (Spring Boot 4.1이 관리. 스타터에서 6.0.3 확인) | `backend/`에서 `./gradlew test` |
 | 속성 기반 테스트 | **jqwik** (JUnit Platform 엔진) | 버전은 의존성 추가 PR에서 고정(플레이북: 의존성 추가는 리뷰어 승인 + 이유). 직접 PBT를 구현하지 않습니다. JUnit 6.0.3에서 jqwik 1.10.1이 도는 것을 확인했습니다(아래 "확인한 것") |
-| 아키텍처 규칙 | ArchUnit | 의존 방향, `println` 금지, `model`의 외부 의존 금지, `com.fasterxml.jackson.databind` 사용 금지(Anthropic SDK가 Jackson 2를 함께 끌어오므로 Jackson 3 `tools.jackson`만 쓰도록). 대상 클래스가 아직 없는 규칙은 `allowEmptyShould(true)`로 둡니다. `%n` 금지는 ArchUnit이 문자열 리터럴을 보지 못하므로 소스 검사 테스트로 합니다 |
+| 아키텍처 규칙 | ArchUnit | 의존 방향, picocli 타입은 `cli`에서만(ADR 0004), `println` 금지, `model`의 외부 의존 금지, `com.fasterxml.jackson.databind` 사용 금지(Anthropic SDK가 Jackson 2를 함께 끌어오므로 Jackson 3 `tools.jackson`만 쓰도록). 대상 클래스가 아직 없는 규칙은 `allowEmptyShould(true)`로 둡니다. `%n` 금지는 ArchUnit이 문자열 리터럴을 보지 못하므로 소스 검사 테스트로 합니다 |
 | GitHub HTTP 가짜 서버 | JDK `HttpServer` 또는 WireMock | 헤더, 페이지네이션, 지연, 재시도 확인 |
 | CI | GitHub Actions 매트릭스 `ubuntu-latest`, `windows-latest`, `macos-latest` × Java 17 | 실제 API 호출 없음(요구사항 22.7) |
 
