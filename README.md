@@ -61,7 +61,7 @@ web/
 │   ├── backend/testing.md       backend/** 를 다룰 때 로드 (JUnit 6, jqwik, ArchUnit, 픽스처)
 │   ├── backend/api-design.md    REST API 규칙 (paths가 메모 샘플의 api 패키지 기준. P2 전에 수정)
 │   ├── frontend/nextjs.md       web/src/** 를 다룰 때 로드
-│   └── context/editing.md       .claude/** 와 CLAUDE.md 를 다룰 때 로드 (브랜치, 맞물린 파일, 권한 변경)
+│   └── context/editing.md       .claude/ 와 CLAUDE.md 를 고칠 때 읽는 규칙 (브랜치, 맞물린 파일, 권한 변경). 루트 CLAUDE.md 가 가리킴
 ├── skills/
 │   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
 │   ├── spec/                    /spec <스펙> [문서]: 스펙 폴더의 다음 문서(요구사항 → 설계 → 작업 목록)를 /task가 읽는 형식으로 작성
