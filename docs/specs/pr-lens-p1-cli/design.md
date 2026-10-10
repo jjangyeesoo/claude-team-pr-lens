@@ -441,8 +441,8 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 모든 공유 타입은 `model` 패키지의 `record`입니다. 공통 규칙(요구사항 17.4~17.8):
 
-- compact constructor에서 필수 필드는 `Objects.requireNonNull(x, "필드이름")`, 목록은 `List.copyOf`(방어적 복사 + 수정 시 `UnsupportedOperationException` + null 원소 거부), 맵은 `Collections.unmodifiableSortedMap(new TreeMap<>(m))`.
-- 값 동등성은 record 기본 `equals`를 씁니다. `BigDecimal`은 scale 차이로 `equals`가 달라지므로 생성자에서 정규화합니다(비용은 `setScale(4)`, 단가는 `stripTrailingZeros`).
+- compact constructor에서 필수 필드는 `Objects.requireNonNull(x, "필드이름")`, 목록은 `List.copyOf`(방어적 복사 + 수정 시 `UnsupportedOperationException` + null 원소 거부), 맵은 빈 `TreeMap`에 옮겨 담은 뒤 `Collections.unmodifiableSortedMap`으로 감쌉니다(`new TreeMap<>(m)`은 원본 `SortedMap`의 comparator를 물려받으므로 쓰지 않음. 키는 항상 자연 순서, null 키와 null 값은 필드 이름을 담아 거부).
+- 값 동등성은 record 기본 `equals`를 씁니다. `BigDecimal`은 scale 차이로 `equals`가 달라지므로 생성자에서 정규화합니다(비용 `Usage.estimatedCostUsd`와 `Configuration.maxCostUsdPerReview`는 `setScale(4, HALF_UP)`, 단가는 `stripTrailingZeros`). 반올림 모드를 주는 것은 소수 다섯째 자리 이하가 있는 값에서 `ArithmeticException`이 나지 않게 하려는 것입니다.
 - null 허용 필드는 아래 코드에 `@Nullable` 주석으로 표시합니다(실제 애너테이션 라이브러리는 스타터 관례를 따름).
 
 ```java

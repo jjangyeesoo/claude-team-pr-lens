@@ -31,8 +31,7 @@ class ArchitectureTest {
           .resideInAPackage("com.prlens.model..")
           .should()
           .onlyDependOnClassesThat()
-          .resideInAnyPackage("java..", "com.prlens.model..")
-          .allowEmptyShould(true);
+          .resideInAnyPackage("java..", "com.prlens.model..");
 
   @ArchTest
   static final ArchRule reviewDoesNotDependOnCliOutputGithubConfig =
