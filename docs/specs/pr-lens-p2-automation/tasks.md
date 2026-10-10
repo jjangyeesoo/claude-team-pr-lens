@@ -87,7 +87,7 @@
 
   - [ ] 2.6 CLI 골격과 P1 조립 지점 정리 (월요일 선머지. T2·T3가 같은 파일을 동시에 고치지 않게 자리를 먼저 만듦)
     - `review`의 `--save`, `--publish` 옵션과 `feedback sync`, `server` 서브커맨드를 등록하고, 각 처리는 빈 클래스(`SaveFlow`, `PublishFlow`, `FeedbackSyncCommand`, `ServerCommand`)로 위임. 본문은 `UnsupportedOperationException`
-    - `HttpGitHubClient` 생성자를 `(HttpClient, GitHubCredentials, RetryExecutor, PrincipalResolver, CancellationToken)`으로 바꾸고 `implements GitHubApi`를 선언(게시 메서드 본문은 `UnsupportedOperationException`, 20.1이 채움). P1 조립 코드와 P1 테스트(7.6)는 `TokenPrincipalResolver` 스텁과 `CancellationToken.NONE`을 넘기도록 고침
+    - `HttpGitHubClient` 생성자를 `(HttpClient, GitHubCredentials, RetryExecutor, PrincipalResolver, CancellationToken)`으로 바꾸고 `implements GitHubApi`를 선언(게시 메서드 본문은 `UnsupportedOperationException`, 20.1이 채움). P1 조립 코드와 P1 테스트(7.6)는 `TokenPrincipalResolver` 스텁과 `CancellationToken.NONE`을 넘기도록 고침. P1의 `BoundarySignatureTest.adaptersTakeCollaboratorsThroughConstructors`가 이 생성자의 인자 3개를 리플렉션으로 고정하고 있으므로 그 단언도 새 시그니처로 함께 고침
     - P1 `CliPipeline.preflight`를 명령별로 필요한 환경변수 목록을 받는 형태로 바꿈(`feedback sync`는 `ANTHROPIC_API_KEY` 불필요)
     - _Requirements: 9.1, 15.4, 15.9, 20.1_
   - [ ] 2.7 작업 범위 도구의 타입 작성 (월요일 선머지)

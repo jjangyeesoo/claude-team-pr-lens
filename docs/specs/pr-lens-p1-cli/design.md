@@ -292,7 +292,7 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 
 1. base SHA의 재귀 트리를 한 번 조회해 `RepoTreeIndex`(경로 → blob/tree)를 만듭니다. 후보 파일의 존재와 폴더 여부를 트리로 먼저 판정하므로 404 호출이 줄어듭니다. 트리 응답이 `truncated`이면 트리 없이 경로별 조회(404 = 없음)로 대체합니다. 이때 `.claude/rules/` 아래 파일은 열거할 방법이 없으므로(`GitHubClient`에 폴더 목록 조회가 없음) 경고를 내고 rule 수집을 건너뜁니다(아래 "요구사항 공백" G-9).
 2. 수집 순서는 `claude_md`(루트, `.claude/CLAUDE.md`, 대상 파일 상위 폴더를 가까운 순) → `rule`(트리에서 `.claude/rules/**` 중 `.md`, 프런트매터 매칭) → `import`(BFS, 깊이 1~4) → `spec`(PR 본문 순서, 최대 20개)입니다. 같은 경로가 다시 들어오면 누적기가 출처 우선순위를 비교해 더 높은 출처를 남깁니다(요구사항 8.2). 수집 순서가 우선순위와 같아서 실제 수집에서는 항상 먼저 들어온 출처가 남으므로 "이미 있으면 기존 출처 유지"(요구사항 6.7)와도 맞습니다. 누적기가 순서에 기대지 않으므로 Property 18은 임의 추가 순서로 검증합니다.
-3. `ReviewContext`는 누적기(`LinkedHashMap<경로, ContextFile>`, 우선순위 비교)로 쌓고 `ReviewContext.of(...)`로 불변화합니다. 경로는 모두 Normalized_Repo_Path입니다.
+3. `ReviewContext`는 누적기(`LinkedHashMap<경로, ContextFile>`, 우선순위 비교)로 쌓고 `new ReviewContext(files)`로 불변화합니다(생성자가 방어적 복사와 경로 중복 검사를 함). 경로는 모두 Normalized_Repo_Path입니다.
 
 - **FrontmatterParser**: 첫 줄이 `---`일 때만 다음 `---` 줄까지를 YAML(SafeConstructor 수준의 안전 로더)로 읽습니다. `paths`가 문자열이면 한 개짜리 목록으로 바꿉니다. 오류 종류는 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`이고 모두 "포함 + 경고"입니다.
 - **ImportResolver**: 간단한 Markdown 토크나이저로 펜스 블록(```` ``` ````로 열고, 닫히지 않으면 파일 끝까지)과 인라인 코드(같은 길이의 백틱 쌍)를 건너뛰고, `(^|\s)@(\S+)`를 import로 읽습니다. 경로 해석은 선언 파일의 폴더 기준으로 `.`/`..`를 정규화하고, `~/`, `/`, `X:` 시작이나 루트 위로 올라가는 `..`는 거부합니다. BFS 큐에 `(path, depth, declaredBy)`를 넣고, 깊이 5 이상은 가져오지 않고 경고합니다.
