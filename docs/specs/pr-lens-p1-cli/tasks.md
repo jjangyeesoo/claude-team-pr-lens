@@ -47,7 +47,7 @@
     - 불변식 검사: `status == COMPLETE ⇔ incompleteReasons 비어 있음`, `verdict == SUMMARY_ONLY ⇔ summaryOnlyReason != null`, `excludedFiles == excludedFileDetails의 path 목록`, `PullRequestSnapshot.body` null → `""`
     - _Requirements: 1.2, 17.1, 17.2, 17.4, 17.5, 17.6, 17.7, 17.8_
   - [x] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
-    - 여러 패키지가 쓰므로 `model`에 둡니다(설계 문서에 위치가 없어 정한 값)
+    - 여러 패키지가 쓰므로 `model`에 둡니다(design.md "패키지 배치" 표의 `model` 행)
     - _Requirements: 4.8, 11.1, 22.2, 22.6_
   - [x] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)
     - `github`: `GitHubCredentials`, `GitHubClient`(`getPullRequest`, `listFiles`, `getTree`, `getFile`), `PullRequestMeta`, `FilePage`, `RepoTree`, `FileFetch`(`Found`/`NotFound`/`IsDirectory`/`TooLarge`)
@@ -114,7 +114,7 @@
     - **Validates: Requirements 22.4**
 
 - [ ] 6. glob과 diff 필터
-  - [ ] 6.1 `GlobMatcher`, `GlobSyntaxException` 구현 (T3가 사용, 화요일 목표)
+  - [ ] 6.1 `GlobMatcher` 구현 (T3가 사용, 화요일 목표. `GlobSyntaxException(pattern, reason)` 타입은 2.3에서 만들어 두었으므로 여기서는 던지는 조건을 채움)
     - `PathMatcher` 미사용. `/` 구간 분할, `**` 구간 = 0개 이상 구간, `*`·`?`·`{a,b}`(중첩) 구간 정규식, 메모이제이션 DP
     - `/`를 포함한 중괄호만 먼저 펼친 뒤 컴파일
     - 문법 오류: 짝 없는 중괄호, 빈 패턴, `\` 포함, 구간 일부의 `**`, 펼친 개수 256 초과

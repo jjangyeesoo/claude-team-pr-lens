@@ -9,8 +9,8 @@ public interface GitHubClient {
   FilePage listFiles(RepoRef repo, int number, int page);
 
   /**
-   * {@code sha}의 재귀 트리. GitHub가 잘라서 준 트리는 {@link RepoTree#truncated()}로 알리고, 트리를 찾지 못하면(404) 다른 조회와
-   * 같이 예외를 던진다.
+   * {@code sha}의 재귀 트리. GitHub가 잘라서 준 트리는 {@link RepoTree#truncated()}로 알리고, 트리를 찾지 못하면(404) {@link
+   * #getPullRequest}, {@link #listFiles}와 같이 예외를 던진다. 404를 결과 값으로 돌려주는 것은 {@link #getFile}뿐이다.
    */
   RepoTree getTree(RepoRef repo, String sha);
 

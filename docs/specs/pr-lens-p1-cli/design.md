@@ -67,7 +67,7 @@ flowchart TB
   CLI --> SUP
   GH --> SUP
   LLM --> SUP
-  PRF & CTX & FIL --> SUP
+  PRF & CTX & FIL & GLOB --> SUP
   PRF & CTX & ENG & OUT & CFG & CODEC & FIL & GH & DIFF --> MODEL
 ```
 
@@ -155,7 +155,7 @@ public interface GitHubCredentials { String authorizationHeader(RepoRef repo); }
 public interface GitHubClient {
   PullRequestMeta getPullRequest(RepoRef repo, int number);
   FilePage listFiles(RepoRef repo, int number, int page);          // per_page=100 고정
-  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 다른 조회처럼 GitHubApiException (Optional로 감싸지 않음)
+  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 getPullRequest·listFiles처럼 GitHubApiException (Optional로 감싸지 않음. getFile만 404를 NotFound로 돌려줌)
   FileFetch getFile(RepoRef repo, String path, String sha);        // Found(content) | NotFound | IsDirectory | TooLarge
 }
 public record PullRequestMeta(String title, /*@Nullable*/ String body, String baseSha, String headSha, int changedFiles) {}
