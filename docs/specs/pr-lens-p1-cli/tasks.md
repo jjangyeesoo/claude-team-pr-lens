@@ -38,33 +38,35 @@
 
 - [ ] 2. 공유 타입과 경계 인터페이스 정의
   - PR 경계: 2.1~2.3 / 2.4~2.6 (앞쪽은 월요일 선머지)
-  - [ ] 2.1 `model` 패키지 레코드 작성
+  - [x] 2.1 `model` 패키지 레코드 작성
     - `RepoRef`, `PullRequestSnapshot`, `ChangedFile`, `FileStatus`, `PatchContent`(sealed: `Parsed`, `Absent`, `Unparseable`), `Hunk`, `DiffLine`, `LineKind`
     - `ReviewContext`(경로 중복 시 생성 거부), `ContextFile`, `ContextSource`, `Revision`
     - `ReviewResult`, `ExcludedFile`, `ResultStatus`, `IncompleteReason`, `IncompleteDetails`, `ChunkIssue`(원본 응답 발췌 포함), `FileCountGap`, `ReviewStats`, `ReviewMode`, `Finding`, `Basis`, `Demotion`, `Severity`, `Category`, `BasisType`, `LineVerdict`, `SummaryOnlyReason`, `Usage`
     - `Configuration`(`defaults()` 포함), `ModelPricing`
-    - compact constructor 규칙: `requireNonNull(x, "필드이름")`, `List.copyOf`, 맵은 `unmodifiableSortedMap(new TreeMap<>(m))`, `BigDecimal` 정규화(비용 `setScale(4)`, 단가 `stripTrailingZeros`), 토큰 수 음수 거부
+    - compact constructor 규칙: `requireNonNull(x, "필드이름")`, `List.copyOf`, 맵은 빈 `TreeMap`에 옮겨 담아 `unmodifiableSortedMap`(키 자연 순서, null 키·값 거부), `BigDecimal` 정규화(비용 `setScale(4, HALF_UP)`(`Usage.estimatedCostUsd`, `Configuration.maxCostUsdPerReview`), 단가 `stripTrailingZeros`), 토큰 수 음수 거부
     - 불변식 검사: `status == COMPLETE ⇔ incompleteReasons 비어 있음`, `verdict == SUMMARY_ONLY ⇔ summaryOnlyReason != null`, `excludedFiles == excludedFileDetails의 path 목록`, `PullRequestSnapshot.body` null → `""`
     - _Requirements: 1.2, 17.1, 17.2, 17.4, 17.5, 17.6, 17.7, 17.8_
-  - [ ] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
-    - 여러 패키지가 쓰므로 `model`에 둡니다(설계 문서에 위치가 없어 정한 값)
+  - [x] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
+    - 여러 패키지가 쓰므로 `model`에 둡니다(design.md "패키지 배치" 표의 `model` 행)
     - _Requirements: 4.8, 11.1, 22.2, 22.6_
-  - [ ] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)
+  - [x] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)
     - `github`: `GitHubCredentials`, `GitHubClient`(`getPullRequest`, `listFiles`, `getTree`, `getFile`), `PullRequestMeta`, `FilePage`, `RepoTree`, `FileFetch`(`Found`/`NotFound`/`IsDirectory`/`TooLarge`)
     - `pullrequest`, `context`: `PrFetcher.fetch(RepoRef, int)`, `ContextCollector.collect(PullRequestSnapshot, Configuration)`의 생성자와 시그니처(본문은 `UnsupportedOperationException`)
     - `llm`: `LlmClient`, `LlmRequest`(모델, 최대 출력 토큰, effort, system, 캐시 블록, 데이터 블록, JSON 스키마), `LlmResponse`(stopReason, text, usage), `LlmUsage`, `LlmApiException`(상태 코드, 오류 종류, `retry-after` 원문)
     - `review`: `ReviewEngine` 생성자와 `review(snapshot, context, config)` 시그니처(본문은 `UnsupportedOperationException`), `ReviewListener`
     - `support`: `RetryListener`(대기 시간은 `Duration`), `Sleeper`, `Warning(code, message)`, `WarningSink`, `PrLensException`(sealed가 아닌 추상 클래스), `Attempt<T>`(`Success`/`Retryable`/`Fatal`)와 `RetryExecutor.execute(api, call)` 시그니처
-    - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
+    - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. `GlobMatcher.validate`가 던지는 `GlobSyntaxException(pattern, reason)`(`PrLensException` 하위 타입)도 여기서 만듭니다(T3 `ConfigLoader`가 6.1을 기다리지 않고 잡을 수 있게). T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
     - 생성자 시그니처만 먼저 고정: `RetryExecutor(RetryPolicy, Sleeper, RetryListener)`, `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`, `RetryingLlmClient(LlmClient, RetryExecutor)` (P2가 작업마다 다시 조립)
     - _Requirements: 17.2, 17.3, 17.9_
   - [ ]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
     - **Validates: Requirements 17.4, 17.5, 17.6, 17.8**
   - [ ]* 2.5 Property 22: 경로 정규화 비교 테스트
+    - 주의(선머지 리뷰): 생성기의 기준 경로 p는 이미 정규화된 값으로 만듭니다(`./`·`/`로 시작하거나 `\`를 포함하면 "정규화 후 p와 같다"가 성립하지 않음). 대소문자 변형은 p에 대소문자 있는 글자가 하나 이상 있을 때만 p와 다릅니다. `RepoPaths.normalize`가 정한 동작(중간의 `./`·`//`와 끝의 `/` 유지, 공백 유지, 빈 문자열 가능)은 그 Javadoc과 `RepoPathsTest`에 있습니다
     - **Validates: Requirements 11.1, 22.2, 22.6**
   - [ ] 2.6 `testkit` 공용 생성기 기본형 작성 (jqwik이 필요하므로 1.2 뒤)
     - 저장소 경로(대소문자, `./`, `\` 변형), `ReviewResult`(한글·따옴표·역슬래시·줄바꿈·탭·이모지 문자열, null 선택 필드, 빈 목록), `Configuration`
     - 트랙별 생성기(Hunk, glob, import 그래프, 응답 수열)는 각 트랙이 추가합니다
+    - 주의(선머지 리뷰): 저장소 경로 생성기는 정규화된 기준 경로와 그 변형(`./`, `/`, `\`, 대소문자)을 짝으로 내야 2.5에서 그대로 쓸 수 있습니다. `ReviewResult`와 `Configuration` 생성기는 2.1의 불변식(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`, 토큰 수 0 이상)을 지켜야 생성자에서 거부되지 않습니다
     - _Requirements: 17.8_
 
 - [ ] 3. `support`: 재시도와 비밀정보 마스킹 (선머지 대상이 아님. 2.3이 머지되면 트랙과 병렬로 진행)
@@ -75,6 +77,7 @@
     - 예외(모두 `support`에 정의, `PrLensException` 하위 타입, final 아님): `RetriesExhaustedException(api, lastStatus, attempts)`, `RetryAfterTooLongException(api, seconds)`, `NonRetryableApiException(api, status)`
     - HTTP 날짜·음수·소수 `retry-after`는 무효로 보고 지수 백오프 사용
     - 재시도마다 `RetryListener.onRetry(api, nextAttempt, maxAttempts, status, wait)` 호출(`wait`는 정책이 계산한 `Duration`)
+    - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다. `maxRetries` 0~10 검증을 `RetryPolicy`에서도 할지, `ConfigLoader`(요구사항 18.6)에만 둘지는 미정입니다
     - _Requirements: 1.13, 21.1, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11_
   - [ ]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
     - **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**
@@ -114,11 +117,12 @@
     - **Validates: Requirements 22.4**
 
 - [ ] 6. glob과 diff 필터
-  - [ ] 6.1 `GlobMatcher`, `GlobSyntaxException` 구현 (T3가 사용, 화요일 목표)
+  - [ ] 6.1 `GlobMatcher` 구현 (T3가 사용, 화요일 목표. `GlobSyntaxException(pattern, reason)` 타입은 2.3에서 만들어 두었으므로 여기서는 던지는 조건을 채움)
     - `PathMatcher` 미사용. `/` 구간 분할, `**` 구간 = 0개 이상 구간, `*`·`?`·`{a,b}`(중첩) 구간 정규식, 메모이제이션 DP
     - `/`를 포함한 중괄호만 먼저 펼친 뒤 컴파일
     - 문법 오류: 짝 없는 중괄호, 빈 패턴, `\` 포함, 구간 일부의 `**`, 펼친 개수 256 초과
     - 예시 테스트: `**/x`가 루트 `x`와 일치, 대소문자 구분
+    - 주의(선머지 리뷰): 패턴에는 `RepoPaths.normalize`를 그대로 쓰지 않습니다. `\`를 `/`로 바꾸므로 `a\b`가 문법 오류 없이 통과합니다. 패턴은 `\` 검사를 먼저 하거나 앞의 `./`·`/` 제거만 따로 합니다(경로 쪽에는 `normalize`를 써도 됨). `/`, `./` 패턴은 접두어를 떼면 `""`가 되므로 빈 패턴 검사는 접두어 제거 뒤에 합니다
     - _Requirements: 3.2, 5.7_
   - [ ]* 6.2 Property 12: glob 중괄호 모델 기반 테스트
     - **Validates: Requirements 5.8**
@@ -142,6 +146,9 @@
     - 401, 404, rate limit이 아닌 403은 `HttpGitHubClient`가 직접 `GitHubApiException`(상태 코드와 원인 후보 메시지. final로 두지 않음: P2가 `GitHubAuthException`으로 상속)으로 던짐. 그 밖의 429 외 4xx는 `Attempt.Fatal`로 돌려줌
     - contents API(base64) 조회, 404 → `NotFound`, 폴더 → `IsDirectory`. 재귀 트리 조회와 `truncated` 전달. 1MB 초과 파일(`encoding: "none"`, 빈 `content`)은 빈 문자열로 넘기지 말고 `FileFetch.TooLarge`로 돌려줌(설계 G-12)
     - HTTP 디버그 로그(기본 꺼짐)는 헤더 마스킹 함수를 거쳐 기록
+    - 주의(선머지 리뷰): `getTree`는 `Optional` 없이 `RepoTree`를 돌려줍니다. 트리를 찾지 못하면(404) `getPullRequest`·`listFiles`처럼 `GitHubApiException`을 던지고, 404를 결과 값(`NotFound`)으로 돌려주는 것은 `getFile`뿐입니다. `FilePage.Entry`는 GitHub 값 그대로 채웁니다(상태 매핑과 patch 해석은 7.4)
+    - 미정(여기서 정함): 트리 항목의 `type`이 `blob`/`tree`/`commit` 외의 값일 때(`RepoTree.Entry.kind`는 null 불가), contents API의 symlink·submodule 응답을 `FileFetch`의 어느 결과로 보낼지
+    - 2.3의 record는 `PullRequestMeta.title`·`baseSha`·`headSha`, `FilePage.Entry.filename`·`status`, `RepoTree.Entry.path`에 null을 거부합니다. GitHub가 이 값들을 항상 채워 준다는 가정이고 실제 응답으로 확인한 것은 아닙니다(7.7에서 확인)
     - _Requirements: 1.8, 1.11, 1.13, 19.5, 19.6, 21.2, 21.9, 21.10, 21.11_
   - [ ] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
     - _Requirements: 1.3, 1.4, 1.9_
@@ -151,6 +158,7 @@
     - 메타데이터 조회, 파일 목록 `per_page=100` 페이지 조회(누적 수 == `changed_files` 또는 빈 페이지/next 없음에서 중단), 같은 `filename` 버림
     - 상태 매핑: `copied` → `ADDED`, `unchanged` → `MODIFIED`(설계 G-6), 이름 변경은 이전 경로 기록
     - patch 없음 → `Absent`, `DiffParseException` → `Unparseable` + 경고
+    - 주의(선머지 리뷰): `FilePage.Entry`는 GitHub 값 그대로(`status` 문자열, `patch`는 없으면 null)이고 다음 페이지 여부는 `FilePage.hasNext`입니다. `ChangedFile`은 경로 정규화를 강제하지 않으므로 `filename`을 `RepoPaths.normalize`에 거쳐 담습니다. `PullRequestMeta.body`는 null일 수 있고 `PullRequestSnapshot` 생성자가 `""`로 바꿉니다
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
   - [ ]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
@@ -161,6 +169,7 @@
   - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
     - 팀 저장소의 실제 PR 1건을 `PrFetcher`로 가져와 파일 수, patch 해석, `changed_files`와 받은 파일 수가 같은지 확인
     - base SHA로 재귀 트리 조회와 contents 조회가 되는지 확인
+    - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
@@ -187,6 +196,7 @@
     - 선언 파일 폴더 기준 해석과 `.`/`..` 정규화, `~/`·`/`·드라이브 문자·루트 위 `..` 거부 + 경고
     - BFS `(path, depth, declaredBy)`, 깊이 1~4만 가져오고 5 이상은 경고, 이미 담긴 경로는 건너뜀, 404·폴더는 경고
     - `claude_md`와 `import` 출처에서만 import 탐색
+    - 주의(선머지 리뷰): 절대 경로 거부 판정을 `RepoPaths.normalize`보다 먼저 합니다. `normalize`는 앞의 `/`를 지우므로 먼저 부르면 `/etc/x`가 `etc/x`로 받아들여집니다. `normalize`는 `.`·`..` 구간을 해석하지 않으므로 "선언 폴더 + import 경로"를 합친 뒤 구간 단위 해석과 중간의 `./`·`//` 정리는 여기서 합니다(그래야 "이미 담긴 경로" 비교가 맞음). `@\foo`처럼 역슬래시로 시작하는 경로를 절대 경로로 볼지는 미정입니다
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
   - [ ]* 8.7 Property 15: import 도달 가능성 불변 테스트
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
@@ -196,6 +206,7 @@
     - 상대 경로·같은 저장소 URL 두 정규식을 본문 순서로 병합, 앵커·쿼리 제거, 다른 저장소(대소문자 무시)·`..`·`docs/specs/` 밖은 경고 후 건너뜀
     - 중복 제거, 최대 20개(초과 개수 경고)
     - 조회: base → 404일 때만 head(`Revision.HEAD`), 둘 다 없거나 폴더면 경고
+    - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다. 허용할지 구간을 정리할지는 미정입니다
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
   - [ ]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
@@ -203,6 +214,7 @@
     - `DiffFilter`로 대상 파일 결정 → `claude_md` → `rule` → `import` → `spec` 순서로 누적기(`LinkedHashMap`)에 수집. 같은 경로가 다시 들어오면 우선순위가 더 높은 출처를 남김(수집 순서가 우선순위와 같아 실제로는 기존 출처가 남음)
     - 404 외 오류(401, 403, 재시도 소진)는 예외로 전파
     - 경고는 생성자로 받은 `WarningSink`에 `Warning(code, message)`로 전달. 순수 함수가 돌려준 경고도 여기로 넘김
+    - 주의(선머지 리뷰): `ReviewContext`와 `ContextFile`은 경로 정규화를 강제하지 않고, `ReviewContext`의 중복 검사는 문자열 그대로 비교합니다(`./a`와 `a`를 다른 경로로 봄). 누적기에 넣기 전에 `RepoPaths.normalize`를 거쳐야 요구사항 4.8이 성립합니다. 불변화는 `new ReviewContext(files)`로 합니다(`of` 팩터리는 없음)
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
   - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
@@ -228,6 +240,7 @@
     - basis: `rule`/`spec`이고 `ref`가 공백이거나 컨텍스트 경로에 없으면 `general`로 강등 + `Demotion`
     - 라인: 전체 대상 파일의 `head 경로 → LineRanges` 맵으로 `not_target_file` → `line_missing` → `out_of_range` → `INLINE_ELIGIBLE`
     - `basis`, `demotion`, 판정 필드 외에는 변경하지 않음
+    - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
@@ -270,6 +283,8 @@
     - 분할 모드 Chunk의 `RetriesExhausted`는 `chunk_failed`로 흡수, 모두 실패하면 `AllChunksFailedException`. 429 외 4xx와 `RetryAfterTooLong`은 즉시 전파
     - `listener.modeDecided`, `chunkStarted`, 누적 비용 첫 초과 시 `costThresholdExceeded` 1회
     - `DiffFilter`가 돌려준 경고는 버림(수집기가 이미 알림). 엔진은 `WarningSink`를 받지 않음
+    - 주의(선머지 리뷰): `RetriesExhaustedException`이 3.1에서 생기므로 3.1이 머지된 뒤 시작합니다. `ReviewResult`는 `usage`, `incompleteDetails`, `stats`를 포함해 모든 필드가 필수라, 대상 0개일 때도 `Usage(0, 0, 0, 0, model, …)`와 `IncompleteDetails(List.of(), null)`을 만들어야 합니다
+    - 미정(여기서 정함): 대상 0개일 때 `estimatedCostUsd`를 `0.0000`으로 할지 `null`로 할지. `null`이면 CLI가 "단가 없음" 경고(요구사항 20.5)를 잘못 냅니다
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
@@ -280,6 +295,7 @@
     - SDK 자체 재시도 끄기, 요청 제한 시간 180초, `ANTHROPIC_API_KEY`는 이 클라이언트에만 전달
     - 요청 매핑: 모델, `max_tokens`, effort, system, user 블록 2개(첫 블록 ephemeral `cache_control`), `output_config.format`
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
+    - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
   - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - _Requirements: 21.1, 21.6, 21.7_
@@ -303,6 +319,7 @@
     - `estimatedCostUsd`는 JSON 숫자 ↔ `BigDecimal`(부동소수점 경유 금지)
     - 오류: 필드 경로(`findings[2].severity`)와 enum 허용 값, 문법 오류 줄·열, 음수 토큰 경로. 모르는 필드 무시
     - Spring Boot 4의 Jackson 3 패키지(`tools.jackson`)는 spike 결과를 따름
+    - 주의(선머지 리뷰): `model` 타입은 불변식 위반과 음수 토큰에 `IllegalArgumentException`, 필수 필드 null에 `NullPointerException`을 던집니다. 코덱이 생성 전에 직접 검증해야(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`) 필드 경로를 담은 `CodecException`이 나가고 `PrLensException`이 아닌 예외가 새지 않습니다. `Usage`는 `estimatedCostUsd`를 `setScale(4, HALF_UP)`으로 맞추므로 `0.1`을 읽으면 `0.1000`으로 저장됩니다
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.7, 12.9, 16.4_
   - [ ]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
@@ -314,8 +331,11 @@
     - `cost.pricing`은 모델 이름 단위로 기본 단가표에 병합, 지정한 모델은 네 단가 필수(설계 G-10)
     - 비밀 키 이름(`token`, `githubToken`, `apiKey`, `anthropicApiKey`, 대소문자·`_`/`-` 무시)은 값을 읽지 않고 환경변수 안내
     - `exclude.add`/`exclude.remove` 패턴을 `GlobMatcher`로 검증
+    - 주의(선머지 리뷰): `Configuration`은 값 범위를 검증하지 않고, `maxCostUsdPerReview`를 `setScale(4, HALF_UP)`으로 맞춥니다. 범위 검사(0.01~100.00)는 `Configuration`을 만들기 전 원본 값에 합니다. 만든 뒤에 하면 `0.00996`이 `0.0100`으로 반올림돼 통과합니다. `GlobMatcher.validate`는 `GlobSyntaxException(pattern, reason)`을 던지고, 이 타입은 2.3에서 만들어 두었습니다(던지는 조건은 6.1). `pricing` 맵은 null 키·값을 거부합니다
+    - 미정(여기서 정함): 설정 파일의 `0.123456`처럼 소수 다섯째 자리 이하가 있는 비용 상한을 오류로 거부할지 `0.1235`로 반올림할지
     - _Requirements: 3.11, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 19.1, 22.2, 22.3_
   - [ ] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
+    - 주의(선머지 리뷰): `maxCostUsdPerReview`는 scale 4라 그대로 쓰면 `0.5000`으로 나옵니다. 단가(`ModelPricing`)는 `stripTrailingZeros`를 거쳐 `20.00`이 `2E+1`이 되므로 `toPlainString()`으로 씁니다. `pricing`은 모델 이름의 자연 순서로 순회됩니다
     - _Requirements: 18.10_
   - [ ]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
     - **Validates: Requirements 18.5, 18.6, 18.7, 18.10, 18.11**
@@ -407,6 +427,7 @@
 ## Notes
 
 - 트랙 담당은 ROADMAP 2주차 기본안(T1 B, T2 A, T3 C)을 따르며 월요일 킥오프에서 바뀔 수 있습니다.
+- 작업 본문의 "주의(선머지 리뷰)"와 "미정(여기서 정함)" 항목은 선머지 PR(2.1~2.3)의 리뷰에서 넘긴 것입니다. 2.1~2.3의 코드와 테스트로 확인한 사실도 있지만, 뒤 작업에 대한 부분은 구현 없이 스펙을 읽고 추론한 것이므로 구현하면서 틀린 것이 드러나면 그 항목을 고칩니다. "미정"은 그 작업에서 정하고 필요하면 요구사항이나 설계에 반영합니다.
 - 1주차 spike 결과에 따라 세부 구현이 달라지는 작업은 다음과 같습니다. spike 확인 목록은 design.md "1주차 spike 확인 목록"에 있습니다.
   - 13.1, 13.2, 3.1: SDK 빌더 이름, `retry-after` 헤더 접근 방법
   - 7.1: secondary rate limit 본문 문구

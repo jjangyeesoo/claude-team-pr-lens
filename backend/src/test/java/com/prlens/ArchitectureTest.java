@@ -13,8 +13,8 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * 패키지 의존 규칙 (ADR 0003, design.md "계층과 의존 방향"). 대상 클래스가 아직 없는 규칙은 {@code allowEmptyShould(true)}로
- * 둔다.
+ * 패키지 의존 규칙 (ADR 0003, design.md "계층과 의존 방향"). 새 규칙의 대상 클래스가 아직 없으면 {@code allowEmptyShould(true)}로
+ * 두고, 클래스가 생기면 뗀다.
  */
 @AnalyzeClasses(packages = "com.prlens", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
@@ -31,8 +31,7 @@ class ArchitectureTest {
           .resideInAPackage("com.prlens.model..")
           .should()
           .onlyDependOnClassesThat()
-          .resideInAnyPackage("java..", "com.prlens.model..")
-          .allowEmptyShould(true);
+          .resideInAnyPackage("java..", "com.prlens.model..");
 
   @ArchTest
   static final ArchRule reviewDoesNotDependOnCliOutputGithubConfig =
@@ -45,8 +44,7 @@ class ArchitectureTest {
               "com.prlens.cli..",
               "com.prlens.output..",
               "com.prlens.github..",
-              "com.prlens.config..")
-          .allowEmptyShould(true);
+              "com.prlens.config..");
 
   @ArchTest
   static final ArchRule reviewDoesNotReferenceAnthropicLlmClient =
@@ -55,8 +53,7 @@ class ArchitectureTest {
           .resideInAPackage("com.prlens.review..")
           .should()
           .dependOnClassesThat()
-          .haveFullyQualifiedName("com.prlens.llm.AnthropicLlmClient")
-          .allowEmptyShould(true);
+          .haveFullyQualifiedName("com.prlens.llm.AnthropicLlmClient");
 
   @ArchTest
   static final ArchRule contextAndPullrequestDoNotReferenceHttpGitHubClient =
@@ -65,8 +62,7 @@ class ArchitectureTest {
           .resideInAnyPackage("com.prlens.context..", "com.prlens.pullrequest..")
           .should()
           .dependOnClassesThat()
-          .haveFullyQualifiedName("com.prlens.github.HttpGitHubClient")
-          .allowEmptyShould(true);
+          .haveFullyQualifiedName("com.prlens.github.HttpGitHubClient");
 
   // 스타터의 common과 StarterApplication은 P2 스펙에서 위치를 정할 때까지 예외로 둔다 (ADR 0003).
   @ArchTest
@@ -77,8 +73,7 @@ class ArchitectureTest {
           .and()
           .doNotHaveFullyQualifiedName("com.prlens.StarterApplication")
           .should()
-          .dependOnClassesThat(SPRING_ANNOTATIONS)
-          .allowEmptyShould(true);
+          .dependOnClassesThat(SPRING_ANNOTATIONS);
 
   // ADR 0004
   @ArchTest

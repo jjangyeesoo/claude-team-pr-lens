@@ -67,7 +67,8 @@ flowchart TB
   CLI --> SUP
   GH --> SUP
   LLM --> SUP
-  PRF & CTX & ENG & OUT & CFG & CODEC & FIL --> MODEL
+  PRF & CTX & FIL & GLOB --> SUP
+  PRF & CTX & ENG & OUT & CFG & CODEC & FIL & GH & DIFF --> MODEL
 ```
 
 의존 규칙(ArchUnit 테스트로 CI에서 강제, 제안):
@@ -82,7 +83,7 @@ flowchart TB
 
 | 패키지 | 트랙 | 주요 클래스 | 관련 요구사항 |
 |---|---|---|---|
-| `model` | 리드(월요일 선머지) | 공유 레코드 전부 (Data Models 참고) | 17 |
+| `model` | 리드(월요일 선머지) | 공유 레코드 전부 (Data Models 참고), `RepoPaths`(Normalized_Repo_Path 변환. 여러 패키지가 쓰는 순수 함수) | 17, 4.8, 11.1, 22.2, 22.6 |
 | `github` | T2 (P2와 공유) | `GitHubClient`, `GitHubCredentials`, `HttpGitHubClient`, `GitHubApiException` | 1.8, 1.11, 21 |
 | `pullrequest` | T2 | `PullRequestUrl`, `PrFetcher` | 1 |
 | `diff` | T2 | `DiffParser`, `DiffPrinter`, `LineRanges` | 2, 22.4 |
@@ -154,8 +155,18 @@ public interface GitHubCredentials { String authorizationHeader(RepoRef repo); }
 public interface GitHubClient {
   PullRequestMeta getPullRequest(RepoRef repo, int number);
   FilePage listFiles(RepoRef repo, int number, int page);          // per_page=100 고정
-  Optional<RepoTree> getTree(RepoRef repo, String sha);            // recursive, truncated 여부 포함
+  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 getPullRequest·listFiles처럼 GitHubApiException (Optional로 감싸지 않음. getFile만 404를 NotFound로 돌려줌)
   FileFetch getFile(RepoRef repo, String path, String sha);        // Found(content) | NotFound | IsDirectory | TooLarge
+}
+public record PullRequestMeta(String title, /*@Nullable*/ String body, String baseSha, String headSha, int changedFiles) {}
+public record FilePage(List<Entry> files, boolean hasNext) {       // hasNext = Link 헤더 rel="next"
+  // GitHub가 준 값 그대로. 상태 매핑과 patch 해석은 PrFetcher가 한다
+  public record Entry(String filename, /*@Nullable*/ String previousFilename, String status,
+                      int additions, int deletions, /*@Nullable*/ String patch) {}
+}
+public record RepoTree(List<Entry> entries, boolean truncated) {
+  public record Entry(String path, Kind kind) {}
+  public enum Kind { BLOB, TREE, COMMIT }                          // COMMIT은 서브모듈
 }
 
 // pullrequest, context 패키지 (T2 구현, T3가 조립)
@@ -196,13 +207,14 @@ public abstract class PrLensException extends RuntimeException { ... }   // seal
 public sealed interface Attempt<T> {
   record Success<T>(T value) implements Attempt<T> {}
   record Retryable<T>(String statusOrError, /*@Nullable*/ String retryAfter,   // 헤더 원문. 유효성은 실행기가 판단
-                      /*@Nullable*/ Duration wait) implements Attempt<T> {}   // 호출자가 정한 대기(GitHub rate limit)
+                      /*@Nullable*/ Duration delay) implements Attempt<T> {}  // 호출자가 정한 대기(GitHub rate limit). `wait`는 record 구성 요소 이름으로 쓸 수 없음
   record Fatal<T>(String api, int status) implements Attempt<T> {}             // 실행기가 NonRetryableApiException으로 던진다
 }
 // RetryExecutor: public <T> T execute(String api, Supplier<Attempt<T>> call)
 
 // T2가 구현하고 T1·T3가 쓰는 순수 함수의 시그니처 (2.3에서 스텁으로 선머지, 본문은 UnsupportedOperationException)
-public final class GlobMatcher { public static boolean matches(String pattern, String path); public static void validate(String pattern); }
+public final class GlobMatcher { public static boolean matches(String pattern, String path); public static void validate(String pattern) throws GlobSyntaxException; }
+public class GlobSyntaxException extends PrLensException { public GlobSyntaxException(String pattern, String reason); public String pattern(); public String reason(); }   // 타입은 2.3에서 선머지, 던지는 조건은 6.1
 public final class DiffPrinter { public static String print(List<Hunk> hunks); }
 public final class LineRanges  { public static LineRanges of(List<Hunk> hunks); public boolean contains(int line); }
 public final class DiffFilter  { public static FilterOutcome apply(List<ChangedFile> files, Configuration config); }
@@ -280,7 +292,7 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 
 1. base SHA의 재귀 트리를 한 번 조회해 `RepoTreeIndex`(경로 → blob/tree)를 만듭니다. 후보 파일의 존재와 폴더 여부를 트리로 먼저 판정하므로 404 호출이 줄어듭니다. 트리 응답이 `truncated`이면 트리 없이 경로별 조회(404 = 없음)로 대체합니다. 이때 `.claude/rules/` 아래 파일은 열거할 방법이 없으므로(`GitHubClient`에 폴더 목록 조회가 없음) 경고를 내고 rule 수집을 건너뜁니다(아래 "요구사항 공백" G-9).
 2. 수집 순서는 `claude_md`(루트, `.claude/CLAUDE.md`, 대상 파일 상위 폴더를 가까운 순) → `rule`(트리에서 `.claude/rules/**` 중 `.md`, 프런트매터 매칭) → `import`(BFS, 깊이 1~4) → `spec`(PR 본문 순서, 최대 20개)입니다. 같은 경로가 다시 들어오면 누적기가 출처 우선순위를 비교해 더 높은 출처를 남깁니다(요구사항 8.2). 수집 순서가 우선순위와 같아서 실제 수집에서는 항상 먼저 들어온 출처가 남으므로 "이미 있으면 기존 출처 유지"(요구사항 6.7)와도 맞습니다. 누적기가 순서에 기대지 않으므로 Property 18은 임의 추가 순서로 검증합니다.
-3. `ReviewContext`는 누적기(`LinkedHashMap<경로, ContextFile>`, 우선순위 비교)로 쌓고 `ReviewContext.of(...)`로 불변화합니다. 경로는 모두 Normalized_Repo_Path입니다.
+3. `ReviewContext`는 누적기(`LinkedHashMap<경로, ContextFile>`, 우선순위 비교)로 쌓고 `new ReviewContext(files)`로 불변화합니다(생성자가 방어적 복사와 경로 중복 검사를 함). 경로는 모두 Normalized_Repo_Path입니다.
 
 - **FrontmatterParser**: 첫 줄이 `---`일 때만 다음 `---` 줄까지를 YAML(SafeConstructor 수준의 안전 로더)로 읽습니다. `paths`가 문자열이면 한 개짜리 목록으로 바꿉니다. 오류 종류는 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`이고 모두 "포함 + 경고"입니다.
 - **ImportResolver**: 간단한 Markdown 토크나이저로 펜스 블록(```` ``` ````로 열고, 닫히지 않으면 파일 끝까지)과 인라인 코드(같은 길이의 백틱 쌍)를 건너뛰고, `(^|\s)@(\S+)`를 import로 읽습니다. 경로 해석은 선언 파일의 폴더 기준으로 `.`/`..`를 정규화하고, `~/`, `/`, `X:` 시작이나 루트 위로 올라가는 `..`는 거부합니다. BFS 큐에 `(path, depth, declaredBy)`를 넣고, 깊이 5 이상은 가져오지 않고 경고합니다.
@@ -441,8 +453,8 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 모든 공유 타입은 `model` 패키지의 `record`입니다. 공통 규칙(요구사항 17.4~17.8):
 
-- compact constructor에서 필수 필드는 `Objects.requireNonNull(x, "필드이름")`, 목록은 `List.copyOf`(방어적 복사 + 수정 시 `UnsupportedOperationException` + null 원소 거부), 맵은 `Collections.unmodifiableSortedMap(new TreeMap<>(m))`.
-- 값 동등성은 record 기본 `equals`를 씁니다. `BigDecimal`은 scale 차이로 `equals`가 달라지므로 생성자에서 정규화합니다(비용은 `setScale(4)`, 단가는 `stripTrailingZeros`).
+- compact constructor에서 필수 필드는 `Objects.requireNonNull(x, "필드이름")`, 목록은 `List.copyOf`(방어적 복사 + 수정 시 `UnsupportedOperationException` + null 원소 거부), 맵은 빈 `TreeMap`에 옮겨 담은 뒤 `Collections.unmodifiableSortedMap`으로 감쌉니다(`new TreeMap<>(m)`은 원본 `SortedMap`의 comparator를 물려받으므로 쓰지 않음. 키는 항상 자연 순서, null 키와 null 값은 필드 이름을 담아 거부).
+- 값 동등성은 record 기본 `equals`를 씁니다. `BigDecimal`은 scale 차이로 `equals`가 달라지므로 생성자에서 정규화합니다(비용 `Usage.estimatedCostUsd`와 `Configuration.maxCostUsdPerReview`는 `setScale(4, HALF_UP)`, 단가는 `stripTrailingZeros`). 반올림 모드를 주는 것은 소수 다섯째 자리 이하가 있는 값에서 `ArithmeticException`이 나지 않게 하려는 것입니다.
 - null 허용 필드는 아래 코드에 `@Nullable` 주석으로 표시합니다(실제 애너테이션 라이브러리는 스타터 관례를 따름).
 
 ```java
@@ -912,14 +924,14 @@ for attempt in 1..(maxRetries+1):
     outcome = call()                              // Attempt<T>. 호출자가 분류와 대기 시간을 함께 돌려준다
     if Success: return value
     if Fatal (429 외 4xx 등): throw NonRetryable
-    wait = outcome.wait ?? retryAfter(0 이상 정수) ?? min(2^(attempt-1), 30)      // Retryable
+    wait = outcome.delay ?? retryAfter(0 이상 정수) ?? min(2^(attempt-1), 30)     // Retryable
     if wait > 60: throw RetryAfterTooLong         // 마지막 시도 여부보다 먼저 검사한다
     if attempt == maxRetries+1: throw RetriesExhausted
     listener.onRetry(api, attempt+1, maxRetries+1, status, wait); sleeper.sleep(wait)
 ```
 
 - 60초 초과 검사를 "마지막 시도" 검사보다 먼저 합니다. 순서가 반대면 같은 응답이 마지막 시도에서는 `RetriesExhausted`(분할 모드에서 `chunk_failed`로 흡수)가 되고 그 전 시도에서는 즉시 종료 코드 2가 되어 결과가 시도 순번에 따라 달라집니다.
-- GitHub rate limit(요구사항 21.9~21.11)은 `HttpGitHubClient`가 응답을 분류해 `outcome.wait`를 정합니다.
+- GitHub rate limit(요구사항 21.9~21.11)은 `HttpGitHubClient`가 응답을 분류해 `outcome.delay`를 정합니다.
 
   | GitHub 403 또는 429 응답 | 분류 | 대기 시간 |
   |---|---|---|
