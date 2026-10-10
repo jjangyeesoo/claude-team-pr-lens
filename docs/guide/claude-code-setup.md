@@ -68,6 +68,7 @@
 |---|---|---|
 | `.claude/skills/spec`, `pr-ready`, `adr` | 공통 코어 | 그대로 복사. `pr-ready`의 스택별 검증 명령만 수정 |
 | `.claude/agents/reviewer.md` | 공통 코어 (+스택 항목) | backend/web 규칙 항목을 프로젝트 구조에 맞게 수정 |
+| `.claude/agents/context-reviewer.md`, `.claude/rules/context/editing.md` | 공통 코어 | 그대로 복사. 서로 맞물린 파일 목록과 승인 규칙이 있는 문서 경로만 프로젝트에 맞게 수정 |
 | `docs/specs/_template.md`, `docs/adr/`, PR 템플릿 | 공통 코어 | 그대로 복사 (ADR 내용만 새로 작성) |
 | `.claude/hooks/ProtectFiles.java` | 공통 코어 | 보호 패턴(`protectedReason`)만 수정 |
 | `.claude/hooks/VerifyOnStop.java` | 코어 로직 + 스택 설정 | `STACKS` 목록만 수정 (폴더, 명령, 실행 전 조건, 실패 판정 문자열). Maven이면 `mvnw`, Python이면 `uv run pytest` 등 |
@@ -75,7 +76,7 @@
 | `.claude/settings.json` allow | **스택별** | 빌드 명령에 맞게 교체 (Bash와 PowerShell 둘 다) |
 | 루트 `CLAUDE.md` | 공통 코어 | 구조와 스택 간 규칙만 프로젝트에 맞게 수정 |
 | `backend/CLAUDE.md`, `web/CLAUDE.md` | **스택별** | Commands/Architecture/Gotchas를 새로 작성 (`/init`으로 초안을 만든 뒤 병합) |
-| `.claude/rules/*`, `skills/new-endpoint`, `skills/new-page` | **스택별** | 프레임워크에 맞게 새로 작성. rules의 `paths`를 폴더 구조에 맞출 것 |
+| `.claude/rules/backend/*`, `.claude/rules/frontend/*`, `skills/new-endpoint`, `skills/new-page` | **스택별** | 프레임워크에 맞게 새로 작성. rules의 `paths`를 폴더 구조에 맞출 것 |
 | `backend/build.gradle.kts`의 `spotless {}` | **스택별** | 팀 포맷터로 교체. **기존 코드베이스라면 `ratchetFrom("origin/main")` 주석을 풀어** 첫 실행에 전체 파일이 재포맷되지 않게 함 |
 | `backend/build.gradle.kts`의 `testLogging {}` | **스택별 (필수)** | Stop hook이 Claude에게 넘기는 실패 정보가 이 설정에 달려 있음. 빼지 말 것 |
 | `web/package.json`의 `verify` 스크립트 | **스택별 (필수)** | Stop hook이 실행하는 진입점. 포맷 → lint → 타입 → 테스트 순서를 유지 |
@@ -84,7 +85,7 @@
 | `.gitattributes` | 공통 코어 | `* text=auto eol=lf` 유지. 빼면 Windows(`core.autocrlf=true`)에서 포맷터가 LF로 바꾼 파일이 전부 "수정됨"으로 보이고 CI의 `format:check`가 실패함. 기존 저장소에 넣을 때는 `git add --renormalize .` 커밋을 따로 만들 것 |
 | `gradlew` 실행 권한 | **스택별** | 복사 후 `git update-index --chmod=+x backend/gradlew` 확인 (hook은 `sh gradlew`로 실행해 권한이 없어도 동작) |
 
-기본 브랜치 이름: `reviewer` 에이전트와 `/pr-ready`는 `main`을 기준으로 diff를 봅니다. 다른 이름이면 두 파일을 수정하세요.
+기본 브랜치 이름: `reviewer`, `context-reviewer` 에이전트와 `/pr-ready`는 `main`을 기준으로 diff를 봅니다. 다른 이름이면 세 파일을 수정하세요.
 
 ### Next.js 관련 메모
 - **`web/AGENTS.md`는 Next.js가 관리합니다.** `create-next-app`이 `AGENTS.md`와 `@AGENTS.md`만 담긴 `CLAUDE.md`를 만들고, `next dev`가 이 블록을 다시 써 넣습니다. 팀 지시는 `web/CLAUDE.md`의 `@AGENTS.md` 아래에 적고, `AGENTS.md`는 고치지 않습니다(Prettier에서도 제외).
