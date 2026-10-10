@@ -15,7 +15,7 @@
 - 버그 수정은 재현하는 실패 테스트를 먼저 작성한다
 - 작업이 끝나면 Stop hook이 **바뀐 스택만** 검증한다 (backend: `spotlessApply test`, web: `npm run verify`). 실패하면 근본 원인을 고친다
 - PR 전에 `/pr-ready`를 실행한다
-- `.claude/`나 `CLAUDE.md`를 고칠 때는 먼저 `.claude/rules/context/editing.md`를 읽는다 (그 규칙의 `paths`는 `.claude/`와 루트 `CLAUDE.md`에서 자동 로드되지 않는 것을 확인했으므로 이 줄을 지우지 않는다)
+- `.claude/`나 `CLAUDE.md`를 고칠 때는 먼저 `.claude/rules/context/editing.md`를 읽는다 (그 규칙은 `paths`에 맞는 파일을 읽은 뒤에야 로드되고, 로드되지 않은 세션도 있었으므로 이 줄을 지우지 않는다)
 
 ## Cross-stack rules
 - web이 쓰는 API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 **같은 PR에서** 함께 바꾼다. P3 전에는 web이 PR Lens API를 쓰지 않으므로 backend만 바꾼다 (메모 API를 지울 때도 web은 고치지 않는다)
