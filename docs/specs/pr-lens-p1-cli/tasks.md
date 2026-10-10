@@ -46,7 +46,7 @@
     - compact constructor 규칙: `requireNonNull(x, "필드이름")`, `List.copyOf`, 맵은 빈 `TreeMap`에 옮겨 담아 `unmodifiableSortedMap`(키 자연 순서, null 키·값 거부), `BigDecimal` 정규화(비용 `setScale(4, HALF_UP)`(`Usage.estimatedCostUsd`, `Configuration.maxCostUsdPerReview`), 단가 `stripTrailingZeros`), 토큰 수 음수 거부
     - 불변식 검사: `status == COMPLETE ⇔ incompleteReasons 비어 있음`, `verdict == SUMMARY_ONLY ⇔ summaryOnlyReason != null`, `excludedFiles == excludedFileDetails의 path 목록`, `PullRequestSnapshot.body` null → `""`
     - _Requirements: 1.2, 17.1, 17.2, 17.4, 17.5, 17.6, 17.7, 17.8_
-  - [ ] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
+  - [x] 2.2 `RepoPaths.normalize` 구현 (`\` → `/`, 앞의 `./`·`/` 반복 제거, `..`은 해석하지 않음)
     - 여러 패키지가 쓰므로 `model`에 둡니다(설계 문서에 위치가 없어 정한 값)
     - _Requirements: 4.8, 11.1, 22.2, 22.6_
   - [ ] 2.3 경계 인터페이스 작성 (시그니처는 design.md "공유 경계"의 코드가 기준)

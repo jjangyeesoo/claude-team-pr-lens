@@ -82,7 +82,7 @@ flowchart TB
 
 | 패키지 | 트랙 | 주요 클래스 | 관련 요구사항 |
 |---|---|---|---|
-| `model` | 리드(월요일 선머지) | 공유 레코드 전부 (Data Models 참고) | 17 |
+| `model` | 리드(월요일 선머지) | 공유 레코드 전부 (Data Models 참고), `RepoPaths`(Normalized_Repo_Path 변환. 여러 패키지가 쓰는 순수 함수) | 17, 4.8, 11.1, 22.2, 22.6 |
 | `github` | T2 (P2와 공유) | `GitHubClient`, `GitHubCredentials`, `HttpGitHubClient`, `GitHubApiException` | 1.8, 1.11, 21 |
 | `pullrequest` | T2 | `PullRequestUrl`, `PrFetcher` | 1 |
 | `diff` | T2 | `DiffParser`, `DiffPrinter`, `LineRanges` | 2, 22.4 |
