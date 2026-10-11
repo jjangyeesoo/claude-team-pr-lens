@@ -154,6 +154,30 @@ class MaskingPrintStreamTest {
     assertThat(written()).isEqualTo("a ***\r\n");
   }
 
+  @Test
+  void flushInsideMultibyteCharacterKeepsCharacterIntact() {
+    byte[] bytes = "한\n".getBytes(UTF_8);
+
+    stream.write(bytes, 0, 2);
+    stream.flush();
+    stream.write(bytes, 2, bytes.length - 2);
+
+    assertThat(target.toByteArray()).isEqualTo(bytes);
+  }
+
+  @Test
+  void flushInsideMultibyteCharacterStillMasksNonAsciiSecret() {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    MaskingPrintStream korean = new MaskingPrintStream(out, new SecretMasker(List.of("가나다라")));
+    byte[] bytes = "x가나다라y\n".getBytes(UTF_8);
+
+    korean.write(bytes, 0, 6);
+    korean.flush();
+    korean.write(bytes, 6, bytes.length - 6);
+
+    assertThat(out.toString(UTF_8)).isEqualTo("x***y\n");
+  }
+
   /** 닫혔는지 기록하고, 켜 두면 쓰기에 실패하는 대상 스트림. */
   private static final class FlakyTarget extends OutputStream {
     private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();

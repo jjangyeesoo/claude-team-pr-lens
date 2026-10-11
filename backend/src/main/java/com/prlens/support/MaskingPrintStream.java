@@ -76,17 +76,33 @@ public final class MaskingPrintStream extends PrintStream {
     }
 
     /**
-     * @param all false면 비밀값의 앞부분일 수 있는 끝부분을 버퍼에 남긴다
+     * @param all false면 비밀값의 앞부분일 수 있는 끝부분과, 아직 다 오지 않은 멀티바이트 문자의 바이트를 버퍼에 남긴다
      */
     private void emit(boolean all) throws IOException {
       if (line.size() > 0) {
-        String text = line.toString(StandardCharsets.UTF_8);
+        byte[] bytes = line.toByteArray();
+        int complete = all ? bytes.length : completeUtf8Length(bytes);
+        String text = new String(bytes, 0, complete, StandardCharsets.UTF_8);
         int end = all ? text.length() : masker.safePrefixLength(text);
         line.reset();
         line.writeBytes(text.substring(end).getBytes(StandardCharsets.UTF_8));
+        line.write(bytes, complete, bytes.length - complete);
         target.write(masker.mask(text.substring(0, end)).getBytes(StandardCharsets.UTF_8));
       }
       target.flush();
+    }
+
+    /** 끝에 걸린 미완성 UTF-8 시퀀스를 뺀 길이. 문자 한가운데서 디코딩하면 대체 문자가 되므로 나머지 바이트가 올 때까지 미룬다. */
+    private static int completeUtf8Length(byte[] bytes) {
+      for (int back = 1; back <= 3 && back <= bytes.length; back++) {
+        int b = bytes[bytes.length - back] & 0xFF;
+        if ((b & 0xC0) == 0x80) {
+          continue;
+        }
+        int needed = b >= 0xF0 ? 4 : b >= 0xE0 ? 3 : b >= 0xC0 ? 2 : 1;
+        return needed > back ? bytes.length - back : bytes.length;
+      }
+      return bytes.length;
     }
   }
 }

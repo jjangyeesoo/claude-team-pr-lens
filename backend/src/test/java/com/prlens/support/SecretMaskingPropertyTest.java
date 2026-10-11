@@ -27,7 +27,7 @@ class SecretMaskingPropertyTest {
     CHECK_ERROR
   }
 
-  /** 텍스트의 {@code cut} 위치(길이로 나눈 나머지)까지 쓴 뒤 {@code action}을 한다. */
+  /** 텍스트의 UTF-8 바이트를 {@code cut} 위치(길이로 나눈 나머지)까지 쓴 뒤 {@code action}을 한다. */
   private record Step(int cut, Action action) {}
 
   private record Scenario(List<String> secrets, String text, String headerValue) {}
@@ -128,18 +128,19 @@ class SecretMaskingPropertyTest {
     }
   }
 
-  /** 텍스트를 임의 위치에서 나눠 쓰고, 조각 사이에 flush나 checkError를 끼운 뒤 닫는다. */
+  /** 텍스트를 임의 바이트 위치(문자 한가운데 포함)에서 나눠 쓰고, 조각 사이에 flush나 checkError를 끼운 뒤 닫는다. */
   private static String writeInSteps(SecretMasker masker, String text, List<Step> steps) {
     ByteArrayOutputStream target = new ByteArrayOutputStream();
     MaskingPrintStream stream = new MaskingPrintStream(target, masker);
+    byte[] bytes = text.getBytes(UTF_8);
     List<Step> ordered =
         steps.stream()
-            .map(step -> new Step(step.cut() % (text.length() + 1), step.action()))
+            .map(step -> new Step(step.cut() % (bytes.length + 1), step.action()))
             .sorted(Comparator.comparingInt(Step::cut))
             .toList();
     int written = 0;
     for (Step step : ordered) {
-      stream.print(text.substring(written, step.cut()));
+      stream.write(bytes, written, step.cut() - written);
       written = step.cut();
       if (step.action() == Action.FLUSH) {
         stream.flush();
@@ -147,7 +148,7 @@ class SecretMaskingPropertyTest {
         stream.checkError();
       }
     }
-    stream.print(text.substring(written));
+    stream.write(bytes, written, bytes.length - written);
     stream.close();
     return target.toString(UTF_8);
   }
