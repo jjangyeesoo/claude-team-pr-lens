@@ -87,7 +87,7 @@
     - `MaskingPrintStream`: `FileDescriptor.out/err` 기반, BOM 없는 UTF-8, 줄 단위 버퍼
     - 헤더 마스킹 함수: `Authorization`, `x-api-key` 이름 대소문자 무시
     - _Requirements: 19.4, 19.5, 19.7, 22.3_
-  - [ ]* 3.4 Property 39: 비밀정보 치환 테스트 (`*` 없는 비밀값으로 한정, 설계 G-3)
+  - [x]* 3.4 Property 39: 비밀정보 치환 테스트 (`*` 없는 비밀값으로 한정, 설계 G-3)
     - **Validates: Requirements 19.4, 19.5, 19.7**
 
 - [ ] 4. Checkpoint: 공유 부분(작업 1~3) 완료 확인
