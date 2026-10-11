@@ -80,7 +80,7 @@
     - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다
     - 결정(3.1): `maxRetries` 0~10 검증은 `RetryPolicy`에서도 합니다(범위 밖이면 `IllegalArgumentException`). 음수면 시도 횟수가 0 이하가 되어 동작이 정의되지 않고, P2는 `ConfigLoader`를 거치지 않고 조립할 수 있기 때문입니다. 사용자에게 보이는 오류 수집은 `ConfigLoader`(요구사항 18.6)가 맡습니다
     - _Requirements: 1.13, 21.1, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11_
-  - [ ]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
+  - [x]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
     - **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**
   - [ ] 3.3 `SecretMasker`, `MaskingPrintStream` 구현
     - 비밀값 모든 출현 위치(겹침 포함)를 덮고 연속 구간마다 `***` 하나로 치환, 빈 값·공백 값 제외
