@@ -19,7 +19,7 @@ import net.jqwik.api.Tuple;
 class SecretMaskingPropertyTest {
 
   /** 자기 겹침({@code aba})과 서로 부분 문자열인 비밀값이 잘 나오도록 작게 둔다. {@code *}와 공백은 뺀다(design.md G-3). */
-  private static final char[] ALPHABET = {'a', 'b', 'c', '-', '_', '가', '나'};
+  private static final char[] ALPHABET = {'a', 'b', 'c', '-', '_', 'é', '가', '나'};
 
   private enum Action {
     NONE,

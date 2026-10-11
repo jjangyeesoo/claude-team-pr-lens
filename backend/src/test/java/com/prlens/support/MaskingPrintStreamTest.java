@@ -166,6 +166,25 @@ class MaskingPrintStreamTest {
   }
 
   @Test
+  void flushAtAnyByteOfFourByteCharacterKeepsCharacterIntact() {
+    byte[] bytes = "😀\n".getBytes(UTF_8);
+
+    for (int cut = 1; cut <= 3; cut++) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      MaskingPrintStream emoji = new MaskingPrintStream(out, new SecretMasker(List.of(TOKEN)));
+
+      emoji.write(bytes, 0, cut);
+      emoji.flush();
+
+      assertThat(out.size()).as("cut=%d", cut).isZero();
+
+      emoji.write(bytes, cut, bytes.length - cut);
+
+      assertThat(out.toByteArray()).as("cut=%d", cut).isEqualTo(bytes);
+    }
+  }
+
+  @Test
   void flushInsideMultibyteCharacterStillMasksNonAsciiSecret() {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     MaskingPrintStream korean = new MaskingPrintStream(out, new SecretMasker(List.of("가나다라")));
