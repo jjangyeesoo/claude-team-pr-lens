@@ -70,14 +70,15 @@
     - _Requirements: 17.8_
 
 - [ ] 3. `support`: 재시도와 비밀정보 마스킹 (선머지 대상이 아님. 2.3이 머지되면 트랙과 병렬로 진행)
-  - [ ] 3.1 `RetryPolicy`, `RetryExecutor` 구현
+  - [x] 3.1 `RetryPolicy`, `RetryExecutor` 구현
     - 첫 시도 + 재시도 n회(0~10), 대기 = 호출자가 정한 값(GitHub rate limit) 또는 유효한 `retry-after` 또는 `min(2^(k-1), 30)`초. 대기가 60초를 넘으면 남은 시도 횟수와 관계없이 즉시 `RetryAfterTooLongException`(이 검사를 "마지막 시도" 검사보다 먼저 합니다)
     - 재시도 대상: 429, 5xx, 연결 실패, 제한 시간 초과, 그리고 호출자가 재시도 대상으로 분류한 응답(GitHub rate limit 403/429, 대기 시간은 호출자가 함께 전달)
     - `execute`는 호출자가 돌려준 `Attempt`로 판단: `Success`면 값 반환, `Fatal`이면 `NonRetryableApiException`, `Retryable`이면 대기 후 재시도. 호출자가 던진 예외(`GitHubApiException` 등)는 그대로 통과
     - 예외(모두 `support`에 정의, `PrLensException` 하위 타입, final 아님): `RetriesExhaustedException(api, lastStatus, attempts)`, `RetryAfterTooLongException(api, seconds)`, `NonRetryableApiException(api, status)`
     - HTTP 날짜·음수·소수 `retry-after`는 무효로 보고 지수 백오프 사용
     - 재시도마다 `RetryListener.onRetry(api, nextAttempt, maxAttempts, status, wait)` 호출(`wait`는 정책이 계산한 `Duration`)
-    - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다. `maxRetries` 0~10 검증을 `RetryPolicy`에서도 할지, `ConfigLoader`(요구사항 18.6)에만 둘지는 미정입니다
+    - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다
+    - 결정(3.1): `maxRetries` 0~10 검증은 `RetryPolicy`에서도 합니다(범위 밖이면 `IllegalArgumentException`). 음수면 시도 횟수가 0 이하가 되어 동작이 정의되지 않고, P2는 `ConfigLoader`를 거치지 않고 조립할 수 있기 때문입니다. 사용자에게 보이는 오류 수집은 `ConfigLoader`(요구사항 18.6)가 맡습니다
     - _Requirements: 1.13, 21.1, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11_
   - [ ]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
     - **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**

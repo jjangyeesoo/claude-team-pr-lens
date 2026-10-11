@@ -906,7 +906,7 @@ cost:
 | `MissingSecretException` | `cli` preflight | 없는 환경변수 이름 전부와 설정 방법 | 2 |
 | `GitHubApiException(401/403/404)` | `github`(`HttpGitHubClient`가 직접 던짐. 실행기는 그대로 통과시킴) | 상태 코드와 원인 후보(요구사항 1.11) | 2 |
 | `RetriesExhaustedException(api, lastStatus, attempts)` | `support`(`RetryExecutor`) | API 이름, 마지막 상태/오류 종류, 시도 수 | 2 (분할 모드 개별 Chunk는 `chunk_failed`로 흡수) |
-| `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각 | 2 |
+| `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각. `seconds`는 초 단위로 올린 대기 시간이고, 실행기는 한도가 풀리는 시각을 알 수 없어 메시지에 넣지 않습니다(요구사항 21.10의 시각은 호출자 쪽에서 만듦) | 2 |
 | `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드 | 2 |
 | `AllChunksFailedException` | `review` | 실패한 Chunk 수 | 2 |
 | 결과 생성 성공 | | 불완전·비용 경고(있으면) | `ExitCodeResolver`: 1 / 3 / 0 |
@@ -943,7 +943,9 @@ for attempt in 1..(maxRetries+1):
   primary rate limit은 reset까지 한 시간이 걸릴 수 있어 대부분 60초 초과로 즉시 종료됩니다. 1·2·4초 백오프로는 rate limit이 풀리지 않으므로 GitHub rate limit 응답에는 지수 백오프를 쓰지 않습니다. 근거는 [GitHub REST API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)입니다. secondary rate limit 본문의 정확한 문구는 문서에 없어 spike에서 확인합니다.
 - 제한 시간: GitHub 30초(`HttpClient` 요청 타임아웃), Claude 180초(SDK 타임아웃). 제한 시간 초과는 재시도 대상입니다.
 - `Sleeper`는 인터페이스라 테스트에서 실제로 기다리지 않습니다. 대기 시간 합은 listener가 집계해 요구사항 9.7의 "재시도 대기 제외" 측정과 P2 요구사항 17.3에 씁니다.
-- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다.
+- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다. 숫자만으로 된 값이 `long` 범위를 넘으면 무효가 아니라 60초 초과로 처리합니다.
+- 호출자가 정한 `delay`가 음수이면(이미 지난 `x-ratelimit-reset`) 0초로 보고 바로 재시도합니다.
+- `RetryPolicy`는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 조립 실수를 막는 검사이고, 사용자에게 보이는 범위 오류는 `ConfigLoader`가 수집합니다(요구사항 18.6).
 
 ### 비밀정보 마스킹 (요구사항 19)
 
