@@ -952,11 +952,12 @@ for attempt in 1..(maxRetries+1):
 - 프로세스 시작 직후, 인자와 설정을 해석하기 전에 `SecretMasker`를 두 Secret_Value로 만들고(빈 값·공백 값 제외), `System.out`/`System.err`를 `MaskingPrintStream`(UTF-8, 줄 단위 버퍼)으로 바꿉니다. 로거 출력도 stderr 스트림으로 보내 같은 마스킹을 거칩니다. CLI는 Spring 컨텍스트 없이 실행하므로 Spring Boot의 로깅 설정이 적용되지 않습니다. 설정 파일이 없으면 Logback은 기본 설정으로 `System.out`에 쓰고, 그러면 라이브러리 로그가 결과 JSON에 섞입니다(요구사항 15.7, 15.8). 그래서 CLI용 `logback.xml`(대상 `System.err`, 기본 수준 WARN)을 둡니다(작업 18.2). 비밀값에는 줄바꿈이 없으므로 줄 단위 버퍼링이면 쓰기 조각 경계에서 비밀값이 나뉘는 문제가 없습니다.
 - 치환 알고리즘: 텍스트에서 각 비밀값의 **모든 출현 위치(겹침 포함)**를 찾아 덮인 문자 구간을 표시하고, 연속으로 덮인 구간마다 `***` 하나로 바꿉니다. 결과의 덮이지 않은 부분은 원문에서 비밀값을 포함하지 않던 조각이므로, 비밀값에 `*`가 없으면 결과에 비밀값이 다시 나타날 수 없습니다.
 - 한계: 비밀값이 `*`를 포함하면 `***`와 이웃 문자가 비밀값을 다시 만들 수 있습니다. GitHub PAT와 Anthropic 키 형식에는 `*`가 없으므로 Property 39는 `*` 없는 값으로 한정합니다. 요구사항 19.7의 "FOR ALL S"와 차이가 있어 아래 "요구사항 공백"에 적었습니다.
-- HTTP 디버그 로그는 헤더 이름을 대소문자 무시로 비교해 `Authorization`, `x-api-key` 값을 `***`로 바꾼 뒤 씁니다. 디버그 로그는 기본으로 꺼 둡니다.
+- `MaskingPrintStream`은 `\n`이 올 때마다 그 줄을 치환해 쓰고 flush합니다. 줄이 끝나기 전에 `flush()`나 `checkError()`(내부에서 flush함)를 부르면 나머지를 내보내되, 끝이 어떤 비밀값의 앞부분과 같으면 그 부분은 줄이 끝나거나 `close()`할 때까지 남깁니다. 그래서 flush를 사이에 두고 나뉘어 쓰인 비밀값도 가려집니다. 대신 줄바꿈 없이 끝난 출력의 끝이 비밀값의 앞부분과 같으면 flush만으로는 나오지 않습니다. JVM은 종료할 때 바꿔 끼운 스트림을 flush하지 않으므로, CLI는 출력을 `\n`으로 끝내고 끝내기 전에 두 스트림을 flush합니다(작업 18.2).
+- HTTP 디버그 로그는 헤더 이름을 대소문자 무시로 비교해 `Authorization`, `x-api-key` 값을 `***`로 바꾼 뒤 씁니다(`SecretMasker.maskHeader(name, value)`). 그 밖의 헤더는 값 안의 비밀값만 바꿉니다. 디버그 로그는 기본으로 꺼 둡니다.
 
 ### 이식성 (요구사항 22)
 
-- 표준 스트림은 `new PrintStream(new FileOutputStream(FileDescriptor.out), true, UTF_8)`로 직접 열어 OS 코드 페이지와 `file.encoding`에 의존하지 않습니다. Windows 콘솔에서 한글이 깨져 보이는 문제는 터미널 설정 문제이며, 바이트는 UTF-8로 같습니다(README에 `chcp 65001` 안내).
+- 표준 스트림은 `MaskingPrintStream.stdout(masker)`/`stderr(masker)`가 `new FileOutputStream(FileDescriptor.out)`(또는 `err`)을 UTF-8로 직접 열어 OS 코드 페이지와 `file.encoding`에 의존하지 않습니다. `PrintStream`의 autoFlush는 끄고 줄이 끝날 때 직접 flush합니다(autoFlush를 켜면 쓰기마다 flush되어 줄 단위 버퍼가 무력해짐). Windows 콘솔에서 한글이 깨져 보이는 문제는 터미널 설정 문제이며, 바이트는 UTF-8로 같습니다(README에 `chcp 65001` 안내).
 - 모든 출력은 `\n`을 직접 붙이고 `println`/`%n`을 쓰지 않습니다(ArchUnit 또는 간단한 소스 검사로 금지).
 - 저장소 경로는 `String`으로만 다루고 `java.nio.file.Path`로 바꾸지 않습니다. `Path`는 `--config` 경로 해석에만 씁니다.
 

@@ -82,7 +82,7 @@
     - _Requirements: 1.13, 21.1, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11_
   - [x]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
     - **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**
-  - [ ] 3.3 `SecretMasker`, `MaskingPrintStream` 구현
+  - [x] 3.3 `SecretMasker`, `MaskingPrintStream` 구현
     - 비밀값 모든 출현 위치(겹침 포함)를 덮고 연속 구간마다 `***` 하나로 치환, 빈 값·공백 값 제외
     - `MaskingPrintStream`: `FileDescriptor.out/err` 기반, BOM 없는 UTF-8, 줄 단위 버퍼
     - 헤더 마스킹 함수: `Authorization`, `x-api-key` 이름 대소문자 무시
