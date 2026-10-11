@@ -63,7 +63,7 @@ web/
 │   ├── frontend/nextjs.md       web/src/** 를 다룰 때 로드
 │   └── context/editing.md       .claude/ 와 CLAUDE.md 를 고칠 때 읽는 규칙 (브랜치, 맞물린 파일, 권한 변경). 루트 CLAUDE.md 가 가리킴
 ├── skills/
-│   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
+│   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 계획 승인, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
 │   ├── spec/                    /spec <스펙> [문서]: 스펙 폴더의 다음 문서(요구사항 → 설계 → 작업 목록)를 /task가 읽는 형식으로 작성
 │   ├── new-endpoint/            /new-endpoint <API>: 컨벤션대로 TDD 방식 엔드포인트 추가
 │   ├── new-page/                /new-page <화면>: 컨벤션대로 backend 데이터를 보여 주는 페이지 추가
@@ -91,7 +91,7 @@ docs/
 ```
 /task pr-lens-p1-cli                   → 지금 시작할 수 있는 작업과 진행 중인 작업(원격 브랜치 기준)을 보고 작업을 고름
 /task pr-lens-p1-cli 5.1               → 브랜치(feat/t2-p1-5-diff-parser)를 만들어 push하고, 작업 본문과 그 작업의 요구사항 인수 기준,
-                                         design.md의 관련 절만 읽고 실패 테스트 먼저, 구현, tasks.md 체크박스 갱신
+                                         design.md의 관련 절만 읽고 계획을 보여 준 뒤 멈춤. 승인하면 실패 테스트 먼저, 구현, tasks.md 체크박스 갱신
 (응답이 끝날 때마다)                    → Stop hook이 바뀐 스택만 검증 (backend: spotlessApply test, web: npm run verify)
 /pr-ready                              → 검증 증거, reviewer 리뷰(.claude/ 변경은 context-reviewer), PR 설명 초안
 사람이 PR을 올리고 동료가 리뷰
