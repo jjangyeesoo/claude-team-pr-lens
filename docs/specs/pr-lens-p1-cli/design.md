@@ -857,7 +857,7 @@ cost:
 
 ### Property 39: 비밀정보 치환
 
-*For any* 비어 있지 않은 Secret_Value S(`*`를 포함하지 않음)와 S를 0회 이상(반복, 인접, 겹침 포함) 넣은 텍스트, 그리고 헤더 이름 대소문자를 바꾼 `Authorization`/`x-api-key` 헤더 목록, 치환 후 텍스트와 헤더 값에는 S가 부분 문자열로 없어야 한다.
+*For any* 비어 있지 않은 Secret_Value S(`*`를 포함하지 않음)와 S를 0회 이상(반복, 인접, 겹침 포함) 넣은 텍스트, 그리고 헤더 이름 대소문자를 바꾼 `Authorization`/`x-api-key` 헤더 목록, 치환 후 텍스트와 헤더 값에는 S가 부분 문자열로 없어야 한다. 같은 텍스트를 임의 위치에서 나눠 `MaskingPrintStream`에 쓰고 조각 사이에 `flush()`나 `checkError()`를 끼워도 출력에 S가 없어야 하고, 그 출력은 연속한 `***`를 하나로 접으면 치환 후 텍스트와 같아야 한다. 테스트는 비밀값끼리 겹치는 경우를 보려고 S를 1~2개로 생성한다.
 
 **Validates: Requirements 19.4, 19.5, 19.7**
 
@@ -875,7 +875,7 @@ cost:
 
 ### Property 42: 재시도 정책
 
-*For any* 응답 수열(429, 5xx, 연결 실패, 제한 시간 초과, 429 외 4xx, 성공, 임의 `retry-after` 값, 호출자가 정한 임의 대기 시간)과 재시도 횟수 n(0~10), 시도 수는 n+1 이하이고, 429 외 4xx나 60초를 넘는 대기(`retry-after` 또는 호출자가 정한 값)에서는 남은 시도 횟수와 관계없이 즉시 멈추며, 각 대기 시간은 유효한 `retry-after`(0~60 정수)가 있으면 그 값, 호출자가 정한 값(GitHub rate limit)이 있으면 그 값, 둘 다 없으면 min(2^(k-1), 30)초(k는 재시도 순번)여야 한다.
+*For any* 응답 수열(429, 5xx, 연결 실패, 제한 시간 초과, 429 외 4xx, 성공, 임의 `retry-after` 값, 호출자가 정한 임의 대기 시간)과 재시도 횟수 n(0~10), 시도 수는 n+1 이하이고, 429 외 4xx나 60초를 넘는 대기(`retry-after` 또는 호출자가 정한 값)에서는 남은 시도 횟수와 관계없이 즉시 멈추며, 각 대기 시간은 호출자가 정한 값(GitHub rate limit)이 있으면 그 값(음수는 0), 없고 숫자만으로 된 `retry-after`(0 이상 정수)가 있으면 그 값, 둘 다 없으면 min(2^(k-1), 30)초(k는 재시도 순번)여야 한다.
 
 **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**
 
@@ -906,7 +906,7 @@ cost:
 | `MissingSecretException` | `cli` preflight | 없는 환경변수 이름 전부와 설정 방법 | 2 |
 | `GitHubApiException(401/403/404)` | `github`(`HttpGitHubClient`가 직접 던짐. 실행기는 그대로 통과시킴) | 상태 코드와 원인 후보(요구사항 1.11) | 2 |
 | `RetriesExhaustedException(api, lastStatus, attempts)` | `support`(`RetryExecutor`) | API 이름, 마지막 상태/오류 종류, 시도 수 | 2 (분할 모드 개별 Chunk는 `chunk_failed`로 흡수) |
-| `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각 | 2 |
+| `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각. `seconds`는 초 단위로 올린 대기 시간이고, 실행기는 한도가 풀리는 시각을 알 수 없어 메시지에 넣지 않습니다(요구사항 21.10의 시각은 호출자 쪽에서 만듦) | 2 |
 | `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드 | 2 |
 | `AllChunksFailedException` | `review` | 실패한 Chunk 수 | 2 |
 | 결과 생성 성공 | | 불완전·비용 경고(있으면) | `ExitCodeResolver`: 1 / 3 / 0 |
@@ -943,18 +943,21 @@ for attempt in 1..(maxRetries+1):
   primary rate limit은 reset까지 한 시간이 걸릴 수 있어 대부분 60초 초과로 즉시 종료됩니다. 1·2·4초 백오프로는 rate limit이 풀리지 않으므로 GitHub rate limit 응답에는 지수 백오프를 쓰지 않습니다. 근거는 [GitHub REST API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)입니다. secondary rate limit 본문의 정확한 문구는 문서에 없어 spike에서 확인합니다.
 - 제한 시간: GitHub 30초(`HttpClient` 요청 타임아웃), Claude 180초(SDK 타임아웃). 제한 시간 초과는 재시도 대상입니다.
 - `Sleeper`는 인터페이스라 테스트에서 실제로 기다리지 않습니다. 대기 시간 합은 listener가 집계해 요구사항 9.7의 "재시도 대기 제외" 측정과 P2 요구사항 17.3에 씁니다.
-- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다.
+- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다. 숫자만으로 된 값이 `long` 범위를 넘으면 무효가 아니라 60초 초과로 처리합니다.
+- 호출자가 정한 `delay`가 음수이면(이미 지난 `x-ratelimit-reset`) 0초로 보고 바로 재시도합니다.
+- `RetryPolicy`는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 조립 실수를 막는 검사이고, 사용자에게 보이는 범위 오류는 `ConfigLoader`가 수집합니다(요구사항 18.6).
 
 ### 비밀정보 마스킹 (요구사항 19)
 
 - 프로세스 시작 직후, 인자와 설정을 해석하기 전에 `SecretMasker`를 두 Secret_Value로 만들고(빈 값·공백 값 제외), `System.out`/`System.err`를 `MaskingPrintStream`(UTF-8, 줄 단위 버퍼)으로 바꿉니다. 로거 출력도 stderr 스트림으로 보내 같은 마스킹을 거칩니다. CLI는 Spring 컨텍스트 없이 실행하므로 Spring Boot의 로깅 설정이 적용되지 않습니다. 설정 파일이 없으면 Logback은 기본 설정으로 `System.out`에 쓰고, 그러면 라이브러리 로그가 결과 JSON에 섞입니다(요구사항 15.7, 15.8). 그래서 CLI용 `logback.xml`(대상 `System.err`, 기본 수준 WARN)을 둡니다(작업 18.2). 비밀값에는 줄바꿈이 없으므로 줄 단위 버퍼링이면 쓰기 조각 경계에서 비밀값이 나뉘는 문제가 없습니다.
 - 치환 알고리즘: 텍스트에서 각 비밀값의 **모든 출현 위치(겹침 포함)**를 찾아 덮인 문자 구간을 표시하고, 연속으로 덮인 구간마다 `***` 하나로 바꿉니다. 결과의 덮이지 않은 부분은 원문에서 비밀값을 포함하지 않던 조각이므로, 비밀값에 `*`가 없으면 결과에 비밀값이 다시 나타날 수 없습니다.
 - 한계: 비밀값이 `*`를 포함하면 `***`와 이웃 문자가 비밀값을 다시 만들 수 있습니다. GitHub PAT와 Anthropic 키 형식에는 `*`가 없으므로 Property 39는 `*` 없는 값으로 한정합니다. 요구사항 19.7의 "FOR ALL S"와 차이가 있어 아래 "요구사항 공백"에 적었습니다.
-- HTTP 디버그 로그는 헤더 이름을 대소문자 무시로 비교해 `Authorization`, `x-api-key` 값을 `***`로 바꾼 뒤 씁니다. 디버그 로그는 기본으로 꺼 둡니다.
+- `MaskingPrintStream`은 `\n`이 올 때마다 그 줄을 치환해 쓰고 flush합니다. 줄이 끝나기 전에 `flush()`나 `checkError()`(내부에서 flush함)를 부르면 나머지를 내보내되, 끝이 어떤 비밀값의 앞부분과 같으면 그 부분은 줄이 끝나거나 `close()`할 때까지 남깁니다. 자르는 자리가 이미 나타난 비밀값의 한가운데면 그 비밀값의 시작까지 남기고, 버퍼가 멀티바이트 문자의 한가운데서 끝나 있으면 그 미완성 바이트도 나머지가 올 때까지 남깁니다(문자 한가운데서 디코딩하면 대체 문자가 되어 출력이 깨지고 비ASCII 비밀값이 가려지지 않음). 그래서 flush를 사이에 두고 나뉘어 쓰인 비밀값도 가려집니다. 대신 줄바꿈 없이 끝난 출력의 끝이 비밀값의 앞부분과 같으면 flush만으로는 나오지 않습니다. JVM은 종료할 때 바꿔 끼운 스트림을 flush하지 않으므로, CLI는 출력을 `\n`으로 끝내고 끝내기 전에 두 스트림을 flush합니다(작업 18.2).
+- HTTP 디버그 로그는 헤더 이름을 대소문자 무시로 비교해 `Authorization`, `x-api-key` 값을 `***`로 바꾼 뒤 씁니다(`SecretMasker.maskHeader(name, value)`). 그 밖의 헤더는 값 안의 비밀값만 바꿉니다. 디버그 로그는 기본으로 꺼 둡니다.
 
 ### 이식성 (요구사항 22)
 
-- 표준 스트림은 `new PrintStream(new FileOutputStream(FileDescriptor.out), true, UTF_8)`로 직접 열어 OS 코드 페이지와 `file.encoding`에 의존하지 않습니다. Windows 콘솔에서 한글이 깨져 보이는 문제는 터미널 설정 문제이며, 바이트는 UTF-8로 같습니다(README에 `chcp 65001` 안내).
+- 표준 스트림은 `MaskingPrintStream.stdout(masker)`/`stderr(masker)`가 `new FileOutputStream(FileDescriptor.out)`(또는 `err`)을 UTF-8로 직접 열어 OS 코드 페이지와 `file.encoding`에 의존하지 않습니다. `PrintStream`의 autoFlush는 끄고 줄이 끝날 때 직접 flush합니다(autoFlush를 켜면 쓰기마다 flush되어 줄 단위 버퍼가 무력해짐). Windows 콘솔에서 한글이 깨져 보이는 문제는 터미널 설정 문제이며, 바이트는 UTF-8로 같습니다(README에 `chcp 65001` 안내).
 - 모든 출력은 `\n`을 직접 붙이고 `println`/`%n`을 쓰지 않습니다(ArchUnit 또는 간단한 소스 검사로 금지).
 - 저장소 경로는 `String`으로만 다루고 `java.nio.file.Path`로 바꾸지 않습니다. `Path`는 `--config` 경로 해석에만 씁니다.
 

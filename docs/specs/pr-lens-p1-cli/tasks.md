@@ -70,23 +70,24 @@
     - _Requirements: 17.8_
 
 - [ ] 3. `support`: 재시도와 비밀정보 마스킹 (선머지 대상이 아님. 2.3이 머지되면 트랙과 병렬로 진행)
-  - [ ] 3.1 `RetryPolicy`, `RetryExecutor` 구현
+  - [x] 3.1 `RetryPolicy`, `RetryExecutor` 구현
     - 첫 시도 + 재시도 n회(0~10), 대기 = 호출자가 정한 값(GitHub rate limit) 또는 유효한 `retry-after` 또는 `min(2^(k-1), 30)`초. 대기가 60초를 넘으면 남은 시도 횟수와 관계없이 즉시 `RetryAfterTooLongException`(이 검사를 "마지막 시도" 검사보다 먼저 합니다)
     - 재시도 대상: 429, 5xx, 연결 실패, 제한 시간 초과, 그리고 호출자가 재시도 대상으로 분류한 응답(GitHub rate limit 403/429, 대기 시간은 호출자가 함께 전달)
     - `execute`는 호출자가 돌려준 `Attempt`로 판단: `Success`면 값 반환, `Fatal`이면 `NonRetryableApiException`, `Retryable`이면 대기 후 재시도. 호출자가 던진 예외(`GitHubApiException` 등)는 그대로 통과
     - 예외(모두 `support`에 정의, `PrLensException` 하위 타입, final 아님): `RetriesExhaustedException(api, lastStatus, attempts)`, `RetryAfterTooLongException(api, seconds)`, `NonRetryableApiException(api, status)`
     - HTTP 날짜·음수·소수 `retry-after`는 무효로 보고 지수 백오프 사용
     - 재시도마다 `RetryListener.onRetry(api, nextAttempt, maxAttempts, status, wait)` 호출(`wait`는 정책이 계산한 `Duration`)
-    - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다. `maxRetries` 0~10 검증을 `RetryPolicy`에서도 할지, `ConfigLoader`(요구사항 18.6)에만 둘지는 미정입니다
+    - 주의(선머지 리뷰): 호출자가 정한 대기 시간은 `Attempt.Retryable.delay()`로 읽습니다(record 구성 요소 이름으로 `wait`를 쓸 수 없어 바꿈). 2.3의 `RetryPolicy(int maxRetries)`는 생성자 시그니처를 고정하려고 둔 최소 형태라 구성 요소를 더해도 됩니다
+    - 결정(3.1): `maxRetries` 0~10 검증은 `RetryPolicy`에서도 합니다(범위 밖이면 `IllegalArgumentException`). 음수면 시도 횟수가 0 이하가 되어 동작이 정의되지 않고, P2는 `ConfigLoader`를 거치지 않고 조립할 수 있기 때문입니다. 사용자에게 보이는 오류 수집은 `ConfigLoader`(요구사항 18.6)가 맡습니다
     - _Requirements: 1.13, 21.1, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9, 21.10, 21.11_
-  - [ ]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
+  - [x]* 3.2 Property 42: 재시도 정책 테스트 (가짜 `Sleeper`)
     - **Validates: Requirements 21.1, 21.3, 21.4, 21.5, 21.8, 21.9, 21.10, 21.11**
-  - [ ] 3.3 `SecretMasker`, `MaskingPrintStream` 구현
+  - [x] 3.3 `SecretMasker`, `MaskingPrintStream` 구현
     - 비밀값 모든 출현 위치(겹침 포함)를 덮고 연속 구간마다 `***` 하나로 치환, 빈 값·공백 값 제외
     - `MaskingPrintStream`: `FileDescriptor.out/err` 기반, BOM 없는 UTF-8, 줄 단위 버퍼
     - 헤더 마스킹 함수: `Authorization`, `x-api-key` 이름 대소문자 무시
     - _Requirements: 19.4, 19.5, 19.7, 22.3_
-  - [ ]* 3.4 Property 39: 비밀정보 치환 테스트 (`*` 없는 비밀값으로 한정, 설계 G-3)
+  - [x]* 3.4 Property 39: 비밀정보 치환 테스트 (`*` 없는 비밀값으로 한정, 설계 G-3)
     - **Validates: Requirements 19.4, 19.5, 19.7**
 
 - [ ] 4. Checkpoint: 공유 부분(작업 1~3) 완료 확인
@@ -149,6 +150,12 @@
     - 주의(선머지 리뷰): `getTree`는 `Optional` 없이 `RepoTree`를 돌려줍니다. 트리를 찾지 못하면(404) `getPullRequest`·`listFiles`처럼 `GitHubApiException`을 던지고, 404를 결과 값(`NotFound`)으로 돌려주는 것은 `getFile`뿐입니다. `FilePage.Entry`는 GitHub 값 그대로 채웁니다(상태 매핑과 patch 해석은 7.4)
     - 미정(여기서 정함): 트리 항목의 `type`이 `blob`/`tree`/`commit` 외의 값일 때(`RepoTree.Entry.kind`는 null 불가), contents API의 symlink·submodule 응답을 `FileFetch`의 어느 결과로 보낼지
     - 2.3의 record는 `PullRequestMeta.title`·`baseSha`·`headSha`, `FilePage.Entry.filename`·`status`, `RepoTree.Entry.path`에 null을 거부합니다. GitHub가 이 값들을 항상 채워 준다는 가정이고 실제 응답으로 확인한 것은 아닙니다(7.7에서 확인)
+    - 미정(여기서 정함): `RetryAfterTooLongException`은 `api`와 올림한 초(`seconds`)만 담고 메시지가 고정입니다. 요구사항 21.10의 "한도가 풀리는 시각" 메시지를 어디서 만들지 정합니다(예: `x-ratelimit-reset`까지 60초를 넘으면 `Retryable`을 돌려주지 않고 하위 타입을 직접 던짐)
+    - 주의(3 리뷰): `Attempt.Retryable`에 `delay`를 주면 실행기는 `retryAfter`를 보지 않고 `delay`만 씁니다. 음수 `delay`는 0초로 보고 바로 재시도하고, 60초를 1ms라도 넘으면 `RetryAfterTooLongException`입니다. 설계 표의 "`retry-after`가 reset보다 먼저"라는 우선순위는 `HttpGitHubClient`가 `delay`를 정할 때 직접 적용합니다
+    - 미정(여기서 정함): GitHub 403/429의 `retry-after`가 정수 초가 아닐 때(HTTP 날짜 등)의 분류를 정합니다. 원문을 `retryAfter`로만 넘기면 실행기가 지수 백오프를 쓰는데, 설계는 GitHub rate limit 응답에 지수 백오프를 쓰지 않는다고 합니다 (스펙을 읽고 추론한 항목)
+    - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
+    - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. API 이름은 `GitHub`, HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
+    - 미정(여기서 정함): 헤더 마스킹은 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`인데 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`에는 `SecretMasker`가 없습니다. 생성자에 더할지 다른 방법으로 넘길지 정합니다. 값 전체를 가리는 이름은 `Authorization`과 `x-api-key`뿐이고 이 둘은 값이 null이어도 `***`를 돌려줍니다. 그 밖의 헤더는 값 안의 비밀값만 치환하며 값이 null이면 NPE입니다. 이름이 null이면 항상 NPE입니다
     - _Requirements: 1.8, 1.11, 1.13, 19.5, 19.6, 21.2, 21.9, 21.10, 21.11_
   - [ ] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
     - _Requirements: 1.3, 1.4, 1.9_
@@ -296,8 +303,12 @@
     - 요청 매핑: 모델, `max_tokens`, effort, system, user 블록 2개(첫 블록 ephemeral `cache_control`), `output_config.format`
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
     - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
+    - 미정(여기서 정함): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. `AnthropicLlmClient`가 `SecretMasker`를 어떻게 받을지 정합니다(7.1과 같은 방식으로 맞춤). 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
   - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
+    - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
+    - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
+    - 주의(3 리뷰): 실행기는 `retryAfter`가 ASCII 숫자만으로 된 문자열일 때만 유효로 봅니다. 앞뒤 공백, `+5`, `1.5`, HTTP 날짜는 오류 없이 지수 백오프로 넘어가므로, 헤더 값을 가공 없이 넘기되 공백이 붙어 오는지 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 21.1, 21.6, 21.7_
   - [ ]* 13.3 요청·응답 매핑 단위 테스트 (모델·effort 항상 명시, 캐시 지점 위치, usage 필드 매핑)
     - _Requirements: 20.8, 20.9_
@@ -355,25 +366,35 @@
 - [ ] 18. CLI 명령과 파이프라인
   - PR 경계: 18.1~18.2 / 18.3~18.6 / 18.7
   - [ ] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
+    - 주의(3 리뷰): picocli가 직접 쓰는 출력(사용법, 버전)은 `CommandLine.setOut`/`setErr`에 UTF-8 `PrintWriter`(설치한 `System.out`/`System.err` 위)를 넘깁니다. 기본 writer가 콘솔 코드 페이지로 인코딩하면 `MaskingPrintStream`에서 한글이 대체 문자로 바뀝니다. picocli 기본 writer의 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 15.1, 15.7, 15.12, 22.1_
   - [ ] 18.2 `CliPipeline.preflight` 구현
     - 순서: 환경변수 값을 읽어 `SecretMasker`와 UTF-8 `MaskingPrintStream` 설치(빈 값은 제외) → 인자(URL, `--format`) → 설정 → 환경변수 검사(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, 둘 다 없으면 한 메시지). 마스커를 가장 먼저 설치해 인자·설정 오류 메시지도 마스킹합니다
     - 어느 단계든 실패하면 외부 API 호출 없이 종료 코드 2
     - CLI용 `logback.xml` 추가(대상 `System.err`, 기본 수준 WARN). Spring 컨텍스트 없이 실행하면 Logback 기본 설정이 로그를 stdout에 써서 결과 출력에 섞임(요구사항 15.7, 15.8)
+    - 주의(3 리뷰): `MaskingPrintStream`은 `\n`으로 끝나지 않은 나머지를 들고 있고, `flush()`는 그 끝이 비밀값의 앞부분과 같으면(한 글자도 해당. `ghp_…`이면 `g`, `sk-ant-…`이면 `s`) 그 부분을 내보내지 않습니다. JVM은 바꿔 끼운 스트림을 종료할 때 flush하지 않으므로, 모든 출력을 `\n`으로 끝내고 프로세스를 끝내기 전에(정상·오류 경로 모두) 두 스트림을 flush합니다
+    - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 `FileDescriptor.out`/`err`를 직접 열므로 `close()`하면 프로세스의 실제 표준 스트림이 닫힙니다. `close()`는 `PrLensMain`의 `System.exit` 직전에만 하고, 테스트가 같은 JVM에서 부르는 경로(`CliPipeline`, 조립 함수)에서는 닫지 않고 `\n`으로 끝낸 뒤 flush합니다. 실제로 닫히는지는 직접 실행해 확인하지 않았으므로 18.6의 하위 프로세스 테스트에서 확인합니다 (스펙을 읽고 추론한 항목)
+    - 주의(3 리뷰): `SecretMasker`는 값을 다듬지 않고 받은 문자열 그대로 찾습니다. 환경변수 값 끝에 공백이나 `\r`이 있는데(cmd의 `set GITHUB_TOKEN=abc & ...`) 요청에는 다듬은 값을 쓰면 오류 메시지에 나온 토큰이 가려지지 않습니다. 마스커에 넣는 값과 자격 증명에 쓰는 값을 같은 문자열로 하거나 둘 다 등록합니다
+    - 주의(3 리뷰): `MaskingPrintStream`은 받은 바이트를 UTF-8로 풀어 다시 쓰므로 UTF-8이 아닌 바이트는 대체 문자가 됩니다. Java 17의 Windows 기본 문자 집합은 UTF-8이 아니므로 `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시합니다. Logback encoder의 기본 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 1.9, 1.10, 3.11, 15.12, 18.7, 19.1, 19.2, 19.3, 19.4, 22.3_
   - [ ] 18.3 파이프라인 조립 구현
     - Spring 컨텍스트 없이 `HttpGitHubClient`, `PrFetcher`, `ContextCollector`, `RetryingLlmClient(AnthropicLlmClient)`, `ReviewEngine`을 직접 조립
     - 조립 함수는 `GitHubClient`와 `LlmClient`를 만드는 팩토리를 인자로 받음(CLI 통합 테스트가 호출 수를 세는 가짜를 넘길 수 있게)
     - 결과에서 유도하는 경고를 `StderrReporter`로 출력: 파일 수 부족(`fileCountGap`), 단가 없음(`estimatedCostUsd == null`), 1회 비용 상한 초과
     - 출력 문자열을 모두 만든 뒤 stdout에 한 번만 쓰기, `--format json`은 `ResultCodec` 결과 하나만
+    - 주의(3 리뷰): `RetryPolicy` 생성자는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 설정 검증(`ConfigLoader`, 요구사항 18.6)이 조립보다 먼저 돌아야 사용자에게 설정 오류로 보입니다
+    - 주의(3 리뷰): 결과 문자열이 `\n`으로 끝나지 않으면 끝 글자가 비밀값 첫 글자와 같을 때(`g`, `s` 등) `flush()`만으로는 그 글자가 나오지 않습니다. 결과 끝에 `\n`을 보장하고 쓴 뒤 flush합니다(스트림을 닫는 것은 18.2의 주의대로 `PrLensMain`에서만). 18.6 통합 테스트에 "`\n` 없이 `s`로 끝나는 출력이 끝까지 나온다" 사례를 넣습니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 15.7, 15.8, 17.2_
   - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
+    - 주의(3 리뷰): `onRetry`의 `wait`는 0초일 수 있고(`retry-after: 0`, 음수 `delay`), 호출자가 정한 `delay`는 초 단위로 떨어지지 않을 수 있습니다. "대기 초"를 `toSeconds()`로 자르면 0으로 찍히므로 표기 방식을 정합니다. 줄바꿈 없이 쓰고 flush하는 진행 표시는 끝 글자가 비밀값의 앞부분과 같으면 다음 쓰기까지 늦게 나오므로, 모든 메시지를 `\n`으로 끝나는 한 줄로 씁니다
     - _Requirements: 1.14, 3.10, 13.12, 15.8, 16.6, 20.3, 20.4, 20.5, 21.7_
   - [ ] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
+    - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
+    - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 실제 `FileDescriptor`를 열어 단위 테스트가 없고, 둘이 서로 바뀌어도 실패하는 테스트가 없습니다. 하위 프로세스로 실행해 결과는 stdout, 오류는 stderr에 BOM 없는 UTF-8로 나오는지, `\n` 없이 `s`로 끝나는 출력이 끝까지 나오는지, `PrLensMain`이 `System.exit` 직전에 스트림을 닫아도 출력이 잘리지 않는지 한 번 확인합니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
   - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요
@@ -429,7 +450,7 @@
 - 트랙 담당은 ROADMAP 2주차 기본안(T1 B, T2 A, T3 C)을 따르며 월요일 킥오프에서 바뀔 수 있습니다.
 - 작업 본문의 "주의(선머지 리뷰)"와 "미정(여기서 정함)" 항목은 선머지 PR(2.1~2.3)의 리뷰에서 넘긴 것입니다. 2.1~2.3의 코드와 테스트로 확인한 사실도 있지만, 뒤 작업에 대한 부분은 구현 없이 스펙을 읽고 추론한 것이므로 구현하면서 틀린 것이 드러나면 그 항목을 고칩니다. "미정"은 그 작업에서 정하고 필요하면 요구사항이나 설계에 반영합니다.
 - 1주차 spike 결과에 따라 세부 구현이 달라지는 작업은 다음과 같습니다. spike 확인 목록은 design.md "1주차 spike 확인 목록"에 있습니다.
-  - 13.1, 13.2, 3.1: SDK 빌더 이름, `retry-after` 헤더 접근 방법
+  - 13.1, 13.2, 3.1: SDK 빌더 이름, `retry-after` 헤더 접근 방법, 실제 `retry-after` 값에 공백이나 소수가 오는지(실행기는 ASCII 숫자만으로 된 값만 유효로 봄)
   - 7.1: secondary rate limit 본문 문구
   - 18.7: 래퍼 스크립트
   - 2.1: `Configuration.defaults()`의 effort(`medium`)와 최대 출력 토큰(16,000, 범위 1~20,000). [ADR 0005](../../adr/0005-llm-settings.md)

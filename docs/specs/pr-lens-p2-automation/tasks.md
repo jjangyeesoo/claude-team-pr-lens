@@ -93,6 +93,7 @@
   - [ ] 2.7 작업 범위 도구의 타입 작성 (월요일 선머지)
     - `support`: `CancellationToken`(`NONE` 포함), `SecretRegistry`의 공개 시그니처(구현은 4.1)
     - `execution`: `JobTimeoutException`(P1 `PrLensException`의 하위 타입), `UsageAccumulator`, `RunErrorKinds.of(Throwable)`(설계의 예외 → Run_Error_Kind 대응표. 서버와 CLI가 함께 씀), `DeadlineSleeper`·`JobRetryListener`·`UsageRecordingLlmClient`·`CancellableLlmClient`의 생성자 시그니처(구현은 11.1, 11.2)
+    - 주의(P1 3 리뷰): P1 `RetryExecutor`는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외의 `api()`, `lastStatus()`로 넘깁니다. `RunErrorKinds.of`가 GitHub/Claude와 "마지막이 상태 코드인지"를 가를 근거는 이 두 문자열뿐이므로, API 이름은 정확히 `GitHub`/`Claude`, HTTP 상태는 숫자만으로 된 문자열이라는 전제로 대응시킵니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 4.5, 4.7, 8.2_
 
 - [ ] 3. 설정 확장 (B. 선머지 대상 아님. 2.6이 머지된 뒤 시작: 둘 다 P1 `CliPipeline`을 고침)
@@ -112,6 +113,7 @@
     - App 개인 키 등록 형태: 환경변수 원문(`\n` 이스케이프), `\n` 변환본, `\r\n` 변환본, 16자 이상인 base64 줄 각각
     - `PRLENS_DB_URL` 비밀번호 추출: `user:pass@`와 `password=` 값, 각각 원문과 URL 디코딩본
     - Installation_Token은 최근 10,000개까지 보관
+    - 주의(P1 3 리뷰): P1 `MaskingPrintStream`은 한 번 내보낼 때 마스커를 두 번 씁니다(`safePrefixLength`, `mask`). 레지스트리로 바꿀 때는 한 번 내보낼 때 스냅샷 하나를 읽어 둘 다에 씁니다. flush 보류는 그 시점에 등록된 비밀값만 보므로, 앞부분이 이미 flush된 뒤 등록된 비밀값은 그 줄에서 가려지지 않습니다. 비밀값은 그 값을 쓸 수 있는 코드가 실행되기 전에 등록합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 18.1, 18.2_
   - [ ] 4.2 `MaskingLayoutEncoder`와 서버용 `logback-server.xml` 작성 (메시지와 스택 전체를 문자열로 만든 뒤 치환, 모든 appender에 적용), Spring·Tomcat 요청 로깅 끄기, `System.out`/`err` 감싸기. P1의 CLI용 `logback.xml`도 같은 인코더를 쓰게 고침
     - Spring Boot는 클래스패스에 `logback.xml`이 있으면 그것을 먼저 쓰므로 서버 설정을 `logback-spring.xml`로 두지 않음. `ServerCommand`가 `logging.config=classpath:logback-server.xml`을 지정(12.2). 서버를 띄워 Review_Run ID가 든 info 로그가 나오는지 확인
@@ -328,6 +330,7 @@
     - 422는 `GitHubUnprocessableException`(치환한 본문, 최대 8KB). 요청 로그에는 메서드·경로·상태만 남김
     - 생성 요청(`createIssueComment`, `createReview`)은 rate limit 응답만 재시도하고, 5xx·연결 실패·제한 시간 초과는 다시 보내지 않고 `PostOutcomeUnknownException`
     - 예시 테스트(HTTP 수준): 페이지네이션, 422 본문 보존, 생성 요청이 5xx에서 재전송되지 않음
+    - 주의(P1 3 리뷰): P1 `RetryExecutor`는 `Attempt.Fatal`을 항상 기반 타입 `NonRetryableApiException(api, status)`으로 던지고 본문을 실을 자리가 없습니다. 422는 `Fatal(422)`을 돌려주지 말고 호출 안에서 `GitHubUnprocessableException`을 직접 던집니다(호출자가 던진 예외는 실행기가 그대로 통과시킴)
     - _Requirements: 11.1, 11.2, 11.15, 12.1, 12.2, 15.2, 18.4_
   - [ ] 20.2 게시 주체 식별 구현 (`AppPrincipalResolver`: `GET /app`의 slug와 `GET /users/{slug}[bot]`의 ID, 프로세스 캐시 / `TokenPrincipalResolver`: `GET /user`의 ID와 login, 403이고 `GITHUB_ACTIONS=true`이면 `github-actions[bot]`). 작성자 비교는 숫자 ID가 기본, 없으면 login. 10.1(JWT)과 10.3 뒤에 구현하고 생성자는 2.6에서 정한 형태를 그대로 씀
     - spike 10 결과 반영. 비교 기준이 바뀌면 `GitHubPrincipal.isAuthor`만 수정
