@@ -7,7 +7,7 @@
 | [pr-lens-p3-web](pr-lens-p3-web/README.md) | P3 웹 조회, FR-12~14, 4주차 | 요구사항 | 검토만 함. 수정 후 설계와 작업 목록 작성 필요. P2가 진행된 뒤로 미룸 |
 
 ## 스펙의 형태
-스펙은 단계마다 폴더 하나입니다. `docs/specs/<이름>/`에 `requirements.md`(무엇을), `design.md`(어떻게), `tasks.md`(작업 목록과 의존 그래프), `README.md`(색인)를 둡니다.
+스펙은 단계마다 폴더 하나입니다. `docs/specs/<이름>/`에 `requirements.md`(무엇을), `design.md`(어떻게), `tasks.md`(작업 목록과 의존 그래프), `README.md`(색인)를 둡니다. `handoff/`는 `/task`가 뒤 작업에 넘길 것을 적어 두는 임시 메모이고, `/pr-ready`가 스펙 문서에 반영한 뒤 지웁니다(`main`에 남아 있으면 안 되는 파일입니다).
 
 - **쓰기**: `/spec <이름>`이 아직 없는 다음 문서를 하나씩 씁니다(요구사항 → 설계 → 작업 목록 → 색인). 문서 하나를 쓸 때마다 사람이 검토합니다. P3의 설계와 작업 목록을 이렇게 씁니다.
 - **구현**: `/task <이름> <번호>`가 `tasks.md`의 작업 하나를 구현합니다. `/spec`은 `/task`가 읽는 형식(체크박스, "PR 경계", `_Requirements: …_`, Notes의 막는 작업 표, Task Dependency Graph)을 지켜서 씁니다.
