@@ -90,7 +90,7 @@
   - [x]* 3.4 Property 39: 비밀정보 치환 테스트 (`*` 없는 비밀값으로 한정, 설계 G-3)
     - **Validates: Requirements 19.4, 19.5, 19.7**
 
-- [ ] 4. Checkpoint: 공유 부분(작업 1~3) 완료 확인
+- [x] 4. Checkpoint: 공유 부분(작업 1~3) 완료 확인
   - `./gradlew test`와 ArchUnit 규칙이 통과하는지 확인하고, 질문이 있으면 사용자에게 묻습니다. 트랙 시작 조건은 이 Checkpoint가 아니라 작업 1, 2.1~2.3의 머지입니다.
 
 ### T2 GitHub 연동 (A)
