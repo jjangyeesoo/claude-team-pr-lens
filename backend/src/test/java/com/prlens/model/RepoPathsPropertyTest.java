@@ -9,7 +9,7 @@ import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 
-/** `RepoPaths.normalize`의 속성 테스트 (design.md Property 22). */
+/** {@code RepoPaths.normalize}의 속성 테스트 (design.md Property 22). */
 class RepoPathsPropertyTest {
 
   @Provide

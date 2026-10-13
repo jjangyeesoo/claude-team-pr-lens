@@ -30,7 +30,7 @@ import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.statistics.Statistics;
 
-/** `ReviewResult` 생성기가 2.1의 불변식을 지키고 round-trip 테스트에 필요한 값을 내는지 확인한다. */
+/** {@code ReviewResult} 생성기가 2.1의 불변식을 지키고 round-trip 테스트에 필요한 값을 내는지 확인한다. */
 class ReviewResultArbitrariesTest {
 
   @Provide
@@ -133,6 +133,24 @@ class ReviewResultArbitrariesTest {
     covers(
         "summaryOnlyReason 있음",
         findings.stream().anyMatch(finding -> finding.summaryOnlyReason() != null));
+    covers(
+        "OUT_OF_RANGE",
+        findings.stream()
+            .anyMatch(finding -> finding.summaryOnlyReason() == SummaryOnlyReason.OUT_OF_RANGE));
+    covers(
+        "NOT_TARGET_FILE line null",
+        findings.stream()
+            .anyMatch(
+                finding ->
+                    finding.summaryOnlyReason() == SummaryOnlyReason.NOT_TARGET_FILE
+                        && finding.line() == null));
+    covers(
+        "NOT_TARGET_FILE line 있음",
+        findings.stream()
+            .anyMatch(
+                finding ->
+                    finding.summaryOnlyReason() == SummaryOnlyReason.NOT_TARGET_FILE
+                        && finding.line() != null));
     covers("estimatedCostUsd null", result.usage().estimatedCostUsd() == null);
     covers("estimatedCostUsd 있음", result.usage().estimatedCostUsd() != null);
     covers("int 범위를 넘는 토큰 수", result.usage().inputTokens() > Integer.MAX_VALUE);

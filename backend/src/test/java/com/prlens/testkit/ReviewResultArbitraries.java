@@ -39,9 +39,18 @@ import net.jqwik.api.Tuple;
  *   <li>{@code chunkIndex}는 1 이상이다
  * </ul>
  *
- * <p>맞추지 않는 것: {@code demotion}과 basis, {@code stats}의 모드와 Chunk 수, {@code line}과 실제 변경 구간. 경로
- * 필드({@code file}, {@code basis.ref}, {@code ExcludedFile.path}, {@code ChunkIssue.files})는 드물게
- * {@code ""}이고, {@code excludedFiles}에 같은 경로가 두 번 나올 수 있다.
+ * <p>맞추지 않는 것은 다음과 같다. 이 조합에 기대는 테스트는 생성기를 따로 만들거나 {@code filter}로 걸러 쓴다.
+ *
+ * <ul>
+ *   <li>{@code demotion}과 basis, {@code line}과 실제 변경 구간
+ *   <li>{@code stats}의 모드와 Chunk 수, 모드와 {@code findings}({@code SUMMARY_ONLY}나 {@code NO_TARGET}인데
+ *       findings가 있을 수 있다), {@code chunkIndex}와 {@code stats.chunkCount}
+ *   <li>{@code incompleteReasons}의 사유마다 {@code ChunkIssue}가 있는 것은 아니다
+ *   <li>경로 필드({@code file}, {@code basis.ref}, {@code ExcludedFile.path}, {@code
+ *       ChunkIssue.files})는 드물게 {@code ""}이고, {@code excludedFiles}에 같은 경로가 두 번 나올 수 있다
+ *   <li>{@code summary}, {@code message}, {@code suggestion}은 {@code ""}일 수 있다
+ *   <li>토큰 수는 각각 {@code Long.MAX_VALUE}까지 나오므로 네 값을 더하면 넘칠 수 있다
+ * </ul>
  */
 public final class ReviewResultArbitraries {
 

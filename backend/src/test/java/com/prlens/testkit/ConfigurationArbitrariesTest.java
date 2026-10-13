@@ -13,7 +13,7 @@ import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.statistics.Statistics;
 
-/** `Configuration` 생성기가 요구사항 18.6의 범위 안에서 round-trip 테스트에 필요한 값을 내는지 확인한다. */
+/** {@code Configuration} 생성기가 요구사항 18.6의 범위 안에서 round-trip 테스트에 필요한 값을 내는지 확인한다. */
 class ConfigurationArbitrariesTest {
 
   @Provide
@@ -56,6 +56,17 @@ class ConfigurationArbitrariesTest {
     covers("해제 패턴 있음", !configuration.removedExcludes().isEmpty());
     covers("특수 문자가 든 모델 이름", model.chars().anyMatch(character -> ":#\"' ".indexOf(character) >= 0));
     covers("역슬래시가 든 모델 이름", model.contains("\\"));
+    covers(
+        "특수 문자가 든 단가 키",
+        configuration.pricing().keySet().stream()
+            .anyMatch(key -> key.chars().anyMatch(character -> ":#\"' ".indexOf(character) >= 0)));
+    covers(
+        "역슬래시가 든 단가 키",
+        configuration.pricing().keySet().stream().anyMatch(key -> key.contains("\\")));
+    covers(
+        "YAML이 다른 타입으로 읽을 수 있는 단가 키",
+        configuration.pricing().keySet().stream()
+            .anyMatch(key -> List.of("true", "123", "null").contains(key)));
     covers("기본값과 다른 effort", !configuration.effort().equals("medium"));
     covers("모델 단가 2개 이상", configuration.pricing().size() >= 2);
   }
