@@ -58,12 +58,12 @@
     - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. `GlobMatcher.validate`가 던지는 `GlobSyntaxException(pattern, reason)`(`PrLensException` 하위 타입)도 여기서 만듭니다(T3 `ConfigLoader`가 6.1을 기다리지 않고 잡을 수 있게). T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
     - 생성자 시그니처만 먼저 고정: `RetryExecutor(RetryPolicy, Sleeper, RetryListener)`, `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`, `RetryingLlmClient(LlmClient, RetryExecutor)` (P2가 작업마다 다시 조립)
     - _Requirements: 17.2, 17.3, 17.9_
-  - [ ]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
+  - [x]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
     - **Validates: Requirements 17.4, 17.5, 17.6, 17.8**
-  - [ ]* 2.5 Property 22: 경로 정규화 비교 테스트
+  - [x]* 2.5 Property 22: 경로 정규화 비교 테스트
     - 주의(선머지 리뷰): 생성기의 기준 경로 p는 이미 정규화된 값으로 만듭니다(`./`·`/`로 시작하거나 `\`를 포함하면 "정규화 후 p와 같다"가 성립하지 않음). 대소문자 변형은 p에 대소문자 있는 글자가 하나 이상 있을 때만 p와 다릅니다. `RepoPaths.normalize`가 정한 동작(중간의 `./`·`//`와 끝의 `/` 유지, 공백 유지, 빈 문자열 가능)은 그 Javadoc과 `RepoPathsTest`에 있습니다
     - **Validates: Requirements 11.1, 22.2, 22.6**
-  - [ ] 2.6 `testkit` 공용 생성기 기본형 작성 (jqwik이 필요하므로 1.2 뒤)
+  - [x] 2.6 `testkit` 공용 생성기 기본형 작성 (jqwik이 필요하므로 1.2 뒤)
     - 저장소 경로(대소문자, `./`, `\` 변형), `ReviewResult`(한글·따옴표·역슬래시·줄바꿈·탭·이모지 문자열, null 선택 필드, 빈 목록), `Configuration`
     - 트랙별 생성기(Hunk, glob, import 그래프, 응답 수열)는 각 트랙이 추가합니다
     - 주의(선머지 리뷰): 저장소 경로 생성기는 정규화된 기준 경로와 그 변형(`./`, `/`, `\`, 대소문자)을 짝으로 내야 2.5에서 그대로 쓸 수 있습니다. `ReviewResult`와 `Configuration` 생성기는 2.1의 불변식(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`, 토큰 수 0 이상)을 지켜야 생성자에서 거부되지 않습니다
@@ -107,6 +107,7 @@
   - [ ] 5.3 `LineRanges.of(hunks)` 구현 (head 줄 수 ≥ 1 구간만, 정렬·병합, 이진 탐색 `contains`) (T1이 사용, 화요일 목표)
     - _Requirements: 2.3, 2.4_
   - [ ]* 5.4 Property 3: diff round-trip 테스트
+    - 주의(2.4~2.6 리뷰): `testkit`에 이미 있는 Hunk 생성기는 `PullRequestSnapshotArbitraries` 안의 private이고 diff로 유효하지 않습니다(줄 번호·줄 수·줄 목록이 서로 맞지 않고 줄 내용에 줄바꿈이 들어감). 유효 구간을 보장하는 공용 Hunk 생성기는 여기서 새로 만듭니다
     - **Validates: Requirements 2.1, 2.5, 2.8, 2.9**
   - [ ]* 5.5 Property 4: 추가·삭제 줄 수 보존 테스트
     - **Validates: Requirements 2.10**
@@ -133,6 +134,7 @@
     - 판정 순서: 새 경로·이전 경로 패턴 일치(처음 일치 패턴) → `Absent`는 `binary_or_too_large` → `Unparseable`은 `unparseable_patch`(설계 G-1) → 대상. 입력 순서 유지
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8, 3.9, 3.10_
   - [ ]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
     - **Validates: Requirements 3.2, 3.3, 3.4, 3.5, 3.12**
   - [ ]* 6.5 Property 9: 필터 멱등 테스트
     - **Validates: Requirements 3.13**
@@ -259,6 +261,7 @@
     - 분할: head 경로 코드 포인트 정렬 후 결정적 순차 greedy, L 초과 파일은 단독 Chunk
     - _Requirements: 3.6, 13.1, 13.2, 13.3, 13.4, 13.9, 13.10_
   - [ ]* 11.2 Property 28: 청크 계획 테스트
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
     - **Validates: Requirements 13.2, 13.3, 13.4, 13.13, 13.14**
   - [ ] 11.3 `DelimiterCodec` 구현 (`<~*/?prlens:` 바이트 스터핑 escape/unescape, 대소문자 무시)
     - _Requirements: 14.5, 14.8_
@@ -295,6 +298,7 @@
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다. 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
 - [ ] 13. Claude API 어댑터
@@ -331,6 +335,8 @@
     - 오류: 필드 경로(`findings[2].severity`)와 enum 허용 값, 문법 오류 줄·열, 음수 토큰 경로. 모르는 필드 무시
     - Spring Boot 4의 Jackson 3 패키지(`tools.jackson`)는 spike 결과를 따름
     - 주의(선머지 리뷰): `model` 타입은 불변식 위반과 음수 토큰에 `IllegalArgumentException`, 필수 필드 null에 `NullPointerException`을 던집니다. 코덱이 생성 전에 직접 검증해야(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`) 필드 경로를 담은 `CodecException`이 나가고 `PrLensException`이 아닌 예외가 새지 않습니다. `Usage`는 `estimatedCostUsd`를 `setScale(4, HALF_UP)`으로 맞추므로 `0.1`을 읽으면 `0.1000`으로 저장됩니다
+    - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries`는 토큰 수를 `Long.MAX_VALUE`까지, `estimatedCostUsd`를 유효 숫자 18자리(scale 4)까지 냅니다. 토큰 수를 `int`로 읽거나 비용이 `double`을 한 번이라도 거치면, 작은 값을 쓰는 예시 테스트는 통과하고 15.2의 Property 19에서 실패합니다
+    - 미정(여기서 정함): `verdict`가 `inline_eligible`인데 `line`이 null인 JSON(또는 `line_missing`인데 `line`이 있는 JSON)을 필드 경로 오류로 거부할지, 그대로 받을지. `model`은 이 조합을 막지 않고 `testkit` 생성기는 이 조합을 내지 않으므로 속성 테스트로는 드러나지 않습니다. 그대로 받기로 하면 17.1의 (경로, 라인) 정렬이 null `line`을 견뎌야 하므로 17.1에 알립니다
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.7, 12.9, 16.4_
   - [ ]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
@@ -347,8 +353,10 @@
     - _Requirements: 3.11, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 19.1, 22.2, 22.3_
   - [ ] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
     - 주의(선머지 리뷰): `maxCostUsdPerReview`는 scale 4라 그대로 쓰면 `0.5000`으로 나옵니다. 단가(`ModelPricing`)는 `stripTrailingZeros`를 거쳐 `20.00`이 `2E+1`이 되므로 `toPlainString()`으로 씁니다. `pricing`은 모델 이름의 자연 순서로 순회됩니다
+    - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries`는 `model`뿐 아니라 `pricing`의 키에도 `true`, `123`, `null`, `model: v1`, `"quoted"`, `a\b`를 냅니다. `pricing`의 키도 큰따옴표로 감싸고 `"`와 `\`를 이스케이프해야 16.3의 round-trip이 성립합니다
     - _Requirements: 18.10_
   - [ ]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
+    - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries.configurations()`는 요구사항 18.6 범위 안의 값만 내므로 Property 38의 범위 밖 값은 따로 만듭니다. `pricing`에는 기본 단가 모델이 항상 있고(G-10 병합 전제) 그 단가는 기본값과 다를 수 있으므로, "기본 모델 단가를 적지 않으면 기본값 유지"는 부분 지정 쪽이나 예시 테스트로 확인합니다. 비용 상한은 소수 넷째 자리까지만 나와 다섯째 자리 이하 처리는 검증되지 않습니다. 패턴 중복은 한 목록 안에서만 없고, 같은 패턴이 추가 목록과 해제 목록에 함께 나올 수 있습니다
     - **Validates: Requirements 18.5, 18.6, 18.7, 18.10, 18.11**
 
 - [ ] 17. 출력 형식과 종료 코드
@@ -357,6 +365,7 @@
     - 빈 구역도 제목과 0건 표시, 줄바꿈은 `\n`
     - _Requirements: 8.1, 8.3, 8.4, 11.6, 12.8, 13.9, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.14, 16.3, 20.5, 22.5_
   - [ ]* 17.2 Property 35: Markdown 구조와 개수 일관성 테스트
+    - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries.findings()`는 `file`을 Finding마다 따로 뽑아 같은 파일의 Finding이 거의 겹치지 않으므로, "같은 파일 안 라인 오름차순"(요구사항 15.5)을 보려면 작은 경로 풀에서 `file`을 뽑는 생성기를 따로 둡니다. `file`은 드물게 `""`이고 `summary`·`message`·`suggestion`도 `""`일 수 있습니다. 문자열에 `\r\n`, 탭, 백틱은 나오지만 `#`, `-`, `|` 같은 Markdown 표식은 나오지 않아, 내용이 구역 구조를 깨는 경우는 이 생성기로 검증되지 않습니다
     - **Validates: Requirements 8.1, 8.3, 11.6, 12.8, 15.2, 15.3, 15.4, 15.5, 15.13, 16.3, 22.5**
   - [ ] 17.3 `ExitCodeResolver` 구현 (blocker ≥ 1 → 1, incomplete → 3, 그 외 0)
     - _Requirements: 15.9, 15.10, 16.7, 16.8_
