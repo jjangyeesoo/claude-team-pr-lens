@@ -58,12 +58,12 @@
     - T2 순수 함수의 스텁(본문은 `UnsupportedOperationException`): `GlobMatcher.matches`/`validate`, `DiffPrinter.print`, `LineRanges.of`/`contains`, `DiffFilter.apply`, `FilterOutcome(targets, excluded, warnings)`. `GlobMatcher.validate`가 던지는 `GlobSyntaxException(pattern, reason)`(`PrLensException` 하위 타입)도 여기서 만듭니다(T3 `ConfigLoader`가 6.1을 기다리지 않고 잡을 수 있게). T1과 T3가 구현을 기다리지 않게 하려는 것이고, 구현은 5.2, 5.3, 6.1, 6.3이 채웁니다
     - 생성자 시그니처만 먼저 고정: `RetryExecutor(RetryPolicy, Sleeper, RetryListener)`, `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`, `RetryingLlmClient(LlmClient, RetryExecutor)` (P2가 작업마다 다시 조립)
     - _Requirements: 17.2, 17.3, 17.9_
-  - [ ]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
+  - [x]* 2.4 Property 43: 공유 타입 불변성과 값 동등성 테스트
     - **Validates: Requirements 17.4, 17.5, 17.6, 17.8**
-  - [ ]* 2.5 Property 22: 경로 정규화 비교 테스트
+  - [x]* 2.5 Property 22: 경로 정규화 비교 테스트
     - 주의(선머지 리뷰): 생성기의 기준 경로 p는 이미 정규화된 값으로 만듭니다(`./`·`/`로 시작하거나 `\`를 포함하면 "정규화 후 p와 같다"가 성립하지 않음). 대소문자 변형은 p에 대소문자 있는 글자가 하나 이상 있을 때만 p와 다릅니다. `RepoPaths.normalize`가 정한 동작(중간의 `./`·`//`와 끝의 `/` 유지, 공백 유지, 빈 문자열 가능)은 그 Javadoc과 `RepoPathsTest`에 있습니다
     - **Validates: Requirements 11.1, 22.2, 22.6**
-  - [ ] 2.6 `testkit` 공용 생성기 기본형 작성 (jqwik이 필요하므로 1.2 뒤)
+  - [x] 2.6 `testkit` 공용 생성기 기본형 작성 (jqwik이 필요하므로 1.2 뒤)
     - 저장소 경로(대소문자, `./`, `\` 변형), `ReviewResult`(한글·따옴표·역슬래시·줄바꿈·탭·이모지 문자열, null 선택 필드, 빈 목록), `Configuration`
     - 트랙별 생성기(Hunk, glob, import 그래프, 응답 수열)는 각 트랙이 추가합니다
     - 주의(선머지 리뷰): 저장소 경로 생성기는 정규화된 기준 경로와 그 변형(`./`, `/`, `\`, 대소문자)을 짝으로 내야 2.5에서 그대로 쓸 수 있습니다. `ReviewResult`와 `Configuration` 생성기는 2.1의 불변식(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`, 토큰 수 0 이상)을 지켜야 생성자에서 거부되지 않습니다
