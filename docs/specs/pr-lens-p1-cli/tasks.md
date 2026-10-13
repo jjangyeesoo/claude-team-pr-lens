@@ -20,7 +20,7 @@
 
 ### 공유 경계 (리드 B, 월요일 선머지)
 
-- [ ] 1. 프로젝트 골격과 의존성 준비
+- [x] 1. 프로젝트 골격과 의존성 준비
   - PR 경계: 1.1 / 1.2 (1.1은 월요일 선머지. 패키지 이름 변경이 크면 그 부분만 먼저 따로 냄)
   - [x] 1.1 패키지 이름 변경, 메모 샘플 제거, 패키지 뼈대 (월요일 선머지. 새 의존성 없음)
     - 패키지를 `com.example.starter`에서 `com.prlens`로 바꿉니다(ROADMAP 1주차 항목. 이미 돼 있으면 건너뜀). `build.gradle.kts`의 group, `settings.gradle.kts`의 프로젝트 이름, `application.properties`를 함께 바꿉니다. 변경 줄 수가 많으면 이 부분만 별도 PR로 먼저 냅니다
@@ -36,7 +36,7 @@
     - `%n` 금지는 ArchUnit이 문자열 리터럴을 보지 못하므로 소스 파일을 읽는 테스트로 검사합니다
     - _Requirements: 17.3, 22.5_
 
-- [ ] 2. 공유 타입과 경계 인터페이스 정의
+- [x] 2. 공유 타입과 경계 인터페이스 정의
   - PR 경계: 2.1~2.3 / 2.4~2.6 (앞쪽은 월요일 선머지)
   - [x] 2.1 `model` 패키지 레코드 작성
     - `RepoRef`, `PullRequestSnapshot`, `ChangedFile`, `FileStatus`, `PatchContent`(sealed: `Parsed`, `Absent`, `Unparseable`), `Hunk`, `DiffLine`, `LineKind`
@@ -69,7 +69,7 @@
     - 주의(선머지 리뷰): 저장소 경로 생성기는 정규화된 기준 경로와 그 변형(`./`, `/`, `\`, 대소문자)을 짝으로 내야 2.5에서 그대로 쓸 수 있습니다. `ReviewResult`와 `Configuration` 생성기는 2.1의 불변식(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`, 토큰 수 0 이상)을 지켜야 생성자에서 거부되지 않습니다
     - _Requirements: 17.8_
 
-- [ ] 3. `support`: 재시도와 비밀정보 마스킹 (선머지 대상이 아님. 2.3이 머지되면 트랙과 병렬로 진행)
+- [x] 3. `support`: 재시도와 비밀정보 마스킹 (선머지 대상이 아님. 2.3이 머지되면 트랙과 병렬로 진행)
   - [x] 3.1 `RetryPolicy`, `RetryExecutor` 구현
     - 첫 시도 + 재시도 n회(0~10), 대기 = 호출자가 정한 값(GitHub rate limit) 또는 유효한 `retry-after` 또는 `min(2^(k-1), 30)`초. 대기가 60초를 넘으면 남은 시도 횟수와 관계없이 즉시 `RetryAfterTooLongException`(이 검사를 "마지막 시도" 검사보다 먼저 합니다)
     - 재시도 대상: 429, 5xx, 연결 실패, 제한 시간 초과, 그리고 호출자가 재시도 대상으로 분류한 응답(GitHub rate limit 403/429, 대기 시간은 호출자가 함께 전달)
