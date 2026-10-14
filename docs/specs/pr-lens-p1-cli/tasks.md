@@ -176,6 +176,7 @@
     - _Requirements: 1.8, 1.11, 1.13, 21.2, 21.9, 21.10, 21.11_
 
   - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
+    - 대상: 고정 픽스처 PR [#15](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/15) (구성과 확인한 사실은 [spike 2026-10-14](../../spikes/2026-10-14-fixture-pr.md)). 내용이 같은 이름 변경도 patch가 없음
     - 팀 저장소의 실제 PR 1건을 `PrFetcher`로 가져와 파일 수, patch 해석, `changed_files`와 받은 파일 수가 같은지 확인
     - base SHA로 재귀 트리 조회와 contents 조회가 되는지 확인
     - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
@@ -441,6 +442,7 @@
   - [ ] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - _Requirements: 17.12_
   - [ ] 20.4 M1 데모 리허설 (목요일. 실제 API, 사람이 실행)
+    - 대상: 고정 픽스처 PR #15. 심어 둔 지적과 판정 기준은 [spike 2026-10-14](../../spikes/2026-10-14-fixture-pr.md)의 "심어 둔 지적"
     - 팀 저장소의 실제 PR 1건을 패키징한 `prlens review`로 리뷰. 규칙 근거(`basis.type`이 `rule`)가 붙은 지적이 1건 이상 나오는지 확인(ROADMAP 2주차 완료 조건). 안 나오면 강등 기록(`demotion`)을 보고 프롬프트의 출력 규칙이나 rules를 고침
     - 400줄 PR의 실행 시간 측정(요구사항 9.7. 재시도 대기 제외, 첫 호출과 그 뒤 호출을 따로 기록), 인젝션 픽스처를 실제 모델로 한 번 실행
     - 결과를 PR이나 `docs/spikes/`에 기록
