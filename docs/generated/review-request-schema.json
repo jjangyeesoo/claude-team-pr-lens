@@ -1,0 +1,16 @@
+{
+  "$comment": "ReviewRequestView에서 생성한 스키마. 직접 고치지 않는다.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReviewRequestView",
+  "type": "object",
+  "required": ["id", "pr_url", "requested_by", "status", "created_at"],
+  "properties": {
+    "id": { "type": "integer" },
+    "pr_url": { "type": "string" },
+    "requested_by": { "type": "string" },
+    "status": { "type": "string", "enum": ["queued", "running", "done", "failed"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}

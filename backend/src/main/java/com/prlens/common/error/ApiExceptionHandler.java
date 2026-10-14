@@ -57,6 +57,11 @@ public class ApiExceptionHandler {
         List.of());
   }
 
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException e) {
+    return ResponseEntity.badRequest().body("invalid_argument: " + e.getMessage());
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
     log.error("Unhandled exception", e);
