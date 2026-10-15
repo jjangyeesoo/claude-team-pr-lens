@@ -235,16 +235,16 @@
 ### T1 리뷰 엔진 (B)
 
 - [ ] 10. 응답 해석과 Finding 검증
-  - [ ] 10.1 `ReviewJsonSchema` 작성 (설계의 JSON 스키마, 모든 속성 `required`, null 허용 3개, `minimum`·`minLength` 없음) 과 스냅샷 테스트
+  - [x] 10.1 `ReviewJsonSchema` 작성 (설계의 JSON 스키마, 모든 속성 `required`, null 허용 3개, `minimum`·`minLength` 없음) 과 스냅샷 테스트
     - _Requirements: 9.1, 9.2, 9.3_
-  - [ ] 10.2 `ResponseParser` 구현
+  - [x] 10.2 `ResponseParser` 구현
     - 정상: Jackson 트리 해석 → 로컬 검증(enum 대소문자 무시 후 소문자 정규화(설계 G-7), `line ≥ 1`, `message` 비어 있지 않음), 실패 시 `schema_violation` + 원본 앞 2,000자
     - `refusal`: 본문 미해석, `findings=[]`
     - `max_tokens`, `model_context_window_exceeded`: 스트리밍 파서로 완전히 닫힌 유효 Finding만 유지, `summary` 없으면 `""`, 사유는 둘 다 `max_tokens`
     - 그 밖의 `stop_reason`(`stop_sequence`, `tool_use`, `pause_turn`)은 `schema_violation`
     - 결과는 비공개 `RawFinding` 목록과 usage
     - _Requirements: 9.4, 9.5, 9.6, 16.1, 16.2, 20.1_
-  - [ ]* 10.3 Property 30(정상 응답 변환), Property 31(스키마 위반), Property 32(max_tokens 절단 복구) 테스트
+  - [x]* 10.3 Property 30(정상 응답 변환), Property 31(스키마 위반), Property 32(max_tokens 절단 복구) 테스트
     - **Validates: Requirements 9.4, 9.5, 9.6, 16.2, 20.1**
   - [ ] 10.4 `FindingValidator` 구현
     - basis: `rule`/`spec`이고 `ref`가 공백이거나 컨텍스트 경로에 없으면 `general`로 강등 + `Demotion`
