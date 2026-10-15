@@ -134,7 +134,7 @@
     - 판정 순서: 새 경로·이전 경로 패턴 일치(처음 일치 패턴) → `Absent`는 `binary_or_too_large` → `Unparseable`은 `unparseable_patch`(설계 G-1) → 대상. 입력 순서 유지
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8, 3.9, 3.10_
   - [ ]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음)
     - **Validates: Requirements 3.2, 3.3, 3.4, 3.5, 3.12**
   - [ ]* 6.5 Property 9: 필터 멱등 테스트
     - **Validates: Requirements 3.13**
@@ -257,16 +257,16 @@
 
 - [ ] 11. 청크 계획, 프롬프트, 비용, 병합
   - PR 경계: 11.1~11.4 / 11.5~11.9
-  - [ ] 11.1 모드 결정과 `ChunkPlanner` 구현
+  - [x] 11.1 모드 결정과 `ChunkPlanner` 구현
     - 모드: 대상 0개 `NO_TARGET`, count ≤ L 단일(count 0 포함, 설계 G-2), ≤ 3L 분할, 초과 요약 전용
     - 분할: head 경로 코드 포인트 정렬 후 결정적 순차 greedy, L 초과 파일은 단독 Chunk
     - _Requirements: 3.6, 13.1, 13.2, 13.3, 13.4, 13.9, 13.10_
-  - [ ]* 11.2 Property 28: 청크 계획 테스트
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
+  - [x]* 11.2 Property 28: 청크 계획 테스트
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음)
     - **Validates: Requirements 13.2, 13.3, 13.4, 13.13, 13.14**
-  - [ ] 11.3 `DelimiterCodec` 구현 (`<~*/?prlens:` 바이트 스터핑 escape/unescape, 대소문자 무시)
+  - [x] 11.3 `DelimiterCodec` 구현 (`<~*/?prlens:` 바이트 스터핑 escape/unescape, 대소문자 무시)
     - _Requirements: 14.5, 14.8_
-  - [ ]* 11.4 Property 33: Delimiter 이스케이프 테스트
+  - [x]* 11.4 Property 33: Delimiter 이스케이프 테스트
     - **Validates: Requirements 14.2, 14.5, 14.8**
   - [ ] 11.5 `PromptBuilder` 구현
     - system: 리뷰 지시문(`PROMPT_VERSION`), 출력 규칙, 인젝션 규칙, `<~` 이스케이프 설명. PR·diff 텍스트 없음
@@ -299,7 +299,7 @@
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다. 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음). 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
 - [ ] 13. Claude API 어댑터
