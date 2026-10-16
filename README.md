@@ -70,6 +70,7 @@ web/
 │   ├── pr-ready/                /pr-ready: PR 단위·크기 확인, 바뀐 스택 검증, 리뷰, PR 설명 초안
 │   └── adr/                     /adr <제목>: 아키텍처 결정 기록
 └── agents/
+    ├── task-planner.md          /task 5번에서 작업 계획 초안을 쓰는 서브에이전트 (model: opus, 읽기 전용)
     ├── reviewer.md              새 컨텍스트에서 diff를 스펙 작업과 패키지 규칙(ADR 0003) 기준으로 리뷰하는 서브에이전트
     └── context-reviewer.md      .claude/ 와 CLAUDE.md 변경을 리뷰하는 서브에이전트 (맞물림, 기존 규칙·hook과의 충돌)
 docs/
