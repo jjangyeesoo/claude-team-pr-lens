@@ -2,6 +2,7 @@ package com.prlens.review;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
 class DelimiterCodecTest {
@@ -57,6 +58,6 @@ class DelimiterCodecTest {
   void escapedTextHasNoDelimiterTagLeft() {
     String escaped = DelimiterCodec.escape("<PRLENS:a></PrLens:a><~prlens:b>");
 
-    assertThat(escaped.toLowerCase(java.util.Locale.ROOT)).doesNotContain("<prlens:", "</prlens:");
+    assertThat(escaped.toLowerCase(Locale.ROOT)).doesNotContain("<prlens:", "</prlens:");
   }
 }
