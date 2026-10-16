@@ -109,7 +109,8 @@
 - `settings.json`: `.claude/` 아래 수정은 ask, allow된 명령에 `--output`·`--init-script`·`-I`·`--config`·`-c`를 붙이는 형태는 deny. `git log --output`과 `npx vitest run --config`가 실제 세션에서 거부되는 것을 확인했습니다
 - `VerifyOnStop.java`: 복제본에서 실패 테스트를 넣으면 차단하고 고치면 통과하는 것을 확인했습니다
 - 의존성 조합(jqwik 1.10.1, ArchUnit 1.5.1, picocli, Anthropic SDK와 JUnit 6.0.3): [`docs/spikes/2026-10-04-build-stack.md`](../spikes/2026-10-04-build-stack.md)
-- **확인하지 못한 것**: macOS/Linux 실행, GitHub에서의 CI 실행(워크플로는 작성했지만 원격 저장소가 아직 없음. 같은 명령을 로컬에서 실행해 통과하는 것만 확인), `Edit(/.claude/**)` ask 규칙이 실제로 승인을 묻는지
+- GitHub Actions의 CI(`.github/workflows/ci.yml`): PR과 main push마다 실행되어 통과하고, ruleset `Protect-main`이 `backend`·`web`을 필수 상태 체크로 요구합니다(2026-10-16 확인)
+- **확인하지 못한 것**: macOS/Linux 실행, `Edit(/.claude/**)` ask 규칙이 실제로 승인을 묻는지
 
 아래는 스타터 시절의 기록입니다.
 

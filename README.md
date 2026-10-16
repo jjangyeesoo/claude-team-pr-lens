@@ -82,7 +82,7 @@ docs/
 └── guide/                       팀 방법론 가이드, Claude Code 설정 설명, 작업 수행 흐름 안내서
 .github/
 ├── pull_request_template.md     작업 번호, 검증 증거, AI 리뷰 지적·반영 건수
-└── workflows/ci.yml             backend, web 검증 (PR과 main push마다 GitHub Actions에서 실행. 브랜치 보호 필수 체크용)
+└── workflows/ci.yml             backend, web 검증 (PR과 main push마다 GitHub Actions에서 실행. ruleset의 필수 상태 체크용)
 .worktreeinclude                 claude --worktree 때 복사할 로컬 설정 파일 목록
 ```
 
