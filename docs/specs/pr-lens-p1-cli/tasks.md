@@ -95,27 +95,27 @@
 
 ### T2 GitHub 연동 (A)
 
-- [ ] 5. diff 해석과 출력
-  - [ ] 5.1 `DiffParser` 구현
+- [x] 5. diff 해석과 출력
+  - [x] 5.1 `DiffParser` 구현
     - CRLF·단독 CR을 LF로 정규화, 끝 LF 하나 제거 후 줄 분할, 빈 문자열은 빈 목록
     - 상태 기계(`EXPECT_HEADER` → `IN_HUNK`), 헤더 정규식, 생략된 줄 수 = 1, `sectionHeading` 원문 보존, `\` 줄은 직전 줄 `noNewlineAtEnd`
     - 오류: `DiffParseException(path, lineNo, hunkIndex, kind)` — 헤더 문법, 줄 수 불일치, 잘못된 접두어, 첫 헤더 앞 내용, 겹침·비증가. 부분 결과 없음
     - 예시 테스트: 줄 수를 생략한 헤더(`@@ -3 +3 @@`)는 줄 수 1로 해석(요구사항 2.2. `DiffPrinter`가 생략형을 출력하지 않아 round-trip 속성으로는 검증되지 않음)
     - _Requirements: 2.1, 2.2, 2.5, 2.6, 2.7, 22.4_
-  - [ ] 5.2 `DiffPrinter` 구현 (`@@ -a,b +c,d @@` + `sectionHeading`, LF, `\ No newline at end of file`) (T1이 사용, 화요일 목표)
+  - [x] 5.2 `DiffPrinter` 구현 (`@@ -a,b +c,d @@` + `sectionHeading`, LF, `\ No newline at end of file`) (T1이 사용, 화요일 목표)
     - _Requirements: 2.8_
-  - [ ] 5.3 `LineRanges.of(hunks)` 구현 (head 줄 수 ≥ 1 구간만, 정렬·병합, 이진 탐색 `contains`) (T1이 사용, 화요일 목표)
+  - [x] 5.3 `LineRanges.of(hunks)` 구현 (head 줄 수 ≥ 1 구간만, 정렬·병합, 이진 탐색 `contains`) (T1이 사용, 화요일 목표)
     - _Requirements: 2.3, 2.4_
-  - [ ]* 5.4 Property 3: diff round-trip 테스트
+  - [x]* 5.4 Property 3: diff round-trip 테스트
     - 주의(2.4~2.6 리뷰): `testkit`에 이미 있는 Hunk 생성기는 `PullRequestSnapshotArbitraries` 안의 private이고 diff로 유효하지 않습니다(줄 번호·줄 수·줄 목록이 서로 맞지 않고 줄 내용에 줄바꿈이 들어감). 유효 구간을 보장하는 공용 Hunk 생성기는 여기서 새로 만듭니다
     - **Validates: Requirements 2.1, 2.5, 2.8, 2.9**
-  - [ ]* 5.5 Property 4: 추가·삭제 줄 수 보존 테스트
+  - [x]* 5.5 Property 4: 추가·삭제 줄 수 보존 테스트
     - **Validates: Requirements 2.10**
-  - [ ]* 5.6 Property 5: Changed_Line_Range 모델 일치 테스트
+  - [x]* 5.6 Property 5: Changed_Line_Range 모델 일치 테스트
     - **Validates: Requirements 2.3, 2.4**
-  - [ ]* 5.7 Property 6: 잘못된 patch 거부 테스트
+  - [x]* 5.7 Property 6: 잘못된 patch 거부 테스트
     - **Validates: Requirements 2.7**
-  - [ ]* 5.8 Property 7(diff 부분): 줄바꿈 무관 해석 테스트
+  - [x]* 5.8 Property 7(diff 부분): 줄바꿈 무관 해석 테스트
     - **Validates: Requirements 22.4**
 
 - [ ] 6. glob과 diff 필터
@@ -135,6 +135,7 @@
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8, 3.9, 3.10_
   - [ ]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
     - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
+    - 주의(5 리뷰): 5.4의 공용 Hunk 생성기는 `testkit/DiffArbitraries.validHunks()`(0~5개)와 `nonEmptyValidHunks()`(1~5개)입니다. 0/0 Hunk는 만들지 않고 `noNewlineAtEnd`는 마지막 줄이 아닌 줄에도 붙습니다. `ChangedFile`의 `additions`/`deletions`는 Hunk의 `ADDED`/`REMOVED` 줄 수로 직접 계산해야 합니다
     - **Validates: Requirements 3.2, 3.3, 3.4, 3.5, 3.12**
   - [ ]* 6.5 Property 9: 필터 멱등 테스트
     - **Validates: Requirements 3.13**
@@ -168,6 +169,8 @@
     - 상태 매핑: `copied` → `ADDED`, `unchanged` → `MODIFIED`(설계 G-6), 이름 변경은 이전 경로 기록
     - patch 없음 → `Absent`, `DiffParseException` → `Unparseable` + 경고
     - 주의(선머지 리뷰): `FilePage.Entry`는 GitHub 값 그대로(`status` 문자열, `patch`는 없으면 null)이고 다음 페이지 여부는 `FilePage.hasNext`입니다. `ChangedFile`은 경로 정규화를 강제하지 않으므로 `filename`을 `RepoPaths.normalize`에 거쳐 담습니다. `PullRequestMeta.body`는 null일 수 있고 `PullRequestSnapshot` 생성자가 `""`로 바꿉니다
+    - 미정(여기서 정함): `DiffParser.parse`는 `""`과 `"\n"`에 빈 목록을 돌려주고 null이면 NPE를 던집니다. `patch == null`만 `Absent`로 보내면 빈 문자열 patch는 Hunk 없는 `Parsed`가 되어 필터를 통과합니다(G-2의 줄 수 0인 대상 파일). `""`도 `Absent`로 볼지 정합니다
+    - 주의(5 리뷰): `DiffParseException`을 `PatchContent.Unparseable`로 옮길 때는 `kind().name().toLowerCase(Locale.ROOT)`, `lineNo()`(1부터, 줄바꿈 정규화 뒤 기준), `hunkIndex()`(0부터)를 넘깁니다. `name()`이나 `toString()`을 그대로 넘겨도 컴파일되므로 주의합니다
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
   - [ ]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
