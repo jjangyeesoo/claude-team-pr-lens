@@ -95,27 +95,27 @@
 
 ### T2 GitHub 연동 (A)
 
-- [ ] 5. diff 해석과 출력
-  - [ ] 5.1 `DiffParser` 구현
+- [x] 5. diff 해석과 출력
+  - [x] 5.1 `DiffParser` 구현
     - CRLF·단독 CR을 LF로 정규화, 끝 LF 하나 제거 후 줄 분할, 빈 문자열은 빈 목록
     - 상태 기계(`EXPECT_HEADER` → `IN_HUNK`), 헤더 정규식, 생략된 줄 수 = 1, `sectionHeading` 원문 보존, `\` 줄은 직전 줄 `noNewlineAtEnd`
     - 오류: `DiffParseException(path, lineNo, hunkIndex, kind)` — 헤더 문법, 줄 수 불일치, 잘못된 접두어, 첫 헤더 앞 내용, 겹침·비증가. 부분 결과 없음
     - 예시 테스트: 줄 수를 생략한 헤더(`@@ -3 +3 @@`)는 줄 수 1로 해석(요구사항 2.2. `DiffPrinter`가 생략형을 출력하지 않아 round-trip 속성으로는 검증되지 않음)
     - _Requirements: 2.1, 2.2, 2.5, 2.6, 2.7, 22.4_
-  - [ ] 5.2 `DiffPrinter` 구현 (`@@ -a,b +c,d @@` + `sectionHeading`, LF, `\ No newline at end of file`) (T1이 사용, 화요일 목표)
+  - [x] 5.2 `DiffPrinter` 구현 (`@@ -a,b +c,d @@` + `sectionHeading`, LF, `\ No newline at end of file`) (T1이 사용, 화요일 목표)
     - _Requirements: 2.8_
-  - [ ] 5.3 `LineRanges.of(hunks)` 구현 (head 줄 수 ≥ 1 구간만, 정렬·병합, 이진 탐색 `contains`) (T1이 사용, 화요일 목표)
+  - [x] 5.3 `LineRanges.of(hunks)` 구현 (head 줄 수 ≥ 1 구간만, 정렬·병합, 이진 탐색 `contains`) (T1이 사용, 화요일 목표)
     - _Requirements: 2.3, 2.4_
-  - [ ]* 5.4 Property 3: diff round-trip 테스트
+  - [x]* 5.4 Property 3: diff round-trip 테스트
     - 주의(2.4~2.6 리뷰): `testkit`에 이미 있는 Hunk 생성기는 `PullRequestSnapshotArbitraries` 안의 private이고 diff로 유효하지 않습니다(줄 번호·줄 수·줄 목록이 서로 맞지 않고 줄 내용에 줄바꿈이 들어감). 유효 구간을 보장하는 공용 Hunk 생성기는 여기서 새로 만듭니다
     - **Validates: Requirements 2.1, 2.5, 2.8, 2.9**
-  - [ ]* 5.5 Property 4: 추가·삭제 줄 수 보존 테스트
+  - [x]* 5.5 Property 4: 추가·삭제 줄 수 보존 테스트
     - **Validates: Requirements 2.10**
-  - [ ]* 5.6 Property 5: Changed_Line_Range 모델 일치 테스트
+  - [x]* 5.6 Property 5: Changed_Line_Range 모델 일치 테스트
     - **Validates: Requirements 2.3, 2.4**
-  - [ ]* 5.7 Property 6: 잘못된 patch 거부 테스트
+  - [x]* 5.7 Property 6: 잘못된 patch 거부 테스트
     - **Validates: Requirements 2.7**
-  - [ ]* 5.8 Property 7(diff 부분): 줄바꿈 무관 해석 테스트
+  - [x]* 5.8 Property 7(diff 부분): 줄바꿈 무관 해석 테스트
     - **Validates: Requirements 22.4**
 
 - [ ] 6. glob과 diff 필터

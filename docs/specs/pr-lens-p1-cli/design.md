@@ -275,7 +275,7 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 
 - 입력을 먼저 `\r\n`과 단독 `\r` 뒤 `\n`을 `\n`으로 바꾸고(CR 제거), 끝의 `\n` 하나를 떼어 줄로 나눕니다.
 - 상태 기계: `EXPECT_HEADER` → 헤더 정규식 `^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$` → `IN_HUNK`(남은 base/head 줄 수를 줄여 가며 ` `, `+`, `-` 소비, `\`는 직전 줄의 `noNewlineAtEnd=true`) → 두 카운터가 0이면 `EXPECT_HEADER`. 헤더 뒤 텍스트(`(.*)`)는 앞 공백 포함 그대로 `sectionHeading`에 저장해 round-trip을 보장합니다.
-- 검증: 카운터가 음수가 되거나 파일 끝에서 0이 아니면 줄 수 불일치, 이전 Hunk의 head 구간 끝 ≥ 다음 시작이면 겹침/비증가. 오류는 `DiffParseException(path, lineNo, hunkIndex, kind)`이고 부분 결과를 반환하지 않습니다.
+- 검증: 카운터가 음수가 되거나 파일 끝에서 0이 아니면 줄 수 불일치, 이전 Hunk의 head 구간 끝 ≥ 다음 시작이거나 이전 시작 ≥ 다음 시작이면 겹침/비증가(head 줄 수 0인 Hunk는 구간 끝이 시작보다 작아 시작 줄도 따로 비교합니다). 줄 수가 남았는데 `@@`로 시작하는 줄이 나오면 줄 수 불일치입니다. 오류는 `DiffParseException(path, lineNo, hunkIndex, kind)`이고 부분 결과를 반환하지 않습니다.
 - Printer는 `@@ -a,b +c,d @@` + `sectionHeading`, 줄 접두어 + 내용 + `\n`, `noNewlineAtEnd`이면 다음 줄에 `\ No newline at end of file\n`을 씁니다.
 - `LineRanges.of(hunks)`: `headCount ≥ 1`인 Hunk마다 `[headStart, headStart+headCount-1]`을 만들고 정렬·병합한 불변 구간 목록을 돌려줍니다. `contains(line)`은 이진 탐색입니다.
 
