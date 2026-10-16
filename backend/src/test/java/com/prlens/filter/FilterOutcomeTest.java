@@ -18,7 +18,7 @@ class FilterOutcomeTest {
   private static final ChangedFile TARGET =
       new ChangedFile("A.java", null, FileStatus.MODIFIED, 1, 0, new PatchContent.Absent());
   private static final ExcludedFile EXCLUDED = new ExcludedFile("logo.png", "**/*.png");
-  private static final Warning WARNING = new Warning("secret_exclude_kept", "해제 요청을 무시했습니다");
+  private static final Warning WARNING = new Warning("exclude_unlock_ignored", "해제 요청을 무시했습니다");
 
   @Test
   void listsAreCopiedAndUnmodifiable() {

@@ -66,6 +66,15 @@ class GlobMatcherTest {
   }
 
   @Test
+  void braceExpansion_isDoneBeforePrefixRemovalAndDoubleStarCheck() {
+    assertThat(GlobMatcher.matches("{a,*}*", "x/y")).isTrue();
+    assertThat(GlobMatcher.matches("{**,a}/x", "q/r/x")).isTrue();
+    assertThat(GlobMatcher.matches("{./a,b}", "a")).isTrue();
+    assertThat(GlobMatcher.matches("{/a,b}", "a")).isTrue();
+    assertSyntaxError("{a**,b}");
+  }
+
+  @Test
   void regexMetaCharacters_areLiteral() {
     assertThat(GlobMatcher.matches("a.b(c)+[d]$", "a.b(c)+[d]$")).isTrue();
     assertThat(GlobMatcher.matches("a.b", "axb")).isFalse();

@@ -2,18 +2,25 @@ package com.prlens.glob;
 
 import com.prlens.model.RepoPaths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
  * 저장소 경로용 glob. {@code java.nio.file.PathMatcher}를 쓰지 않고 {@code /} 구간 단위로 직접 맞춘다.
  *
  * <p>{@code **}가 구간 전체이면 0개 이상의 구간, {@code *}는 {@code /}를 뺀 0개 이상의 문자, {@code ?}는 {@code /}를 뺀 한
- * 문자, {@code {a,b}}는 (중첩 가능한) 중괄호 확장이다. {@code /}를 포함한 중괄호만 구간 분할 전에 펼치고, 나머지는 정규식 교대로 컴파일한다.
+ * 문자, {@code {a,b}}는 (중첩 가능한) 중괄호 확장이다. 중괄호를 모두 펼친 패턴마다 앞의 {@code ./}·{@code /} 제거와 구간 컴파일을 따로 한다.
  */
 public final class GlobMatcher {
 
   private static final int MAX_EXPANSIONS = 256;
+  private static final int MAX_CACHED = 1_000;
+
+  /** 컴파일한 패턴 캐시. 유효한 패턴만 담고, 가득 차면 비운다. */
+  private static final Map<String, List<List<Pattern>>> CACHE = new ConcurrentHashMap<>();
 
   private GlobMatcher() {}
 
@@ -38,36 +45,39 @@ public final class GlobMatcher {
     compile(pattern);
   }
 
-  /** 전체 패턴 하나가 펼쳐진 구간 목록들. 구간이 {@code null}이면 {@code **}이다. */
+  /** 패턴을 중괄호가 없는 패턴들로 펼친 뒤 각각을 구간 목록으로 컴파일한다. 구간이 {@code null}이면 {@code **}이다. */
   private static List<List<Pattern>> compile(String pattern) {
-    String body = stripPrefix(pattern);
-    checkBraces(pattern, body);
-    List<List<Pattern>> result = new ArrayList<>();
-    for (String expanded : expandSlashBraces(body)) {
-      List<Pattern> segments = new ArrayList<>();
-      for (String segment : splitTopLevel(expanded, '/')) {
-        segments.add(compileSegment(pattern, segment));
-      }
-      result.add(segments);
+    List<List<Pattern>> cached = CACHE.get(pattern);
+    if (cached != null) {
+      return cached;
     }
-    return result;
-  }
-
-  private static String stripPrefix(String pattern) {
     if (pattern.indexOf('\\') >= 0) {
       throw new GlobSyntaxException(pattern, "백슬래시(\\)는 쓸 수 없습니다");
     }
-    String body = RepoPaths.normalize(pattern);
-    if (body.isEmpty()) {
-      throw new GlobSyntaxException(pattern, "패턴이 비어 있습니다");
+    checkBraces(pattern);
+    List<List<Pattern>> result = new ArrayList<>();
+    for (String expanded : expand(pattern)) {
+      String body = RepoPaths.normalize(expanded);
+      if (body.isEmpty()) {
+        throw new GlobSyntaxException(pattern, "패턴이 비어 있습니다");
+      }
+      List<Pattern> segments = new ArrayList<>();
+      for (String segment : body.split("/", -1)) {
+        segments.add(compileSegment(pattern, segment));
+      }
+      result.add(Collections.unmodifiableList(segments));
     }
-    return body;
+    if (CACHE.size() >= MAX_CACHED) {
+      CACHE.clear();
+    }
+    CACHE.put(pattern, result);
+    return result;
   }
 
-  private static void checkBraces(String pattern, String body) {
+  private static void checkBraces(String pattern) {
     int depth = 0;
-    for (int i = 0; i < body.length(); i++) {
-      char c = body.charAt(i);
+    for (int i = 0; i < pattern.length(); i++) {
+      char c = pattern.charAt(i);
       if (c == '{') {
         depth++;
       } else if (c == '}' && --depth < 0) {
@@ -77,7 +87,7 @@ public final class GlobMatcher {
     if (depth != 0) {
       throw new GlobSyntaxException(pattern, "짝이 맞지 않는 중괄호입니다");
     }
-    if (countExpansions(body) > MAX_EXPANSIONS) {
+    if (countExpansions(pattern) > MAX_EXPANSIONS) {
       throw new GlobSyntaxException(pattern, "중괄호를 펼친 개수가 " + MAX_EXPANSIONS + "개를 넘습니다");
     }
   }
@@ -114,26 +124,18 @@ public final class GlobMatcher {
     throw new IllegalStateException("checkBraces가 먼저 짝을 확인한다");
   }
 
-  /** 바깥 중괄호 가운데 {@code /}를 포함한 것을 앞에서부터 펼친다. */
-  private static List<String> expandSlashBraces(String s) {
-    int i = 0;
-    while (i < s.length()) {
-      if (s.charAt(i) == '{') {
-        int close = matchingBrace(s, i);
-        String inner = s.substring(i + 1, close);
-        if (inner.indexOf('/') >= 0) {
-          List<String> out = new ArrayList<>();
-          for (String alternative : splitTopLevel(inner, ',')) {
-            out.addAll(expandSlashBraces(s.substring(0, i) + alternative + s.substring(close + 1)));
-          }
-          return out;
-        }
-        i = close + 1;
-      } else {
-        i++;
-      }
+  /** 중괄호를 모두 펼친다. 앞에서부터 바깥 중괄호 하나씩 풀고, 대안마다 나머지를 다시 펼친다. */
+  private static List<String> expand(String s) {
+    int open = s.indexOf('{');
+    if (open < 0) {
+      return List.of(s);
     }
-    return List.of(s);
+    int close = matchingBrace(s, open);
+    List<String> out = new ArrayList<>();
+    for (String alternative : splitTopLevel(s.substring(open + 1, close), ',')) {
+      out.addAll(expand(s.substring(0, open) + alternative + s.substring(close + 1)));
+    }
+    return out;
   }
 
   private static List<String> splitTopLevel(String s, char separator) {
@@ -163,21 +165,11 @@ public final class GlobMatcher {
       throw new GlobSyntaxException(pattern, "**는 경로 구간 전체여야 합니다: " + segment);
     }
     StringBuilder regex = new StringBuilder();
-    int depth = 0;
     for (int i = 0; i < segment.length(); i++) {
       char c = segment.charAt(i);
       switch (c) {
         case '*' -> regex.append("[^/]*");
         case '?' -> regex.append("[^/]");
-        case '{' -> {
-          depth++;
-          regex.append("(?:");
-        }
-        case '}' -> {
-          depth--;
-          regex.append(')');
-        }
-        case ',' -> regex.append(depth > 0 ? "|" : Pattern.quote(","));
         default -> regex.append(Pattern.quote(String.valueOf(c)));
       }
     }
