@@ -2,7 +2,10 @@ package com.prlens.glob;
 
 import com.prlens.support.PrLensException;
 
-/** glob 패턴의 문법 오류. 어떤 경우에 던지는지는 작업 6.1에서 채운다. */
+/**
+ * glob 패턴의 문법 오류. 짝이 맞지 않는 중괄호, 중괄호 중첩 32단계 초과, 중괄호를 펼친 개수 256 초과, 백슬래시, 앞의 {@code ./}·{@code /}를 뗀
+ * 뒤 빈 패턴(중괄호를 펼친 패턴 하나라도 비면 포함), 구간 일부로 쓰인 {@code **}일 때 {@code GlobMatcher}가 던진다.
+ */
 public class GlobSyntaxException extends PrLensException {
 
   private final String pattern;

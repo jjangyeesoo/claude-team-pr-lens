@@ -10,7 +10,6 @@ import net.jqwik.api.Combinators;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
-import net.jqwik.api.Tuple;
 
 /** {@code GlobMatcher}의 중괄호 모델 기반 속성 테스트 (design.md Property 12). */
 class GlobMatcherPropertyTest {
@@ -22,7 +21,10 @@ class GlobMatcherPropertyTest {
 
   private record Group(List<List<Node>> alternatives) implements Node {}
 
-  private record Case(String pattern, String path) {}
+  /**
+   * @param expansions 트리에서 계산한 모델 펼침
+   */
+  private record Case(String pattern, String path, List<String> expansions) {}
 
   private static String render(List<Node> nodes) {
     StringBuilder sb = new StringBuilder();
@@ -114,24 +116,20 @@ class GlobMatcherPropertyTest {
                 String chosen = expansions.get(pick % expansions.size());
                 path = chosen.replace("*", fill).replace("?", "q");
               }
-              return new Case(render(nodes), path);
+              return new Case(render(nodes), path, expansions);
             });
   }
 
   // Feature: pr-lens-p1-cli, Property 12: glob 중괄호 모델 기반
   @Property(tries = 300)
-  void braceMatchEqualsAnyExpansionMatch(
-      @ForAll("expansionCases") Tuple.Tuple2<Case, List<String>> c) {
-    Case testCase = c.get1();
+  void braceMatchEqualsAnyExpansionMatch(@ForAll("cases") Case testCase) {
+    List<String> expansions = expandPattern(testCase.pattern());
+    assertThat(expansions).containsExactlyInAnyOrderElementsOf(testCase.expansions());
+
     boolean expected =
-        c.get2().stream().anyMatch(expanded -> GlobMatcher.matches(expanded, testCase.path()));
+        expansions.stream().anyMatch(expanded -> GlobMatcher.matches(expanded, testCase.path()));
 
     assertThat(GlobMatcher.matches(testCase.pattern(), testCase.path())).isEqualTo(expected);
-  }
-
-  @Provide
-  Arbitrary<Tuple.Tuple2<Case, List<String>>> expansionCases() {
-    return cases().map(c -> Tuple.of(c, expandPattern(c.pattern())));
   }
 
   /** 렌더링한 패턴 문자열을 독립적으로 다시 펼친다 (트리가 아니라 문자열 기준 모델). */

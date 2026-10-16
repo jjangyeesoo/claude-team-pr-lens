@@ -95,6 +95,23 @@ class GlobMatcherTest {
   }
 
   @Test
+  void validate_rejectsPatternWhenAnyExpansionIsEmpty() {
+    assertSyntaxError("{a,}");
+    assertSyntaxError("{/,x}");
+    assertThatCode(() -> GlobMatcher.validate("{a,b}")).doesNotThrowAnyException();
+  }
+
+  @Test
+  void validate_rejectsBraceNestingOver32() {
+    String ok = "{".repeat(32) + "a" + "}".repeat(32);
+    String tooDeep = "{".repeat(33) + "a" + "}".repeat(33);
+    assertThatCode(() -> GlobMatcher.validate(ok)).doesNotThrowAnyException();
+    assertSyntaxError(tooDeep);
+    String thousands = "{".repeat(5000) + "a" + "}".repeat(5000);
+    assertSyntaxError(thousands);
+  }
+
+  @Test
   void validate_rejectsBackslash() {
     assertSyntaxError("a\\b");
     assertSyntaxError("\\");

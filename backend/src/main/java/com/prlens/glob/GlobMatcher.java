@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 public final class GlobMatcher {
 
   private static final int MAX_EXPANSIONS = 256;
+  private static final int MAX_BRACE_DEPTH = 32;
   private static final int MAX_CACHED = 1_000;
 
   /** 컴파일한 패턴 캐시. 유효한 패턴만 담고, 가득 차면 비운다. */
@@ -70,8 +71,9 @@ public final class GlobMatcher {
     if (CACHE.size() >= MAX_CACHED) {
       CACHE.clear();
     }
-    CACHE.put(pattern, result);
-    return result;
+    List<List<Pattern>> immutable = List.copyOf(result);
+    CACHE.put(pattern, immutable);
+    return immutable;
   }
 
   private static void checkBraces(String pattern) {
@@ -79,7 +81,9 @@ public final class GlobMatcher {
     for (int i = 0; i < pattern.length(); i++) {
       char c = pattern.charAt(i);
       if (c == '{') {
-        depth++;
+        if (++depth > MAX_BRACE_DEPTH) {
+          throw new GlobSyntaxException(pattern, "중괄호 중첩이 " + MAX_BRACE_DEPTH + "단계를 넘습니다");
+        }
       } else if (c == '}' && --depth < 0) {
         throw new GlobSyntaxException(pattern, "짝이 맞지 않는 중괄호입니다");
       }
