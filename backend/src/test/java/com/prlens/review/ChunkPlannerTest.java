@@ -9,6 +9,7 @@ import com.prlens.model.ReviewMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class ChunkPlannerTest {
@@ -131,7 +132,7 @@ class ChunkPlannerTest {
 
     for (int seed = 0; seed < 5; seed++) {
       List<ChangedFile> shuffled = new ArrayList<>(files);
-      Collections.shuffle(shuffled, new java.util.Random(seed));
+      Collections.shuffle(shuffled, new Random(seed));
       assertThat(plannedPaths(shuffled, 400)).isEqualTo(expected);
     }
   }
