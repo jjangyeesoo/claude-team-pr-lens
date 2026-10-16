@@ -1,18 +1,213 @@
 package com.prlens.glob;
 
-/** 저장소 경로용 glob. 본문은 작업 6.1에서 구현한다. */
+import com.prlens.model.RepoPaths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
+/**
+ * 저장소 경로용 glob. {@code java.nio.file.PathMatcher}를 쓰지 않고 {@code /} 구간 단위로 직접 맞춘다.
+ *
+ * <p>{@code **}가 구간 전체이면 0개 이상의 구간, {@code *}는 {@code /}를 뺀 0개 이상의 문자, {@code ?}는 {@code /}를 뺀 한
+ * 문자, {@code {a,b}}는 (중첩 가능한) 중괄호 확장이다. {@code /}를 포함한 중괄호만 구간 분할 전에 펼치고, 나머지는 정규식 교대로 컴파일한다.
+ */
 public final class GlobMatcher {
+
+  private static final int MAX_EXPANSIONS = 256;
 
   private GlobMatcher() {}
 
+  /**
+   * @throws GlobSyntaxException 패턴 문법이 유효하지 않을 때
+   */
   public static boolean matches(String pattern, String path) {
-    throw new UnsupportedOperationException("작업 6.1에서 구현한다");
+    List<List<Pattern>> alternatives = compile(pattern);
+    String[] pathSegments = RepoPaths.normalize(path).split("/", -1);
+    for (List<Pattern> segments : alternatives) {
+      if (matchSegments(segments, pathSegments)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
    * @throws GlobSyntaxException 패턴 문법이 유효하지 않을 때
    */
   public static void validate(String pattern) throws GlobSyntaxException {
-    throw new UnsupportedOperationException("작업 6.1에서 구현한다");
+    compile(pattern);
+  }
+
+  /** 전체 패턴 하나가 펼쳐진 구간 목록들. 구간이 {@code null}이면 {@code **}이다. */
+  private static List<List<Pattern>> compile(String pattern) {
+    String body = stripPrefix(pattern);
+    checkBraces(pattern, body);
+    List<List<Pattern>> result = new ArrayList<>();
+    for (String expanded : expandSlashBraces(body)) {
+      List<Pattern> segments = new ArrayList<>();
+      for (String segment : splitTopLevel(expanded, '/')) {
+        segments.add(compileSegment(pattern, segment));
+      }
+      result.add(segments);
+    }
+    return result;
+  }
+
+  private static String stripPrefix(String pattern) {
+    if (pattern.indexOf('\\') >= 0) {
+      throw new GlobSyntaxException(pattern, "백슬래시(\\)는 쓸 수 없습니다");
+    }
+    String body = RepoPaths.normalize(pattern);
+    if (body.isEmpty()) {
+      throw new GlobSyntaxException(pattern, "패턴이 비어 있습니다");
+    }
+    return body;
+  }
+
+  private static void checkBraces(String pattern, String body) {
+    int depth = 0;
+    for (int i = 0; i < body.length(); i++) {
+      char c = body.charAt(i);
+      if (c == '{') {
+        depth++;
+      } else if (c == '}' && --depth < 0) {
+        throw new GlobSyntaxException(pattern, "짝이 맞지 않는 중괄호입니다");
+      }
+    }
+    if (depth != 0) {
+      throw new GlobSyntaxException(pattern, "짝이 맞지 않는 중괄호입니다");
+    }
+    if (countExpansions(body) > MAX_EXPANSIONS) {
+      throw new GlobSyntaxException(pattern, "중괄호를 펼친 개수가 " + MAX_EXPANSIONS + "개를 넘습니다");
+    }
+  }
+
+  /** 중괄호를 모두 펼쳤을 때의 개수. 상한을 넘으면 더 키우지 않는다. */
+  private static long countExpansions(String s) {
+    long total = 1;
+    int i = 0;
+    while (i < s.length()) {
+      if (s.charAt(i) == '{') {
+        int close = matchingBrace(s, i);
+        long group = 0;
+        for (String alternative : splitTopLevel(s.substring(i + 1, close), ',')) {
+          group += countExpansions(alternative);
+        }
+        total = Math.min(total * group, MAX_EXPANSIONS + 1L);
+        i = close + 1;
+      } else {
+        i++;
+      }
+    }
+    return total;
+  }
+
+  private static int matchingBrace(String s, int open) {
+    int depth = 0;
+    for (int i = open; i < s.length(); i++) {
+      if (s.charAt(i) == '{') {
+        depth++;
+      } else if (s.charAt(i) == '}' && --depth == 0) {
+        return i;
+      }
+    }
+    throw new IllegalStateException("checkBraces가 먼저 짝을 확인한다");
+  }
+
+  /** 바깥 중괄호 가운데 {@code /}를 포함한 것을 앞에서부터 펼친다. */
+  private static List<String> expandSlashBraces(String s) {
+    int i = 0;
+    while (i < s.length()) {
+      if (s.charAt(i) == '{') {
+        int close = matchingBrace(s, i);
+        String inner = s.substring(i + 1, close);
+        if (inner.indexOf('/') >= 0) {
+          List<String> out = new ArrayList<>();
+          for (String alternative : splitTopLevel(inner, ',')) {
+            out.addAll(expandSlashBraces(s.substring(0, i) + alternative + s.substring(close + 1)));
+          }
+          return out;
+        }
+        i = close + 1;
+      } else {
+        i++;
+      }
+    }
+    return List.of(s);
+  }
+
+  private static List<String> splitTopLevel(String s, char separator) {
+    List<String> parts = new ArrayList<>();
+    int depth = 0;
+    int start = 0;
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (c == '{') {
+        depth++;
+      } else if (c == '}') {
+        depth--;
+      } else if (c == separator && depth == 0) {
+        parts.add(s.substring(start, i));
+        start = i + 1;
+      }
+    }
+    parts.add(s.substring(start));
+    return parts;
+  }
+
+  private static Pattern compileSegment(String pattern, String segment) {
+    if (segment.equals("**")) {
+      return null;
+    }
+    if (segment.contains("**")) {
+      throw new GlobSyntaxException(pattern, "**는 경로 구간 전체여야 합니다: " + segment);
+    }
+    StringBuilder regex = new StringBuilder();
+    int depth = 0;
+    for (int i = 0; i < segment.length(); i++) {
+      char c = segment.charAt(i);
+      switch (c) {
+        case '*' -> regex.append("[^/]*");
+        case '?' -> regex.append("[^/]");
+        case '{' -> {
+          depth++;
+          regex.append("(?:");
+        }
+        case '}' -> {
+          depth--;
+          regex.append(')');
+        }
+        case ',' -> regex.append(depth > 0 ? "|" : Pattern.quote(","));
+        default -> regex.append(Pattern.quote(String.valueOf(c)));
+      }
+    }
+    return Pattern.compile(regex.toString());
+  }
+
+  private static boolean matchSegments(List<Pattern> segments, String[] path) {
+    Boolean[][] memo = new Boolean[segments.size() + 1][path.length + 1];
+    return match(segments, path, 0, 0, memo);
+  }
+
+  private static boolean match(
+      List<Pattern> segments, String[] path, int i, int j, Boolean[][] memo) {
+    if (memo[i][j] != null) {
+      return memo[i][j];
+    }
+    boolean result;
+    if (i == segments.size()) {
+      result = j == path.length;
+    } else if (segments.get(i) == null) {
+      result =
+          match(segments, path, i + 1, j, memo)
+              || (j < path.length && match(segments, path, i, j + 1, memo));
+    } else {
+      result =
+          j < path.length
+              && segments.get(i).matcher(path[j]).matches()
+              && match(segments, path, i + 1, j + 1, memo);
+    }
+    memo[i][j] = result;
+    return result;
   }
 }
