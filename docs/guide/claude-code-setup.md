@@ -67,8 +67,8 @@
 | 파일 | 구분 | 다른 프로젝트에 적용할 때 |
 |---|---|---|
 | `.claude/skills/spec`, `pr-ready`, `adr` | 공통 코어 | 그대로 복사. `pr-ready`의 스택별 검증 명령만 수정 |
-| `.claude/agents/reviewer.md` | 공통 코어 (+스택 항목) | backend/web 규칙 항목을 프로젝트 구조에 맞게 수정 |
-| `.claude/agents/context-reviewer.md`, `.claude/rules/context/editing.md` | 공통 코어 | 그대로 복사. 서로 맞물린 파일 목록과 승인 규칙이 있는 문서 경로만 프로젝트에 맞게 수정 |
+| `.claude/agents/reviewer.md` | 공통 코어 (+스택 항목) | backend/web 규칙 항목을 프로젝트 구조에 맞게 수정. frontmatter의 `model: opus`는 리뷰 품질이 세션 모델에 좌우되지 않도록 둔 것이다(별칭이라 최신 Opus를 따른다). 팀 사정에 맞게 조정 |
+| `.claude/agents/context-reviewer.md`, `.claude/rules/context/editing.md` | 공통 코어 | 그대로 복사. 서로 맞물린 파일 목록과 승인 규칙이 있는 문서 경로만 프로젝트에 맞게 수정. `model: opus`는 `reviewer`와 같은 이유로 둔 것이다 |
 | `docs/specs/_template.md`, `docs/adr/`, PR 템플릿 | 공통 코어 | 그대로 복사 (ADR 내용만 새로 작성) |
 | `.claude/hooks/ProtectFiles.java` | 공통 코어 | 보호 패턴(`protectedReason`)만 수정 |
 | `.claude/hooks/VerifyOnStop.java` | 코어 로직 + 스택 설정 | `STACKS` 목록만 수정 (폴더, 명령, 실행 전 조건, 실패 판정 문자열). Maven이면 `mvnw`, Python이면 `uv run pytest` 등 |
