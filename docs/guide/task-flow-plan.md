@@ -1,0 +1,187 @@
+# `/task-flow` 계획: 단계를 나눈 task skill
+
+임시 문서입니다. `/task-flow`를 만들기 전의 계획이고, 구현하면 지우거나 `task-workflow.md`의 절로 옮깁니다. 지금의 `/task`(`.claude/skills/task/SKILL.md`)는 이 계획에서 고치지 않습니다.
+
+## 배경
+- 마지막 주차에 task 오케스트레이션(매니저가 단계별 에이전트를 관리)을 적용합니다. 처음에는 의존이 없는 작업의 병렬 진행까지 목표로 했으나, 검토 결과 병렬은 보류했습니다(아래 "병렬 실행" 줄).
+- 지금의 `/task`는 한 세션이 상태 확인부터 마무리까지 모두 하는 단일 프로세스입니다. 단계별로 다른 모델이나 에이전트에 맡기거나 병렬로 돌리기 어렵습니다.
+- `/task`는 그대로 두고, 단계를 에이전트로 나눈 `/task-flow`를 만듭니다. 안정되면 `/task`를 대체하고 이름을 `task`로 바꿉니다.
+- 요구: 계획과 리뷰는 opus, 구현은 현재 세션의 모델로 합니다. 첫 PR은 작업 하나만 다루고, 게이트 자동 통과(`--auto`)는 다음 PR에서 합니다.
+- 병렬 실행은 검토만 하고 진행하지 않습니다(마지막 절 "병렬 검토"). 겹치는 작업 사이의 의존, 넘길 것의 전달, 작업 트리 공유 문제가 커서, 이번 실습은 작업 하나씩 단계를 나누는 데까지 합니다.
+
+## 결정
+| 번호 | 항목 | 결정 |
+|---|---|---|
+| D1 | 계획 수정 | 계획 파일을 기준으로 합니다. 같은 세션이면 `SendMessage`(planner의 agentId)로 같은 planner에게 보냅니다. 끝난 에이전트도 transcript에서 재개되므로 스펙을 다시 읽지 않습니다. `/clear`나 새 세션 뒤에는 새 planner가 계획 파일과 피드백만 읽고 고칩니다. 메인 세션은 계획을 직접 고치지 않습니다. fork는 쓰지 않습니다(부모 모델로 돌아서 구현 세션이 다른 모델이면 opus 조건이 깨지고, 메인에는 스펙 컨텍스트가 없습니다) |
+| D2 | 계획 파일 | `docs/specs/<스펙>/handoff/<번호>-plan.md`. 절: 계획 본문, 입력 근거(인수 기준 번호, `design.md` 절 제목), 주의·미정 대응(아래 "주의·미정 대응"), 결정과 이유, 요구사항 변경, 질문, 수정 이력. **커밋하지 않습니다**: `.gitignore`에 `docs/specs/*/handoff/*-plan.md`와 `*-review.md`를 더합니다. 커밋하지 않은 파일이 남아 `/pr-ready` 1번이 멈추는 것을 막기 위해서입니다. 그래서 계획 파일은 그 PC에만 있고, 다른 PC나 다른 사람은 이어받지 못합니다(메모 파일 `<번호>.md`는 지금처럼 커밋합니다) |
+| D3 | 구조 | 메인 세션이 매니저(상태 확인, 브랜치, 사람 게이트, 결과 취합)입니다. `planner`(opus), `implementer`(현재 모델, `model: inherit`), `reviewer`(opus, 기존 에이전트)에게 단계를 맡깁니다. 워커 1명짜리 매니저입니다(병렬은 "병렬 검토" 절에서 검토만 함). **planner와 implementer는 frontmatter `background: true`로 백그라운드에 고정하고, 구현 검증은 implementer가 끝날 때 합니다**(아래 "구현 중 검증"). 기본 실행 모드는 세션 설정(fork 모드)에 따라 포그라운드일 수도 있다고 문서에 나오므로, 전제를 고정하려고 명시합니다. 백그라운드면 매니저 턴이 implementer보다 먼저 끝나고, 그대로 두면 메인의 Stop hook이 실패 테스트만 있는 중간 상태를 검증해 매니저를 막고, 메인 세션이 그 실패를 고치려 들어 implementer와 같은 파일을 건드릴 수 있습니다. 백그라운드 서브에이전트가 끝나면 완료 알림이 메인 세션을 깨워 매니저가 이어 갑니다(이 환경에서 확인함: 계획 검토 에이전트 세 번 모두 사용자 입력 없이 완료 보고가 도착해 이어서 응답함). 백그라운드 서브에이전트의 권한 프롬프트(planner·implementer의 Write·Edit, implementer의 `git add`·`git commit` 등)는 메인 세션에 에이전트 이름과 함께 뜨므로 사용자가 메인 세션에서 처리합니다(allow 추가는 하지 않음). 기존 `reviewer`는 `/pr-ready`와 같이 쓰므로 frontmatter를 바꾸지 않고, allow에 없는 `git fetch`는 reviewer를 부르는 쪽(매니저, `/pr-ready`)이 먼저 실행합니다 |
+| D4 | 리뷰 | implementer가 작업 브랜치에 커밋합니다. 비교 기준은 어디서나 `origin/main`으로 통일합니다: reviewer는 브랜치 인자를 받으면 `origin/main...<브랜치>`, 인자가 없으면 `origin/main...HEAD`를 보고, `/pr-ready` 1번의 변경 범위 확인과 G3의 줄 수 계산도 같은 기준을 씁니다. 로컬 `main`이 뒤처져 diff가 부풀지 않게 하기 위해서입니다. 비교 전에 `git fetch origin`을 하되, reviewer 안이 아니라 부르는 쪽(매니저, `/pr-ready`)이 합니다(D3). `origin`이 없는 저장소는 `/task`처럼 로컬 `main`을 대신 씁니다. "반드시 수정"은 `SendMessage`로 같은 implementer에게 보냅니다 |
+| D5 | 이중 리뷰 방지 | 매니저가 reviewer 결과를 `handoff/<번호>-review.md`(리뷰한 커밋 SHA 포함)로 저장합니다. 이 파일은 커밋하지 않으므로(D2) 저장해도 `HEAD`가 바뀌지 않습니다. `/pr-ready`는 이 파일이 있고 SHA가 `HEAD`와 같을 때만 재사용하고, 아니면 지금처럼 reviewer를 돌립니다. 기존 `/task`는 이 파일을 만들지 않으므로 기존 흐름은 바뀌지 않습니다. 기존 메모 파일(`<번호>.md`)과 이름도 겹치지 않습니다 |
+| D6 | 규칙의 원본 | `/task-flow`가 `/task`를 대체할 것이므로 `/task`의 번호를 참조하지 않고 새 파일을 원본으로 씁니다. 단계 규칙은 에이전트 정의에, `SKILL.md`에는 매니저 절차만 둡니다. 공존 기간에는 `.claude/rules/context/editing.md`의 맞물린 파일 목록에 "`/task` ↔ `/task-flow`(대체 전까지 함께 고친다)"를 더합니다 |
+| D7 | 사람 게이트 | G1 브랜치 이름 확인, G2 계획 승인, G3 리뷰와 수정 뒤 최종 보고. 각 게이트에 자동 통과 조건을 적어 두어 다음 PR의 `--auto`가 쓰게 합니다. 조건은 planner나 implementer의 판단이 아니라 매니저가 기계로 확인할 수 있는 값으로 정합니다(아래 "게이트 조건") |
+| D8 | 작업 상태 | 계획 파일 맨 위에 매니저만 고치는 상태 줄을 둡니다(아래 "작업 상태"). 매니저가 상태를 대화 컨텍스트에만 두면 `/clear`나 압축 뒤에 어디까지 했는지 잃기 때문입니다. 상태 줄과 산출물(브랜치, 커밋, `-review.md`)이 어긋나면 **알리고 멈춥니다**. 상태 줄은 사용자가 확인한 뒤에 고칩니다 |
+
+### 작업 상태
+G1을 통과하면 매니저가 상태 줄만 있는 계획 파일 골격을 만들고, planner는 그 아래 본문만 채웁니다. 상태 줄은 매니저만 고칩니다.
+```
+상태: 구현 중
+브랜치: feat/t2-p1-7-github-client
+승인: G2 2026-10-20
+planner: <agentId> · implementer: <agentId>
+```
+- `승인`은 G2를 통과할 때 매니저가 적습니다. 그 전에는 `승인: 없음`입니다
+- agentId는 같은 세션에서 `SendMessage`가 될 때만 씁니다. `/clear`나 새 세션 뒤에는 새 에이전트를 띄웁니다(D1)
+
+| 상태 | 뜻 | 바꾸는 때 | 교차 확인 | 재개 시 할 일 |
+|---|---|---|---|---|
+| 계획 중 | planner가 쓰거나 고치는 중 | 골격 생성, 수정 요청 | `승인: 없음` | 계획 본문이 있으면 요약을 다시 보여 주고 G2를 묻습니다. 본문이 없으면 planner를 다시 부릅니다 |
+| 계획 승인 | G2 통과, 구현 전 | G2 승인 | `승인`에 날짜가 있음 | implementer를 부릅니다 |
+| 구현 중 | implementer가 작업 중이거나 `BLOCKED` | implementer 호출 | 체크아웃한 브랜치가 이 작업의 브랜치 | 작업 트리 상태(`git status`), 이 브랜치의 커밋, 실패하는 테스트 목록을 모아 계획 파일과 함께 새 implementer에게 넘기고 이어서 구현하게 합니다. `BLOCKED`였으면 그 질문을 다시 사용자에게 묻습니다 |
+| 리뷰 중 | 구현 커밋 완료, 리뷰 또는 수정 중 | implementer 완료 보고 | 작업 트리가 깨끗하고 브랜치가 `origin/main`보다 앞섬 | `-review.md`가 없거나 SHA가 브랜치 끝 커밋과 다르면 reviewer를 다시 부릅니다. 같으면 남은 "반드시 수정"을 implementer에게 넘깁니다 |
+| 수정 필요 | 재리뷰 뒤에도 "반드시 수정"이 남음 | 재리뷰 결과 | `-review.md`의 SHA가 브랜치 끝 커밋과 같고 "반드시 수정"이 있음 | 남은 항목을 보여 주고 사용자에게 묻습니다. 고치라고 하면 implementer에게 넘기고 "리뷰 중"으로 바꿉니다. 그대로 두라고 하면 "PR 준비"로 바꾸고 그 사실을 G3 보고에 적습니다 |
+| PR 준비 | G3 통과, `/pr-ready` 차례 | G3 보고 | `-review.md`의 SHA가 같고 "반드시 수정"이 없음 | G3 보고를 다시 보여 주고 `/pr-ready`를 안내합니다 |
+
+계획 파일과 `-review.md`는 `/pr-ready`가 지웁니다(PR을 열기 전, "고칠 파일"의 `/pr-ready` 삭제 단계). 그 뒤에는 상태 줄이 없고, 지금처럼 원격 브랜치와 `origin/main` 체크박스로 판단합니다.
+
+`/task-flow <스펙> <번호>`를 다시 실행하면 매니저는 먼저 아래로 판단합니다.
+- 계획 파일이 있음: 상태 줄을 읽고 위 표의 "재개 시 할 일"을 합니다. G1은 건너뜁니다
+- 계획 파일은 없고 이 작업의 브랜치가 있음: `/pr-ready`를 이미 돌렸거나, 다른 PC에서 시작한 작업입니다. 브랜치의 커밋과 PR 여부(`gh pr list --head <브랜치>`)를 알리고 멈춥니다. 어떻게 이어 갈지는 사용자가 정합니다
+- 둘 다 없음: 처음부터 시작합니다
+
+### 게이트 조건
+`--auto`일 때도 아래 중 하나라도 맞으면 멈춥니다. 이번 PR에서는 모든 게이트에서 멈추고, 이 조건은 G2·G3 보고에 "자동이었다면 멈췄을 이유"로만 출력합니다.
+
+| 게이트 | 멈추는 조건 | 확인 방법 |
+|---|---|---|
+| G1 | 같은 `-<단계>-<번호>-` 패턴의 **다른** 브랜치가 원격이나 로컬에 있음(다른 사람이 진행 중). 이 작업의 계획 파일에 적힌 브랜치는 제외하고, 재개할 때는 G1을 건너뜀 | `git branch -a`에서 이름 패턴 검사 |
+| G2 | 작업이 결정 대기(D-n, G-n)에 걸림 | 스펙 색인의 결정 대기 표와 `tasks.md` Notes의 "막는 작업" 표에 이 작업 번호가 있음 |
+| G2 | 계획이 요구사항 변경을 제안함 | 계획 파일의 "요구사항 변경" 절이 비어 있지 않음(planner는 이 절을 항상 두고, 없으면 "없음"이라고 적음) |
+| G2 | planner가 사용자에게 물을 것을 남김 | 계획 파일의 "질문" 절이 "없음"이 아님 |
+| G2 | 작업 본문의 "주의"·"미정"을 빠뜨렸거나, 대응이 멈출 값임 | 작업 본문의 `- 주의(`·`- 미정(` 줄과 계획 파일 "주의·미정 대응" 표의 행을 줄 번호로 짝지어, 빠진 줄이 있거나 "대응"이 `코드와 다름`·`질문`인 행이 있으면 멈춤 |
+| G3 | `src/main` 변경이 400줄을 넘음 | `git diff --numstat origin/main...HEAD -- '*/src/main/*'`의 추가와 삭제 합계. 계획 단계의 예상치가 아니라 구현 뒤 실제 값으로 판단 |
+| G3 | 재리뷰를 한 번 한 뒤에도 "반드시 수정"이 남음 | `-review.md`의 마지막 리뷰에 "반드시 수정" 항목이 있음 |
+| G3 | implementer가 `BLOCKED`로 끝났거나, 종료 검증이 실패함 | implementer 마지막 메시지의 `BLOCKED:` 접두어, `build/claude-verify/implementer-result.json`의 결과가 통과가 아니거나, 그 `agent_id`가 상태 줄의 `implementer`와 다름(결과 없음) |
+
+### 구현 중 검증
+검증을 메인의 Stop에서 implementer의 SubagentStop으로 옮깁니다. 검증 명령과 판정은 지금의 `VerifyOnStop.java`를 그대로 씁니다.
+
+hook은 모두 `settings.json`에 둡니다(SubagentStart·SubagentStop, matcher `implementer`). 에이전트 frontmatter의 `hooks`로도 걸 수 있지만, 설정을 한 파일에 모으고 판정 로직도 `VerifyOnStop.java` 한 곳에 두기 위해서입니다.
+
+1. **시작 표시**: SubagentStart hook이 표시 파일 `build/claude-verify/implementer-marker.json`에 입력의 `agent_id`, `session_id`, 시작 시각, 메인 세션의 `transcript_path`를 적습니다. 이름은 같은 폴더의 검증 상태 파일(`state.properties`, `*.log`)과 구분합니다
+2. **구현 중 메인 Stop**: `VerifyOnStop`은 표시가 유효하면 검증하지 않고 "implementer `<agentId>` 실행 중이라 검증을 건너뜁니다(시작 `<시각>`)"를 `systemMessage`로 알립니다. 유효하지 않으면 지금처럼 검증합니다
+3. **implementer 종료 검증**: SubagentStop hook이 `VerifyOnStop`을 돌립니다
+   - 입력의 `last_assistant_message`가 `BLOCKED`로 시작하면 검증하지 않고 표시만 지웁니다. 질문하려고 멈춘 implementer를 붙잡으면 `BLOCKED` 흐름이 깨지기 때문입니다(트리는 빨간 채로 남고, 매니저가 질문을 사용자에게 전합니다)
+   - 실패하면 exit 2로 implementer를 붙잡아 고치게 하고, 두 번째 실패(`stop_hook_active`)에서는 놓아줍니다
+   - 결과(통과·실패·건너뜀, 입력의 `agent_id`, 내용 해시, 종료 시각)를 `build/claude-verify/implementer-result.json`에 남깁니다. 매니저는 G3에서 이 파일의 `agent_id`가 상태 줄의 `implementer`와 같을 때만 검증 증거로 씁니다. 다르면 이전 실행의 결과이므로 "결과 없음"으로 보고 멈춥니다. 통과하면 통과 기록(내용 해시)도 남으므로 그 뒤 메인 Stop은 같은 내용을 다시 검증하지 않습니다
+4. **표시 해제**: implementer가 실제로 멈출 때(통과, 두 번째 실패로 놓아줌, `BLOCKED`) 3번의 hook이 표시를 **항상** 지웁니다. 붙잡는 동안(exit 2)에는 지우지 않습니다. 실행 중인 표시를 시간으로 만료시키지 않는 것은 이 해제가 있기 때문입니다(아래 "남은 표시 정리")
+5. **재개할 때**: `SendMessage`로 implementer를 다시 깨울 때(`BLOCKED`의 답, "반드시 수정") SubagentStart가 다시 발생하는지는 확인되지 않았습니다. 발생하지 않으면 매니저가 `SendMessage` 직전에 `java .claude/hooks/VerifyOnStop.java --mark <agentId>`로 표시를 씁니다. 이 표시에는 메인 `transcript_path`가 없으므로(그 값은 SubagentStart 입력에만 옴) "실재 확인"을 하지 않고, 출처를 `mark`로 적어 SubagentStart가 쓴 표시와 구분합니다. 이 명령은 Bash로 표시를 만드는 우회로와 같은 능력이므로, 아래 "드러내기"로 보이게 하는 것이 대책입니다. allow에 없으므로 실행할 때 권한 프롬프트가 뜹니다
+
+implementer는 전체 검증(`spotlessApply test`, `npm run verify`)을 직접 돌리지 않습니다. 직접 돌린 검증은 통과 기록을 남기지 않아 종료 검증이 한 번 더 돌기 때문입니다. 실패 테스트 확인과 구현 중 확인은 그 테스트만 돌립니다.
+
+**우회로 대책.** 표시 파일은 일반 파일이라, 메인 세션이 Bash로 만들기만 해도 Stop 검증을 끌 수 있습니다. 지금은 검증을 끄려면 승인 프롬프트가 뜨는 `.claude/` 파일을 고쳐야 하므로, 이 변경은 hook 완화에 해당합니다(`editing.md`에 따라 구현 PR에서 이유를 설명하고 승인받습니다). 다음으로 우회를 어렵게 하고, 건너뛸 때마다 드러나게 합니다.
+- **내용 검사**: 표시 파일에 agent ID와 시작 시각이 형식대로 있어야 유효합니다. 빈 파일이나 형식이 다른 파일은 무시하고 검증합니다
+- **세션 확인**: 메인 Stop은 hook 입력의 `session_id`가 표시의 `session_id`와 다르면 표시를 무효로 보고 검증합니다. implementer가 SubagentStop 없이 끝난 뒤(세션 종료, 프로세스 중단) transcript 파일은 남으므로, 실재 확인만으로는 다음 세션에서도 표시가 유효로 보이기 때문입니다. `--mark` 표시는 세션 ID를 모르므로 이 검사를 하지 못하고, SubagentStop의 해제와 12시간 기한에만 기댑니다(한계)
+- **남은 표시 정리**: 표시는 4번의 해제로 지우므로, 시간 기한은 SubagentStop 없이 남은 표시(implementer 비정상 종료, 세션 중단)를 정리하는 용도로만 둡니다. 시작 시각에서 12시간이 지난 표시는 무시합니다. 1시간처럼 짧게 잡으면 Gradle 테스트를 여러 번 돌리는 긴 구현이 끝나기 전에 표시가 만료되어, 메인 Stop이 구현 도중의 상태를 검증하는 문제가 다시 생깁니다
+- **실재 확인** (SubagentStart가 쓴 표시만, `mark` 표시는 제외): 표시에 적힌 메인 `transcript_path`에서 서브에이전트 transcript 경로(`<세션>/subagents/agent-<agentId>.jsonl`)를 만들어, 파일이 **있을 때만** 유효로 봅니다. 수정 시각은 보지 않습니다. Gradle 테스트처럼 몇 분 걸리는 명령을 실행하는 동안에는 transcript에 쓰기가 없어, 수정 시각으로 판단하면 실행 중인 implementer의 표시가 무효가 되기 때문입니다. SubagentStop 입력에는 `agent_transcript_path`가 직접 오므로, 첫 실행에서 이 값과 만든 경로가 같은지 확인합니다. 경로를 만들 수 없으면 이 검사는 빼고 나머지로 운영합니다
+- **편집 보호**: `ProtectFiles`에 `build/claude-verify/` 경로를 더해 Edit·Write로는 만들거나 고치지 못하게 합니다. Bash로 만드는 것은 막지 못하므로 보조 수단입니다
+- **드러내기**: 건너뛸 때마다 2번의 `systemMessage`가 사용자에게 보입니다(지금 `VerifyOnStop`도 알림에 `systemMessage`를 쓰고 있음). implementer를 띄우지 않았는데 이 안내가 나오면 우회를 의심할 수 있습니다
+
+**신뢰 수락.** 프로젝트의 hook과 에이전트는 이 폴더에서 워크스페이스 신뢰 대화상자를 수락한 뒤에만 돕니다. 수락하지 않았으면 오류 없이 조용히 돌지 않으므로 첫 실행 전에 확인합니다.
+
+### 주의·미정 대응
+planner는 작업 본문의 `주의`·`미정` 줄마다 한 행을 씁니다. 본문에 없으면 `없음` 한 줄을 적습니다(파싱 실패와 구분하기 위해서입니다).
+
+```
+| 본문 줄 | 종류 | 대응 | 내용 |
+|---|---|---|---|
+| tasks.md:153 | 주의 | 따름 | getTree는 404면 GitHubApiException → 테스트 getTree_404_throws |
+| tasks.md:154 | 미정 | 정함 | 알 수 없는 type은 FileFetch.Unsupported로 보냄 |
+| tasks.md:157 | 주의 | 코드와 다름 | 실행기는 음수 delay를 0초로 보지 않음(RetryExecutor:42) → "질문" 절로 |
+| tasks.md:158 | 미정 | 질문 | 요구사항을 바꿔야 할 수 있음 → "질문" 절로 |
+```
+
+- "대응"은 `따름`, `정함`, `코드와 다름`, `질문` 넷 가운데 하나입니다. `코드와 다름`과 `질문`은 "질문" 절에도 적습니다
+- 경로 대조를 쓰지 않는 이유: "주의" 줄은 대부분 파일 경로가 아니라 클래스·메서드 이름(`GlobMatcher.validate`, `RepoPaths.normalize`)을 가리킵니다. 경로로 대조하면 경로가 없는 줄은 늘 통과하고, "이렇게 써라"는 주의(고치지 않는 파일)는 계획을 제대로 따라도 멈춥니다
+- 판단(코드와 다른지)은 planner가 하고, 매니저는 빠짐없이 다뤘는지와 멈출 값인지를 셉니다(D7)
+- G3 보고와 마무리(지금 `/task` 3.8번의 "주의"·"미정" 정리)에서도 이 표를 체크리스트로 씁니다
+
+## 만들 파일
+1. `.claude/skills/task-flow/SKILL.md` (`disable-model-invocation: true`, `argument-hint: "<스펙 이름> [작업 번호]"`): 매니저 절차
+   - 작업 번호가 없으면 시작 가능, 진행 중, 막힘, 완료 목록(지금 `/task` 1·2번의 내용을 옮겨 적습니다)
+   - 작업 번호가 있으면 계획 파일의 상태 줄(D8)을 먼저 읽고, 있으면 그 단계부터 이어 갑니다. 상태가 바뀔 때마다 상태 줄을 고칩니다
+   - 상태 확인, 시작 가능 판정, "사람이 수행"·Checkpoint·`*` 작업 분기
+   - G1: 브랜치 이름을 제안하고 멈춥니다. 확인받으면 `origin/main`에서 만들고 push한 뒤, 상태 줄만 있는 계획 파일 골격을 만듭니다(D8)
+   - planner 호출(스펙, 작업 번호, 브랜치, 계획 파일 경로 전달) → agentId를 상태 줄에 적음 → 계획 파일 요약과 "질문" 절 출력 → G2에서 멈춤. 질문의 답과 수정 요청은 D1대로 planner에게 보냅니다
+   - implementer 호출(계획 파일 경로 전달, D3) → 반환된 agentId를 상태 줄 `implementer:`에 적음(새 implementer를 띄우거나 `SendMessage`로 재개할 때마다 갱신. G3가 결과 파일과 이 값을 비교함) → 완료 알림이 올 때까지 턴을 끝내고 기다립니다. 그동안 사용자가 말을 걸어도 매니저는 구현 대상 파일을 고치거나 검증 명령을 돌리지 않습니다 → `BLOCKED` 보고가 오면 사용자에게 묻고 `SendMessage`로 답을 전달(필요하면 그 직전에 시작 표시, "구현 중 검증" 5번) → 완료 뒤 `implementer-result.json`으로 검증 결과를 확인
+   - `git fetch origin` 뒤 reviewer 호출(스펙 폴더, 작업 번호, 브랜치) → `-review.md` 저장 → "반드시 수정"을 implementer에게 → 재리뷰 1회 → SHA 갱신. 재리뷰 뒤에도 "반드시 수정"이 남으면 더 돌리지 않고 G3에서 사용자에게 알립니다
+   - G3: 지금 `/task` 8번의 보고 항목, 리뷰 요약, 게이트 조건 결과를 보고합니다. PR 생성은 하지 않고 `/pr-ready`를 안내합니다
+2. `.claude/agents/planner.md` (`model: opus`, `background: true`, tools: Read, Grep, Glob, Bash, Write, Edit): 필요한 부분만 읽기(지금 `/task` 3.4번), "주의"·"미정"과 기존 메모 확인, 계획 항목(지금 3.5번), 계획 파일 형식(D2, "주의·미정 대응", "요구사항 변경", "질문" 절은 항상 두고 없으면 "없음"), 수정 요청 처리(수정 이력에 추가). planner도 사용자에게 물을 수 없으므로, 결정 대기 항목이나 요구사항을 바꿔야 하는 판단처럼 물어야 할 것은 "질문" 절에 적고 멈춥니다(매니저가 G2에서 묻습니다). 매니저가 만든 골격 파일의 상태 줄 아래에 본문만 쓰고, 상태 줄(D8)과 계획 파일 밖의 파일은 건드리지 않습니다
+3. `.claude/agents/implementer.md` (`model: inherit`, `background: true`): 실패 테스트 먼저(지금 3.6번), 구현과 멈출 조건(지금 3.7번. 묻는 대신 마지막 메시지를 `BLOCKED: <이유와 질문>`으로 시작하고 멈춥니다. 종료 검증이 이 접두어로 건너뛰기를 판단합니다), 메모 규칙, 마무리(지금 3.8번의 체크박스, "주의"·"미정" 정리), Conventional Commits 커밋, 보고 형식. 전체 검증은 직접 돌리지 않고 종료 검증에 맡기며, 종료 검증이 실패를 돌려주면 고칩니다("구현 중 검증")
+
+## 고칠 파일
+- `.gitignore`: `docs/specs/*/handoff/*-plan.md`, `docs/specs/*/handoff/*-review.md` (D2)
+- `.claude/agents/reviewer.md` 1번: 브랜치가 주어지면 `git diff origin/main...<브랜치>`, 없으면 `origin/main...HEAD`(`origin`이 없으면 로컬 `main`). fetch는 부르는 쪽이 이미 했다고 봅니다(D3, D4). frontmatter는 바꾸지 않습니다
+- `.claude/skills/pr-ready/SKILL.md`
+  - 1번: 변경 범위 확인을 `git fetch origin` 뒤 `git diff origin/main...HEAD --stat`로. 이 fetch가 3번 reviewer의 비교 기준도 맞춥니다 (D4)
+  - 3번: `-review.md` 재사용 조건(D5)
+  - 5번: 메모 읽기 대상은 이 브랜치가 커밋한 `<번호>.md`뿐이므로(`git diff --diff-filter=A`) `-plan.md`와 `-review.md`는 이미 빠집니다
+  - 새 단계(5번과 6번 사이): 이 브랜치 작업 번호의 `-plan.md`와 `-review.md`를 로컬에서 지웁니다. 5번은 넘길 것이 있을 때만 실행되므로, 삭제는 5번 안이 아니라 **항상 실행하는** 별도 단계로 둡니다
+- `.claude/settings.json`: SubagentStart, SubagentStop hook(matcher `implementer`)을 더합니다("구현 중 검증")
+- `.claude/hooks/VerifyOnStop.java`: 시작 표시 쓰기(SubagentStart, `--mark`), 유효한 표시가 있으면 메인 Stop 검증 건너뛰기와 안내, implementer 종료 검증(`BLOCKED` 건너뛰기, 결과 파일, 표시 지우기). 실행 방식(시작 표시, 메인 Stop, implementer 종료)은 인자로 구분해 한 파일에 둡니다. 판정 규칙이 두 곳으로 갈라지지 않게 하기 위해서입니다
+- `.claude/hooks/ProtectFiles.java`: `build/claude-verify/`를 보호 경로에 더합니다
+- `docs/guide/claude-code-setup.md`: 구현 중 검증과 우회로 대책을 설명합니다(`settings.json`, `.claude/hooks/` ↔ 이 안내서는 맞물린 파일)
+- `.claude/rules/context/editing.md`: 맞물린 파일에 `/task` ↔ `/task-flow`, `/task-flow` ↔ `planner`·`implementer`·`reviewer`·`/pr-ready`(handoff 파일 이름과 형식)를 더합니다
+- 루트 `README.md` 구조 트리(새 skill과 agent 2개), `docs/guide/task-workflow.md`(`/task-flow` 절). 구현할 때 `editing.md` 규칙대로 `task`, `handoff`, `reviewer`로 Grep해 `PLAYBOOK.md` 등 함께 고칠 곳을 찾습니다
+
+## 진행 방식
+- 브랜치는 `origin/main`에서 `chore/task-flow-skill`로 만들고 바로 push합니다. PR에는 `context` 라벨을 붙입니다
+- `.claude/**` 편집은 `settings.json`의 `ask` 대상이라 편집마다 승인 프롬프트가 뜹니다
+- "구현 중 검증"은 hook 완화에 해당하므로, 구현을 시작하기 전에 이유와 우회로 대책을 설명하고 승인받습니다. PR 설명에도 적습니다
+- `.claude/hooks/`의 Java 파일이 바뀌므로 `/pr-ready` 3번에 따라 `context-reviewer`와 `reviewer` 둘 다 리뷰합니다
+- 커밋은 `chore:`와 `docs:`로 나누고, 사용자가 확인한 뒤에 합니다
+
+## 검증
+1. `/task-flow pr-lens-p1-cli`(번호 없음): 목록이 `/task`의 결과와 같은지 비교합니다
+2. 시작 가능한 실제 작업 하나로 `/task-flow <스펙> <번호>`: G1에서 멈춤 → G2에서 계획 파일 생성, `git status`에 계획 파일이 나오지 않는지(gitignore) → 수정 요청 1회로 `SendMessage` 재개(스펙을 다시 읽지 않고 고치는지, 수정 이력이 남는지) → implementer가 백그라운드로 도는 동안 매니저 턴이 끝나도 메인 Stop이 검증을 건너뛰고 안내를 내는지, planner·implementer의 Write·Edit와 `git commit` 권한 프롬프트가 메인 세션에 에이전트 이름과 함께 뜨고 거기서 처리되는지, implementer 종료 때 검증이 돌고 실패하면 implementer가 계속 고치는지, 끝난 뒤 표시 파일이 지워지고 결과 파일이 남는지, 완료 알림으로 매니저가 스스로 이어 가는지 → `BLOCKED`로 멈추게 했을 때 종료 검증이 건너뛰는지, 답을 `SendMessage`로 보내 재개할 때 SubagentStart가 다시 발생하는지(안 되면 `--mark` 절차) → reviewer가 `origin/main...<브랜치>`를 보는지 → `-review.md`의 SHA → G3에 게이트 조건 결과가 나오는지
+3. 이어 가기: 2번 도중(예: G2 전, G2 승인 뒤, 구현 중, 리뷰 중)에 `/clear`하고 `/task-flow <스펙> <번호>`를 다시 실행해, G1을 건너뛰고 상태 줄의 "재개 시 할 일"을 하는지 확인합니다. 상태 줄을 일부러 틀리게 고쳐 산출물과 어긋날 때 알리고 멈추는지도 봅니다
+4. 같은 브랜치에서 `/pr-ready`: `-review.md`를 재사용하는지, `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지는지, 넘길 것이 없을 때도 두 파일이 지워지는지. 그 뒤 `/task-flow`를 다시 실행해 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈추는지
+5. 기존 흐름 회귀: `-review.md`가 없는 브랜치에서 `/pr-ready`가 지금처럼 reviewer를 돌리는지
+6. `context-reviewer`로 리뷰합니다(위 실행 결과를 함께 넘깁니다). 실행하지 못한 항목은 PR의 "검증 증거"에 적습니다
+- 우회로 대책 확인: implementer 없이 표시 파일을 빈 파일로, 형식이 틀린 내용으로, 12시간 지난 시각으로, 다른 `session_id`로 각각 만들어 메인 Stop이 그대로 검증하는지 봅니다. 결과 파일의 `agent_id`를 다른 값으로 바꿔 G3가 "결과 없음"으로 멈추는지도 봅니다. Edit·Write로 표시 파일을 만들려 하면 `ProtectFiles`가 막는지도 봅니다
+- 첫 실행 전에 확인: 이 폴더의 워크스페이스 신뢰 수락 여부
+- 문서로 확인한 것(공식 hooks·sub-agents 문서, 실행으로 한 번 더 봄): SubagentStart·SubagentStop의 matcher가 에이전트 이름이고 입력에 `agent_id`가 옴, SubagentStop 입력에 `stop_hook_active`·`last_assistant_message`·`agent_transcript_path`가 옴, exit 2면 서브에이전트가 계속 돎, 설정의 hook이 서브에이전트의 도구 호출에도 걸림(`ProtectFiles`), frontmatter `background: true`
+- 실행해서 확인할 것(문서로 확인하지 못함): `SendMessage` 재개 때 SubagentStart 발생 여부, SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝나는지, `stop_hook_active`가 SubagentStop에서 Stop과 같은 의미인지, 백그라운드 서브에이전트가 끝날 때 settings의 Stop도 도는지(문서상 간접적으로 아님), Stop의 `systemMessage`가 사용자에게 보이는지, 만든 transcript 경로가 `agent_transcript_path`와 같은지. SubagentStart나 SubagentStop이 동작하지 않으면 구현을 멈추고 설계를 다시 정합니다
+
+## 다음 PR
+- **`--auto`**: "게이트 조건"을 적용해 조건에 걸리지 않으면 멈추지 않고 넘어갑니다. 자동 push용 `settings.json` allow 추가는 권한을 넓히는 변경이므로 그때 따로 승인받습니다
+- **대체**: `/task`를 지우고 `task-flow`를 `task`로 바꾸고, `editing.md`의 공존 줄을 지웁니다
+
+## 병렬 검토 (참고, 진행하지 않음)
+검토한 결과만 남깁니다. 다시 병렬을 검토할 때 출발점으로 씁니다.
+
+### 단계 파이프라이닝 (worktree 없이 가장 가까웠던 안)
+작업 트리 하나에서 구현은 한 번에 하나만 하고, 코드를 고치지 않는 계획과 리뷰를 앞뒤 작업과 겹쳐 돌리는 방식입니다.
+
+```
+implementer :  [ 7 구현 ][ 7 수정 ][ 8 구현 ][ 10 구현 ]
+planner     :  [8 계획][10 계획]       [11 계획]
+reviewer    :            [7 리뷰]   [8 리뷰]
+사람        :  G2(8, 10 일괄)   G3(7)        G3(8)
+```
+
+- **계획 병렬**: 작업 번호를 여러 개 받아 planner를 백그라운드로 동시에 띄웁니다. planner는 gitignore된 계획 파일만 쓰므로 같은 작업 트리에서 돌 수 있습니다. G2는 한 번에 받습니다
+- **리뷰 겹치기**: reviewer는 `origin/main...<브랜치>`로 ref를 비교하므로(D4) 체크아웃 없이, implementer가 다른 브랜치에서 일하는 동안 리뷰합니다
+- **구현은 순차**: implementer는 하나만 돕니다(D3, "구현 중 검증"). 작업 트리가 하나라 worktree 기준 브랜치 문제가 생기지 않습니다
+- **수정 순서**: 리뷰의 "반드시 수정"은 그 브랜치를 체크아웃해야 하므로, implementer가 하던 구현을 끝내고 다음 작업으로 넘어가기 전에 고칩니다. 매니저가 "7 구현 → 7 수정 → 8 구현"처럼 큐를 관리합니다
+- **장점**: 비싸고 느린 opus 단계(계획, 리뷰)가 구현 뒤로 숨고, 사람 승인을 묶어 받아 기다리는 시간이 줄어듭니다. 1~2주차 회고(`docs/retro/week-1-2.md`)에서 실제 병목은 작성자 1명과 사람 리뷰였으므로, 구현을 동시에 여러 개 돌리는 것보다 이쪽이 맞습니다
+- **진행하지 않는 이유 (겹칠 때 생기는 문제)**
+  - 선행 작업과 겹침: 다음 작업이 아직 머지되지 않은 작업의 코드를 쓰면, 계획은 스펙만 보고 짠 것이 되고 브랜치는 그 코드 없이 `origin/main`에서 갈라집니다
+  - 넘길 것이 늦게 도착: 앞 작업의 "주의"는 그 브랜치의 메모 파일에 있다가 `/pr-ready`와 머지를 거쳐야 `tasks.md`에 들어가므로, 그 사이에 짠 계획은 이것을 모릅니다
+  - 작업 트리 공유: 구현을 바꿀 때 앞 작업이 커밋되지 않았으면 변경이 따라 넘어갑니다
+- **다시 검토할 때의 규칙 후보**: 작업마다 상태 줄(D8)을 두고 `/task-flow <스펙> status`로 모아 보기, 구현 슬롯은 하나이고 앞 작업이 "리뷰 중"(커밋 완료, 깨끗한 트리)이 된 뒤에만 다음 작업으로 바꾸기, 선행 작업이 머지된 작업만 계획하고 구현하기(P1 wave 3에는 작업이 25개라 병렬 여지가 있음), planner가 진행 중인 브랜치의 메모 파일을 `git show <브랜치>:<경로>`로 읽기, 구현 직전에 그 사이 머지된 작업이 계획의 파일을 건드렸는지 확인하기, 같은 PR 안에서 `tasks.md` 체크박스를 고치는 브랜치끼리의 머지 충돌, wave는 의존이 아니라 순서 안내라는 점("확인 필요"는 사람이 판단)
+
+### 쓰지 않는 방식
+- 구현 병렬(`isolation: "worktree"`): worktree가 기본 브랜치에서 갈라져 커밋이 feat 브랜치가 아닌 임시 브랜치에 쌓이고, gitignore된 계획 파일이 보이지 않으며, 백그라운드 워커의 권한 프롬프트와 검증을 따로 풀어야 합니다. 구현 병렬이 꼭 필요해지면 "매니저는 `main`에 머물고 브랜치를 체크아웃 없이 만든 뒤, implementer가 worktree 안에서 `git switch <feat>`" 방식부터 검토합니다
+- 원격 클라우드 워커(`isolation: "remote"`): 실행 비용이 따로 들어 이번 실습에서는 쓰지 않습니다
+- 같은 작업 트리에서 구현 여러 개를 동시에: Gradle 모듈이 하나라 서로의 테스트를 깨고, 한 트리는 브랜치를 하나만 체크아웃합니다
+- 별도 clone이나 GitHub Actions: worktree와 같은 문제를 더 무겁게 겪고, 외부 설정 승인이 필요합니다
