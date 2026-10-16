@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 /** unified diff patch를 Hunk 목록으로 해석한다. 오류가 있으면 부분 결과 없이 예외를 던진다. */
 public final class DiffParser {
 
+  // DOTALL: 문맥 텍스트의 {@code .}가 줄 구분 문자(U+0085, U+2028, U+2029)도 받아 round-trip을 지킨다
   private static final Pattern HEADER =
       Pattern.compile("^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@(.*)$", Pattern.DOTALL);
 
@@ -23,7 +24,8 @@ public final class DiffParser {
    * 앞이면 앞 내용, 아니면 초과 줄(줄 수 불일치)이다.
    *
    * @param path 오류 메시지에 담을 파일 경로
-   * @param patch GitHub가 돌려준 patch 텍스트. 빈 문자열이면 빈 목록
+   * @param patch GitHub가 돌려준 patch 텍스트. 빈 문자열이면 빈 목록이고 null이면 {@link NullPointerException}이다(patch가
+   *     없는 파일은 호출하는 쪽이 먼저 걸러야 한다)
    * @throws DiffParseException patch가 유효한 unified diff가 아닐 때
    */
   public static List<Hunk> parse(String path, String patch) {

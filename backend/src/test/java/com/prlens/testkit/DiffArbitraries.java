@@ -8,6 +8,7 @@ import java.util.List;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.Combinators;
+import net.jqwik.api.Tuple;
 
 /**
  * 유효한 Hunk 목록 생성기. 줄 수는 줄 목록에서 계산하고 구간은 이전 Hunk의 head 구간 끝보다 뒤에서 시작한다. 줄 내용에는 줄바꿈이 없고, 접두어처럼 보이는
@@ -40,8 +41,8 @@ public final class DiffArbitraries {
             .as(LineSpec::new);
     Arbitrary<String> heading =
         Arbitraries.frequencyOf(
-            net.jqwik.api.Tuple.of(1, Arbitraries.just("")),
-            net.jqwik.api.Tuple.of(
+            Tuple.of(1, Arbitraries.just("")),
+            Tuple.of(
                 1,
                 Arbitraries.strings()
                     .withCharRange(' ', '~')

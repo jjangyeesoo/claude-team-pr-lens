@@ -100,6 +100,8 @@ class DiffPropertyTest {
         switch (mutation) {
           case 1, 4 -> 1;
           case 2 -> 2;
+          // 겹치는 헤더는 첫 Hunk를 출력한 줄 바로 다음 줄에 온다
+          case 3 -> DiffPrinter.print(List.of(hunks.get(0))).split("\n").length + 1;
           default -> -1;
         };
     String invalid =

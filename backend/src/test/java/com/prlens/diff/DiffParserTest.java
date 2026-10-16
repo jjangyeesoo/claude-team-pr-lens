@@ -66,6 +66,16 @@ class DiffParserTest {
   }
 
   @Test
+  void sectionHeadingMayContainUnicodeLineSeparators() {
+    // 포맷터가 유니코드 이스케이프를 실제 문자로 바꾸므로 문자 코드로 만든다
+    String heading = " a" + (char) 0x0085 + "b" + (char) 0x2028 + "c" + (char) 0x2029 + "d";
+
+    List<Hunk> hunks = DiffParser.parse(PATH, "@@ -1,1 +1,1 @@" + heading + "\n x\n");
+
+    assertThat(hunks.get(0).sectionHeading()).isEqualTo(heading);
+  }
+
+  @Test
   void emptyPatchReturnsEmptyList() {
     assertThat(DiffParser.parse(PATH, "")).isEmpty();
   }
