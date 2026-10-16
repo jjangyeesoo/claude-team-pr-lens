@@ -134,7 +134,7 @@
     - 판정 순서: 새 경로·이전 경로 패턴 일치(처음 일치 패턴) → `Absent`는 `binary_or_too_large` → `Unparseable`은 `unparseable_patch`(설계 G-1) → 대상. 입력 순서 유지
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8, 3.9, 3.10_
   - [ ]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음)
     - 주의(5 리뷰): 5.4의 공용 Hunk 생성기는 `testkit/DiffArbitraries.validHunks()`(0~5개)와 `nonEmptyValidHunks()`(1~5개)입니다. 0/0 Hunk는 만들지 않고 `noNewlineAtEnd`는 마지막 줄이 아닌 줄에도 붙습니다. `ChangedFile`의 `additions`/`deletions`는 Hunk의 `ADDED`/`REMOVED` 줄 수로 직접 계산해야 합니다
     - **Validates: Requirements 3.2, 3.3, 3.4, 3.5, 3.12**
   - [ ]* 6.5 Property 9: 필터 멱등 테스트
@@ -254,22 +254,23 @@
     - 라인: 전체 대상 파일의 `head 경로 → LineRanges` 맵으로 `not_target_file` → `line_missing` → `out_of_range` → `INLINE_ELIGIBLE`
     - `basis`, `demotion`, 판정 필드 외에는 변경하지 않음
     - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
+    - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
 
 - [ ] 11. 청크 계획, 프롬프트, 비용, 병합
   - PR 경계: 11.1~11.4 / 11.5~11.9
-  - [ ] 11.1 모드 결정과 `ChunkPlanner` 구현
+  - [x] 11.1 모드 결정과 `ChunkPlanner` 구현
     - 모드: 대상 0개 `NO_TARGET`, count ≤ L 단일(count 0 포함, 설계 G-2), ≤ 3L 분할, 초과 요약 전용
     - 분할: head 경로 코드 포인트 정렬 후 결정적 순차 greedy, L 초과 파일은 단독 Chunk
     - _Requirements: 3.6, 13.1, 13.2, 13.3, 13.4, 13.9, 13.10_
-  - [ ]* 11.2 Property 28: 청크 계획 테스트
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다
+  - [x]* 11.2 Property 28: 청크 계획 테스트
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음)
     - **Validates: Requirements 13.2, 13.3, 13.4, 13.13, 13.14**
-  - [ ] 11.3 `DelimiterCodec` 구현 (`<~*/?prlens:` 바이트 스터핑 escape/unescape, 대소문자 무시)
+  - [x] 11.3 `DelimiterCodec` 구현 (`<~*/?prlens:` 바이트 스터핑 escape/unescape, 대소문자 무시)
     - _Requirements: 14.5, 14.8_
-  - [ ]* 11.4 Property 33: Delimiter 이스케이프 테스트
+  - [x]* 11.4 Property 33: Delimiter 이스케이프 테스트
     - **Validates: Requirements 14.2, 14.5, 14.8**
   - [ ] 11.5 `PromptBuilder` 구현
     - system: 리뷰 지시문(`PROMPT_VERSION`), 출력 규칙, 인젝션 규칙, `<~` 이스케이프 설명. PR·diff 텍스트 없음
@@ -278,6 +279,7 @@
     - 둘째 user 블록: 제목, 본문, head 스펙, Chunk 파일별 경로와 `DiffPrinter` 출력을 각각 Delimiter_Tag로 감싸고 이스케이프
     - 요약 전용: patch 대신 경로·상태·줄 수·Hunk 헤더, 같은 스키마 사용
     - 요청마다 모델과 effort 명시, 최대 출력 토큰 지정
+    - 주의(11.1~11.4 리뷰): `DelimiterCodec`은 문자열 변환만 하고 영역을 감싸지 않습니다. 파일 경로, 제목, 본문, head 스펙, diff, 컨텍스트 파일 내용을 모두 `escape`한 뒤 태그로 감쌉니다. `team_context`의 파일 머리줄 `path`/`source` 값도 같습니다(경로에 태그 꼴이 있을 수 있음. 머리줄은 스펙 추론)
     - _Requirements: 3.7, 9.1, 14.1, 14.2, 14.3, 14.4, 14.6, 20.6, 20.7, 20.8, 20.9_
   - [ ] 11.6 `CostCalculator` 구현 (공개 순수 함수 `estimate(LlmUsage, ModelPricing)`, `BigDecimal` Σ(토큰 × 단가 / 1,000,000), `setScale(4, HALF_UP)`, 단가 없으면 `null`. P2가 같은 함수를 씀)
     - _Requirements: 20.2, 20.5_
@@ -299,10 +301,11 @@
     - `DiffFilter`가 돌려준 경고는 버림(수집기가 이미 알림). 엔진은 `WarningSink`를 받지 않음
     - 주의(선머지 리뷰): `RetriesExhaustedException`이 3.1에서 생기므로 3.1이 머지된 뒤 시작합니다. `ReviewResult`는 `usage`, `incompleteDetails`, `stats`를 포함해 모든 필드가 필수라, 대상 0개일 때도 `Usage(0, 0, 0, 0, model, …)`와 `IncompleteDetails(List.of(), null)`을 만들어야 합니다
     - 미정(여기서 정함): 대상 0개일 때 `estimatedCostUsd`를 `0.0000`으로 할지 `null`로 할지. `null`이면 CLI가 "단가 없음" 경고(요구사항 20.5)를 잘못 냅니다
+    - 주의(11.1~11.4 리뷰): SINGLE에서는 `ChunkPlanner.plan`을 부르지 않고 대상 전체(원래 순서)를 Chunk 하나로 씁니다. `plan`은 모드와 무관하게 경로순으로 정렬해 묶으므로 SPLIT에서만 부릅니다. 모드는 `ChunkPlanner.decideMode(targets, sizeLimit)`, 줄 수는 `changedLineCount(targets)`이고 둘 다 정적 메서드입니다. SINGLE에서 diff 순서가 경로순이 아니어도 되는지는 여기서 정합니다(데이터 영역만 달라지고 캐시 앞부분은 영향 없음)
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
-    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 유효한 변경 파일은 5.4의 Hunk 생성기로 따로 만듭니다. 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
+    - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음). 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
 - [ ] 13. Claude API 어댑터
@@ -470,7 +473,7 @@
   - 2.1: `Configuration.defaults()`의 effort(`medium`)와 최대 출력 토큰(16,000, 범위 1~20,000). [ADR 0005](../../adr/0005-llm-settings.md)
   - 13.1: 스키마 직렬화 순서 고정, 첫 text 블록 선택, SDK 빌더 이름. [spike 2026-10-08](../../spikes/2026-10-08-llm-settings.md)의 "SDK에서 확인한 것"
 - 실제 API를 쓰는 확인은 세 번 있습니다: 7.7과 13.4(수요일, 어댑터 단위), 20.4(목요일, 전체 리허설). 400줄 120초 측정(요구사항 9.7), 실제 모델의 인젝션 픽스처 동작, 규칙 근거가 붙은 지적 1건 이상(M1 완료 조건)은 20.4에서 확인합니다.
-- design.md "요구사항 공백" G-1~G-7과 G-9, G-10, G-12의 잠정 처리는 해당 작업에 반영했습니다. G-8과 G-11은 결정 전이라 작업이 없습니다. 요구사항을 고치기로 하면 관련 작업도 함께 수정합니다.
+- design.md "요구사항 공백" G-1~G-7과 G-9, G-10, G-12의 잠정 처리는 해당 작업에 반영했습니다. G-8과 G-11은 결정 전이라 작업이 없습니다. G-13은 제안값으로 10.4에 주의로 넘겼습니다. 요구사항을 고치기로 하면 관련 작업도 함께 수정합니다.
 - 결정 대기 항목이 막는 작업은 다음과 같습니다. 결정 전에는 제안값으로 진행하고, 결정이 바뀌면 이 작업들을 다시 봅니다.
 
   | 항목 | 막는 작업 |
@@ -483,6 +486,7 @@
   | D-6 생성 코드 기본 패턴 | 6.3, 6.4, 6.6, 20.1 |
   | D-7 스펙 head SHA fallback | 2.1, 8.9, 8.10, 11.5 |
   | D-8 리뷰 대상 저장소 한정 | 결정되면 요구사항과 작업을 추가 |
+  | G-13 응답 `file`의 이스케이프 해제 (설계 "요구사항 공백") | 10.4, 12.1 |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
