@@ -20,7 +20,7 @@ model: opus
    - backend 패키지 규칙 (ADR 0003, `backend/CLAUDE.md`)
      - 패키지 사이 의존 방향을 어기지 않는가 (`model`의 외부 의존, `review`가 `cli`·`output`·`github`·`config`나 구현 클래스에 의존, `cli` 밖의 Spring 애너테이션)
      - 설계의 패키지 표에 없는 패키지를 표 수정 없이 추가하지 않았는가
-     - `println`·`%n`, 저장소 경로의 `java.nio.file.Path` 변환, Jackson 2(`com.fasterxml.jackson.databind`) import가 없는가
+     - `println`·`%n`, 저장소 경로의 `java.nio.file.Path` 변환, Jackson 2(`com.fasterxml.jackson.databind`) import가 없는가, 이름 충돌이 없는데 코드 본문에 패키지 경로째 쓴 클래스(`net.jqwik.api.Tuple` 등)가 없는가 (Javadoc 언급, 문자열 리터럴, `Tuple.Tuple2` 같은 중첩 클래스 표기는 제외)
    - 비밀값(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`)이 출력, 로그, 프롬프트, 픽스처에 들어가지 않는가
    - web 규칙: backend 호출이 `src/lib/api/`에만 있는가, 불필요한 `"use client"`가 없는가, Route Handler나 Server Action에 비즈니스 로직이 없는가
    - API 계약: web이 쓰는 backend DTO가 바뀌었다면 `web/src/lib/api/types.ts`도 함께 바뀌었는가 (P3 전에는 web이 PR Lens API를 쓰지 않으므로 해당 없음)

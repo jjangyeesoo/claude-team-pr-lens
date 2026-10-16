@@ -28,5 +28,6 @@ P1은 `prlens review <PR URL>` CLI이고 Spring 컨텍스트 없이 실행한다
 - 출력: stdout에는 최종 결과만 쓴다. 진행·경고·오류는 stderr. `println`과 `%n`을 쓰지 않고 `\n`을 직접 붙인다 (OS와 무관하게 같은 바이트)
 - 저장소 내 경로는 `/` 구분자의 `String`으로만 다룬다. `java.nio.file.Path`로 바꾸지 않는다
 - Jackson은 3(`tools.jackson`)만 쓴다. Anthropic SDK가 Jackson 2(`com.fasterxml.jackson.databind`)도 끌어오므로 import를 확인한다
+- 클래스는 `import`로 가져와 단순 이름으로 쓴다. `net.jqwik.api.Tuple.Tuple2<...>`처럼 패키지 경로째 코드 본문에 쓰지 않는다. 같은 단순 이름이 겹칠 때만 한쪽을 패키지 경로로 쓴다. 중첩 클래스는 바깥 클래스를 import해 `Tuple.Tuple2`처럼 써도 된다 (테스트 코드도 같다. Javadoc의 `{@link}` 등 주석 안 언급과 문자열 리터럴은 해당 없다)
 - 비밀값(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`)은 환경변수에서만 읽고 출력·로그·프롬프트에 넣지 않는다
 - 테스트는 JUnit 6이다. Spring Boot 4의 `@WebMvcTest`는 `org.springframework.boot.webmvc.test.autoconfigure`에 있다 (P2부터 사용)
