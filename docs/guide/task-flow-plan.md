@@ -80,7 +80,7 @@ implementer는 전체 검증(`spotlessApply test`, `npm run verify`)을 직접 �
 
 **우회로 대책.** 표시 파일은 일반 파일이라, 메인 세션이 Bash로 만들기만 해도 Stop 검증을 끌 수 있습니다. 지금은 검증을 끄려면 승인 프롬프트가 뜨는 `.claude/` 파일을 고쳐야 하므로, 이 변경은 hook 완화에 해당합니다(`editing.md`에 따라 구현 PR에서 이유를 설명하고 승인받습니다). 다음으로 우회를 어렵게 하고, 건너뛸 때마다 드러나게 합니다.
 - **내용 검사**: 표시 파일에 agent ID와 시작 시각이 형식대로 있어야 유효합니다. 빈 파일이나 형식이 다른 파일은 무시하고 검증합니다
-- **세션 확인**: 메인 Stop은 hook 입력의 `session_id`가 표시의 `session_id`와 다르면 표시를 무효로 보고 검증합니다. implementer가 SubagentStop 없이 끝난 뒤(세션 종료, 프로세스 중단) transcript 파일은 남으므로, 실재 확인만으로는 다음 세션에서도 표시가 유효로 보이기 때문입니다. `--mark` 표시는 세션 ID를 모르므로 이 검사를 하지 못하고, SubagentStop의 해제와 12시간 기한에만 기댑니다(한계)
+- **세션 확인**: 메인 Stop은 hook 입력의 `session_id`가 표시의 `session_id`와 다르면 표시를 무효로 보고 검증합니다. implementer가 SubagentStop 없이 끝난 뒤(세션 종료, 프로세스 중단) transcript 파일은 남으므로, 실재 확인만으로는 다음 세션에서도 표시가 유효로 보이기 때문입니다. `--mark` 표시는 세션 ID를 모르므로 이 검사를 하지 못하고, SubagentStop의 해제와 12시간 기한에만 기댑니다(한계). 또 `claude --resume`·`--continue`로 이어 갈 때 `session_id`가 유지된다면 이 검사가 막는 것은 새 세션뿐입니다. 이는 확인되지 않았으므로 검증 체크리스트 0번에서 확인합니다
 - **남은 표시 정리**: 표시는 4번의 해제로 지우므로, 시간 기한은 SubagentStop 없이 남은 표시(implementer 비정상 종료, 세션 중단)를 정리하는 용도로만 둡니다. 시작 시각에서 12시간이 지난 표시는 무시합니다. 1시간처럼 짧게 잡으면 Gradle 테스트를 여러 번 돌리는 긴 구현이 끝나기 전에 표시가 만료되어, 메인 Stop이 구현 도중의 상태를 검증하는 문제가 다시 생깁니다
 - **실재 확인** (SubagentStart가 쓴 표시만, `mark` 표시는 제외): 표시에 적힌 메인 `transcript_path`에서 서브에이전트 transcript 경로(`<세션>/subagents/agent-<agentId>.jsonl`)를 만들어, 파일이 **있을 때만** 유효로 봅니다. 수정 시각은 보지 않습니다. Gradle 테스트처럼 몇 분 걸리는 명령을 실행하는 동안에는 transcript에 쓰기가 없어, 수정 시각으로 판단하면 실행 중인 implementer의 표시가 무효가 되기 때문입니다. SubagentStop 입력에는 `agent_transcript_path`가 직접 오므로, 첫 실행에서 이 값과 만든 경로가 같은지 확인합니다. 경로를 만들 수 없으면 이 검사는 빼고 나머지로 운영합니다
 - **편집 보호**: `ProtectFiles`에 `build/claude-verify/` 경로를 더해 Edit·Write로는 만들거나 고치지 못하게 합니다. Bash로 만드는 것은 막지 못하므로 보조 수단입니다
@@ -140,17 +140,91 @@ planner는 작업 본문의 `주의`·`미정` 줄마다 한 행을 씁니다. �
 - `.claude/hooks/`의 Java 파일이 바뀌므로 `/pr-ready` 3번에 따라 `context-reviewer`와 `reviewer` 둘 다 리뷰합니다
 - 커밋은 `chore:`와 `docs:`로 나누고, 사용자가 확인한 뒤에 합니다
 
-## 검증
-1. `/task-flow pr-lens-p1-cli`(번호 없음): 목록이 `/task`의 결과와 같은지 비교합니다
-2. 시작 가능한 실제 작업 하나로 `/task-flow <스펙> <번호>`: G1에서 멈춤 → G2에서 계획 파일 생성, `git status`에 계획 파일이 나오지 않는지(gitignore) → 수정 요청 1회로 `SendMessage` 재개(스펙을 다시 읽지 않고 고치는지, 수정 이력이 남는지) → implementer가 백그라운드로 도는 동안 매니저 턴이 끝나도 메인 Stop이 검증을 건너뛰고 안내를 내는지, planner·implementer의 Write·Edit와 `git commit` 권한 프롬프트가 메인 세션에 에이전트 이름과 함께 뜨고 거기서 처리되는지, implementer 종료 때 검증이 돌고 실패하면 implementer가 계속 고치는지, 끝난 뒤 표시 파일이 지워지고 결과 파일이 남는지, 완료 알림으로 매니저가 스스로 이어 가는지 → `BLOCKED`로 멈추게 했을 때 종료 검증이 건너뛰는지, 답을 `SendMessage`로 보내 재개할 때 SubagentStart가 다시 발생하는지(안 되면 `--mark` 절차) → reviewer가 `origin/main...<브랜치>`를 보는지 → `-review.md`의 SHA → G3에 게이트 조건 결과가 나오는지
-3. 이어 가기: 2번 도중(예: G2 전, G2 승인 뒤, 구현 중, 리뷰 중)에 `/clear`하고 `/task-flow <스펙> <번호>`를 다시 실행해, G1을 건너뛰고 상태 줄의 "재개 시 할 일"을 하는지 확인합니다. 상태 줄을 일부러 틀리게 고쳐 산출물과 어긋날 때 알리고 멈추는지도 봅니다
-4. 같은 브랜치에서 `/pr-ready`: `-review.md`를 재사용하는지, `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지는지, 넘길 것이 없을 때도 두 파일이 지워지는지. 그 뒤 `/task-flow`를 다시 실행해 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈추는지
-5. 기존 흐름 회귀: `-review.md`가 없는 브랜치에서 `/pr-ready`가 지금처럼 reviewer를 돌리는지
-6. `context-reviewer`로 리뷰합니다(위 실행 결과를 함께 넘깁니다). 실행하지 못한 항목은 PR의 "검증 증거"에 적습니다
-- 우회로 대책 확인: implementer 없이 표시 파일을 빈 파일로, 형식이 틀린 내용으로, 12시간 지난 시각으로, 다른 `session_id`로 각각 만들어 메인 Stop이 그대로 검증하는지 봅니다. 결과 파일의 `agent_id`를 다른 값으로 바꿔 G3가 "결과 없음"으로 멈추는지도 봅니다. Edit·Write로 표시 파일을 만들려 하면 `ProtectFiles`가 막는지도 봅니다
-- 첫 실행 전에 확인: 이 폴더의 워크스페이스 신뢰 수락 여부
-- 문서로 확인한 것(공식 hooks·sub-agents 문서, 실행으로 한 번 더 봄): SubagentStart·SubagentStop의 matcher가 에이전트 이름이고 입력에 `agent_id`가 옴, SubagentStop 입력에 `stop_hook_active`·`last_assistant_message`·`agent_transcript_path`가 옴, exit 2면 서브에이전트가 계속 돎, 설정의 hook이 서브에이전트의 도구 호출에도 걸림(`ProtectFiles`), frontmatter `background: true`
-- 실행해서 확인할 것(문서로 확인하지 못함): `SendMessage` 재개 때 SubagentStart 발생 여부, SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝나는지, `stop_hook_active`가 SubagentStop에서 Stop과 같은 의미인지, 백그라운드 서브에이전트가 끝날 때 settings의 Stop도 도는지(문서상 간접적으로 아님), Stop의 `systemMessage`가 사용자에게 보이는지, 만든 transcript 경로가 `agent_transcript_path`와 같은지. SubagentStart나 SubagentStop이 동작하지 않으면 구현을 멈추고 설계를 다시 정합니다
+## 검증 체크리스트
+`/task-flow`를 만든 뒤 실제 브랜치에서 위에서부터 차례로 확인합니다. 결과는 구현 PR의 "검증 증거"에 옮기고, 확인하지 못한 항목은 그렇다고 적습니다. **(근거)** 열의 `문서`는 공식 hooks·sub-agents 문서로 확인한 것, `이 세션`은 계획을 쓰면서 실제로 본 것, `미확인`은 실행으로만 알 수 있는 것입니다. "막히면"에 "멈춤"이라고 적힌 항목이 실패하면 구현을 멈추고 설계를 다시 정합니다.
+
+### 0. 사전 확인 (hook을 바꾸기 전)
+hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전체가 성립하지 않으므로, `VerifyOnStop.java`를 고치기 전에 입력을 파일로 남기기만 하는 시험용 hook으로 먼저 봅니다.
+
+| 확인 | 근거 | 막히면 |
+|---|---|---|
+| [ ] 이 폴더의 워크스페이스 신뢰를 수락했음 | 문서 | 수락 뒤 다시 확인 |
+| [ ] SubagentStart·SubagentStop이 matcher `implementer`로 걸리고 입력에 `agent_id`, `session_id`, `transcript_path`가 옴 | 문서 | 멈춤 |
+| [ ] SubagentStop 입력에 `stop_hook_active`, `last_assistant_message`, `agent_transcript_path`가 옴 | 문서 | `BLOCKED` 건너뛰기나 재시도 상한을 다른 방법으로 |
+| [ ] SubagentStop에서 exit 2면 implementer가 멈추지 않고 실패 내용을 받아 계속 고침 | 문서 | 멈춤 |
+| [ ] 두 번째 차단에서 `stop_hook_active`가 true로 옴(Stop과 같은 의미) | 미확인 | 재시도 횟수를 표시 파일에 직접 셈 |
+| [ ] SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝남 | 미확인 | 표시를 매니저가 호출 직전에 `--mark`로 씀 |
+| [ ] `SendMessage`로 재개할 때 SubagentStart가 다시 발생함 | 미확인 | `--mark` 절차("구현 중 검증" 5번) |
+| [ ] 백그라운드 서브에이전트가 끝날 때 settings의 Stop은 돌지 않음 | 미확인(문서상 간접적으로 아님) | 돈다면 그때도 표시를 보고 건너뛰는지 확인 |
+| [ ] Stop의 `systemMessage`가 사용자에게 보임 | 미확인(지금 `VerifyOnStop`도 씀) | 건너뛸 때 안내 방식을 바꿈 |
+| [ ] SubagentStart의 `transcript_path`로 만든 서브에이전트 transcript 경로가 SubagentStop의 `agent_transcript_path`와 같음 | 미확인 | "실재 확인" 검사를 뺌 |
+| [ ] `claude --resume`·`--continue`로 이어 간 뒤 `session_id`가 바뀜 | 미확인 | 바뀌지 않으면 "세션 확인"이 막는 것은 새 세션뿐임. SessionStart hook 등 대안을 그때 정함 |
+| [ ] frontmatter `background: true`인 planner·implementer가 백그라운드로 돌고, 끝나면 완료 알림으로 매니저가 이어 감 | 문서, 이 세션(검토 에이전트) | 사용자가 `/task-flow`를 다시 불러 재개하는 흐름으로 |
+| [ ] 백그라운드 서브에이전트의 Write·Edit·`git add`·`git commit` 권한 프롬프트가 메인 세션에 에이전트 이름과 함께 뜨고 거기서 처리됨 | 문서 | 멈춤 |
+| [ ] `ProtectFiles`가 서브에이전트의 Edit·Write에도 걸림 | 문서 | 편집 보호를 우회로 대책에서 뺌 |
+
+### 1. 목록
+| 확인 | 막히면 |
+|---|---|
+| [ ] `/task-flow pr-lens-p1-cli`(번호 없음)의 시작 가능·진행 중·막힘·완료 목록이 `/task pr-lens-p1-cli`와 같음 | 차이를 고침 |
+
+### 2. 작업 하나 끝까지 (시작 가능한 실제 작업)
+| 단계 | 확인 |
+|---|---|
+| G1 | [ ] 브랜치 이름을 제안하고 멈춤 → 확인 뒤 생성·push, 상태 줄만 있는 계획 파일 골격이 생김 |
+| 계획 | [ ] planner가 골격 아래 본문만 채우고 상태 줄을 건드리지 않음 |
+| | [ ] "주의·미정 대응", "요구사항 변경", "질문" 절이 있고, 대응 표가 작업 본문의 `주의`·`미정` 줄과 줄 번호로 모두 짝지어짐 |
+| | [ ] `git status`에 계획 파일이 나오지 않음(gitignore) |
+| G2 | [ ] 계획 요약, "질문" 절, 게이트 조건 결과("자동이었다면 멈췄을 이유")가 나오고 멈춤 |
+| | [ ] 수정 요청 1회를 `SendMessage`로 같은 planner에게 보내면 스펙을 다시 읽지 않고 고치고, 수정 이력이 남음 |
+| | [ ] 승인 뒤 상태 줄이 `계획 승인`, `승인: G2 <날짜>`로 바뀜 |
+| 구현 | [ ] implementer의 agentId가 상태 줄 `implementer:`에 적힘 |
+| | [ ] implementer가 도는 동안 매니저 턴이 끝나도 메인 Stop이 검증을 건너뛰고 안내를 냄 |
+| | [ ] 그동안 사용자가 말을 걸어도 매니저가 구현 파일을 고치거나 검증 명령을 돌리지 않음 |
+| | [ ] 종료 검증이 돌고, 실패하면 implementer가 계속 고치고, 두 번째 실패에서 놓아줌 |
+| | [ ] 끝난 뒤 표시 파일이 지워지고, 결과 파일에 이 implementer의 `agent_id`와 결과가 남음 |
+| | [ ] implementer가 전체 검증을 직접 돌리지 않음(대상 테스트만) |
+| `BLOCKED` | [ ] 일부러 `BLOCKED`로 멈추게 하면 종료 검증을 건너뛰고 표시만 지움, 매니저가 질문을 사용자에게 전함 |
+| | [ ] 답을 `SendMessage`로 보내 재개할 때 표시가 다시 생김(SubagentStart 또는 `--mark`) |
+| 리뷰 | [ ] 매니저가 `git fetch origin` 뒤 reviewer를 부르고, reviewer가 `origin/main...<브랜치>`를 봄 |
+| | [ ] `-review.md`에 리뷰한 커밋 SHA가 남고, "반드시 수정"이 implementer에게 가고 재리뷰는 1회만 |
+| G3 | [ ] `/task` 8번의 보고 항목, 리뷰 요약, 게이트 조건 결과, 결과 파일 기반 검증 증거가 나옴 |
+| | [ ] 상태 줄이 `PR 준비`로 바뀜 |
+
+### 3. 이어 가기
+| 확인 |
+|---|
+| [ ] G2 전, G2 승인 뒤, 구현 중, 리뷰 중에 각각 `/clear`하고 `/task-flow <스펙> <번호>`를 다시 실행하면 G1을 건너뛰고 상태 표의 "재개 시 할 일"을 함 |
+| [ ] 구현 중 재개 때 새 implementer에게 트리 상태, 커밋, 실패하는 테스트 목록이 넘어감 |
+| [ ] 상태 줄을 일부러 틀리게 고치면 산출물과 어긋난다고 알리고 멈춤 |
+
+### 4. `/pr-ready`와 회귀
+| 확인 |
+|---|
+| [ ] 같은 브랜치에서 `/pr-ready`가 `-review.md`(SHA가 `HEAD`와 같음)를 재사용하고 reviewer를 다시 돌리지 않음 |
+| [ ] `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지고, 넘길 것이 없을 때도 지워짐 |
+| [ ] 그 뒤 `/task-flow`를 다시 실행하면 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈춤 |
+| [ ] 회귀: `-review.md`가 없는 브랜치(기존 `/task`로 만든 것)에서 `/pr-ready`가 지금처럼 reviewer를 돌림 |
+| [ ] 회귀: 기존 `/task`가 지금처럼 동작함(`VerifyOnStop` 변경 뒤 implementer 없이 메인 Stop이 평소대로 검증) |
+
+### 5. 우회로 대책
+implementer 없이 아래를 만들어, 메인 Stop이 건너뛰지 않고 그대로 검증하는지 봅니다.
+
+| 확인 |
+|---|
+| [ ] 빈 표시 파일 |
+| [ ] 형식이 틀린 표시 파일 |
+| [ ] 시작 시각이 12시간 지난 표시 |
+| [ ] 다른 `session_id`의 표시 |
+| [ ] 없는 transcript를 가리키는 표시(SubagentStart 출처) |
+| [ ] Edit·Write로 표시 파일을 만들려 하면 `ProtectFiles`가 막음 |
+| [ ] 결과 파일의 `agent_id`를 다른 값으로 바꾸면 G3가 "결과 없음"으로 멈춤 |
+
+### 6. 리뷰
+| 확인 |
+|---|
+| [ ] `context-reviewer`와 `reviewer`로 리뷰함(`.claude/hooks/`의 Java 파일이 바뀌므로). 위 결과를 함께 넘김 |
+| [ ] hook 완화에 대한 승인과 우회로 대책을 PR 설명에 적음 |
 
 ## 다음 PR
 - **`--auto`**: "게이트 조건"을 적용해 조건에 걸리지 않으면 멈추지 않고 넘어갑니다. 자동 push용 `settings.json` allow 추가는 권한을 넓히는 변경이므로 그때 따로 승인받습니다
