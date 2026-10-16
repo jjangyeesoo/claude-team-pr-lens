@@ -118,28 +118,28 @@
   - [x]* 5.8 Property 7(diff 부분): 줄바꿈 무관 해석 테스트
     - **Validates: Requirements 22.4**
 
-- [ ] 6. glob과 diff 필터
-  - [ ] 6.1 `GlobMatcher` 구현 (T3가 사용, 화요일 목표. `GlobSyntaxException(pattern, reason)` 타입은 2.3에서 만들어 두었으므로 여기서는 던지는 조건을 채움)
-    - `PathMatcher` 미사용. `/` 구간 분할, `**` 구간 = 0개 이상 구간, `*`·`?`·`{a,b}`(중첩) 구간 정규식, 메모이제이션 DP
-    - `/`를 포함한 중괄호만 먼저 펼친 뒤 컴파일
-    - 문법 오류: 짝 없는 중괄호, 빈 패턴, `\` 포함, 구간 일부의 `**`, 펼친 개수 256 초과
+- [x] 6. glob과 diff 필터
+  - [x] 6.1 `GlobMatcher` 구현 (T3가 사용, 화요일 목표. `GlobSyntaxException(pattern, reason)` 타입은 2.3에서 만들어 두었으므로 여기서는 던지는 조건을 채움)
+    - `PathMatcher` 미사용. `/` 구간 분할, `**` 구간 = 0개 이상 구간, `*`·`?` 구간 정규식, 메모이제이션 DP
+    - `{a,b}`(중첩)는 구간 분할 전에 모두 펼친 뒤(256개 상한) 펼친 패턴마다 접두어 제거와 컴파일
+    - 문법 오류: 짝 없는 중괄호, 빈 패턴, `\` 포함, 구간 일부의 `**`, 펼친 개수 256 초과, 중괄호 중첩 32단계 초과
     - 예시 테스트: `**/x`가 루트 `x`와 일치, 대소문자 구분
     - 주의(선머지 리뷰): 패턴에는 `RepoPaths.normalize`를 그대로 쓰지 않습니다. `\`를 `/`로 바꾸므로 `a\b`가 문법 오류 없이 통과합니다. 패턴은 `\` 검사를 먼저 하거나 앞의 `./`·`/` 제거만 따로 합니다(경로 쪽에는 `normalize`를 써도 됨). `/`, `./` 패턴은 접두어를 떼면 `""`가 되므로 빈 패턴 검사는 접두어 제거 뒤에 합니다
     - _Requirements: 3.2, 5.7_
-  - [ ]* 6.2 Property 12: glob 중괄호 모델 기반 테스트
+  - [x]* 6.2 Property 12: glob 중괄호 모델 기반 테스트
     - **Validates: Requirements 5.8**
-  - [ ] 6.3 `DiffFilter` 구현 (T1이 사용, 화요일 목표)
+  - [x] 6.3 `DiffFilter` 구현 (T1이 사용, 화요일 목표)
     - 기본 패턴 목록(요구사항 3.1 순서), 합성 = 기본 − (해제 ∩ 비밀정보 아닌 기본) + 추가
     - 비밀정보 패턴 해제 요청은 무시하고 경고를 `FilterOutcome`에 담아 반환. 제외 파일은 경로와 사유(`ExcludedFile`)로 반환
     - 판정 순서: 새 경로·이전 경로 패턴 일치(처음 일치 패턴) → `Absent`는 `binary_or_too_large` → `Unparseable`은 `unparseable_patch`(설계 G-1) → 대상. 입력 순서 유지
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.8, 3.9, 3.10_
-  - [ ]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
+  - [x]* 6.4 Property 8: 필터 분할 불변과 사유 결정 테스트
     - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음)
     - 주의(5 리뷰): 5.4의 공용 Hunk 생성기는 `testkit/DiffArbitraries.validHunks()`(0~5개)와 `nonEmptyValidHunks()`(1~5개)입니다. 0/0 Hunk는 만들지 않고 `noNewlineAtEnd`는 마지막 줄이 아닌 줄에도 붙습니다. `ChangedFile`의 `additions`/`deletions`는 Hunk의 `ADDED`/`REMOVED` 줄 수로 직접 계산해야 합니다
     - **Validates: Requirements 3.2, 3.3, 3.4, 3.5, 3.12**
-  - [ ]* 6.5 Property 9: 필터 멱등 테스트
+  - [x]* 6.5 Property 9: 필터 멱등 테스트
     - **Validates: Requirements 3.13**
-  - [ ]* 6.6 Property 10: 제외 패턴 목록 합성 테스트
+  - [x]* 6.6 Property 10: 제외 패턴 목록 합성 테스트
     - **Validates: Requirements 3.8, 3.9, 3.10**
 
 - [ ] 7. GitHub 클라이언트와 PR 가져오기
@@ -201,6 +201,7 @@
     - 오류 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`는 포함 + 경고
     - `.claude/rules/**` 중 소문자 `.md`, `paths` 없으면 포함, 있으면 대상 파일(이름 변경이면 이전 경로 또는 새 경로)과 일치할 때만 포함
     - 무효 glob 패턴은 그 패턴만 무시하고 경고, 모두 무효면 포함 + 경고(설계 G-4)
+    - 주의(6 리뷰): `GlobMatcher.matches`는 무효 패턴이면 unchecked `GlobSyntaxException`을 던집니다. rule `paths`는 먼저 패턴마다 `GlobMatcher.validate`로 무효 패턴을 걸러 패턴당 경고 1건을 내고, 남은 패턴으로만 `matches`를 부르세요. 파일마다 `matches`를 try/catch하면 같은 경고가 대상 파일 수만큼 반복됩니다
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
   - [ ]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
