@@ -2,7 +2,7 @@
 
 팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, PR에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구입니다. 3명이 5주 동안 Claude Code로 만들면서 팀 개발 방법론을 실험하는 연구회 프로젝트입니다.
 
-- **지금 상태 (2026-10-04)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) PR Lens 코드는 아직 없습니다. backend는 패키지 뼈대(`com.prlens`)만 있고 web은 스타터의 메모 샘플 그대로입니다. 진행 상황과 다음 할 일은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
+- **지금 상태 (2026-10-16)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) P1 CLI 구현이 진행 중입니다. 끝난 것은 작업 1~6(패키지 뼈대, 공유 모델과 경계 인터페이스, 재시도와 비밀정보 마스킹, diff 파서, glob과 diff 필터)과 11.1~11.4(청크 계획, 구분자 코덱)입니다. GitHub 조회, 컨텍스트 수집, LLM 호출, CLI 조립은 아직 없고, web은 스타터의 메모 샘플 그대로입니다. 작업별 진행은 [P1 `tasks.md`](docs/specs/pr-lens-p1-cli/tasks.md)의 체크박스에, 1주차 준비 현황은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
 - **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회. 2~4주차에 이 순서로 되는 데까지 개발하고 5주차에 발표합니다. 주차별 일정은 가이드이고 강제하지 않습니다
 - **구조**: 모노레포. `backend/`(CLI와 P2부터 서버), `web/`(P3부터 조회 화면)
 - backend: Spring Boot 4.1 · Java 17 · Gradle (Kotlin DSL) · Spotless(google-java-format)
@@ -22,7 +22,7 @@
 | [`docs/specs/`](docs/specs/README.md) | 단계별 스펙 (`pr-lens-p1-cli`, `pr-lens-p2-automation`, `pr-lens-p3-web`)과 읽는 법 |
 | [`docs/adr/`](docs/adr/README.md) | 아키텍처 결정 기록 |
 | [`docs/spikes/`](docs/spikes/) | 기술 검증 기록 |
-| [`docs/guide/`](docs/guide/) | 팀 방법론 가이드("소규모 IT 팀을 위한 Claude Code 개발 방법론"), Claude Code 설정의 동작과 한계 |
+| [`docs/guide/`](docs/guide/) | 팀 방법론 가이드("소규모 IT 팀을 위한 Claude Code 개발 방법론"), Claude Code 설정의 동작과 한계, [작업 수행 흐름 안내서](docs/guide/task-workflow.md) |
 
 문서 전체 지도는 [`docs/README.md`](docs/README.md)에 있습니다.
 
@@ -39,7 +39,7 @@ web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:
 첫 세션에서 확인할 것:
 1. `/context`에 루트 `CLAUDE.md`가 로드되어 있는지. `backend/`나 `web/` 파일을 읽게 한 뒤 다시 보면 그 폴더의 `CLAUDE.md`와 해당 rules가 추가로 로드됩니다
 2. `/hooks`에 `PreToolUse`(ProtectFiles)와 `Stop`(VerifyOnStop)이 보이는지
-3. `/`를 입력하면 `/task`, `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`와 `/new-page`는 아직 메모 샘플 기준이라 P2, P3 전에 고쳐야 합니다)
+3. `/`를 입력하면 `/task`, `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`는 평면 패키지 기준으로 고쳤고 P2부터 씁니다. `/new-page`는 아직 메모 샘플 기준이라 P3 전에 고쳐야 합니다)
 
 ## 구성
 
@@ -47,7 +47,7 @@ web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:
 CLAUDE.md                        팀 공용 지시문 (구조, 워크플로, 스택 간 규칙, 컨벤션)
 backend/
 ├── CLAUDE.md                    backend 명령·아키텍처 (backend 파일을 다룰 때만 로드)
-└── build.gradle.kts, src/ ...   CLI와 서버 (지금은 패키지 뼈대)
+└── build.gradle.kts, src/ ...   CLI와 서버 (P1 구현 중: model, diff, glob, filter, codec 등 순수 로직까지)
 web/
 ├── CLAUDE.md                    web 명령·아키텍처 (web 파일을 다룰 때만 로드). 첫 줄의 @AGENTS.md는 Next.js가 관리
 ├── AGENTS.md                    Next.js가 생성: "번들된 문서(node_modules/next/dist/docs)를 먼저 읽어라"
@@ -79,10 +79,10 @@ docs/
 ├── adr/                         결정 기록 (README.md는 CLAUDE.md가 import)
 ├── spikes/                      기술 검증 기록
 ├── spec-review/                 스펙 검토 결과 중 남은 것 (P3 스펙을 고친 뒤 삭제)
-└── guide/                       팀 방법론 가이드, Claude Code 설정 설명
+└── guide/                       팀 방법론 가이드, Claude Code 설정 설명, 작업 수행 흐름 안내서
 .github/
 ├── pull_request_template.md     작업 번호, 검증 증거, AI 리뷰 지적·반영 건수
-└── workflows/ci.yml             backend, web 검증 (브랜치 보호 필수 체크용. GitHub에서 실행해 본 적은 없음)
+└── workflows/ci.yml             backend, web 검증 (PR과 main push마다 GitHub Actions에서 실행. 브랜치 보호 필수 체크용)
 .worktreeinclude                 claude --worktree 때 복사할 로컬 설정 파일 목록
 ```
 
@@ -101,6 +101,7 @@ docs/
 - 스펙에 없는 새 기능은 그 단계의 스펙 폴더에 요구사항, 설계, 작업을 먼저 더합니다. 작은 변경(한 문장으로 설명되는 diff)은 스펙 없이 바로 요청해도 됩니다.
 - 스펙 문서는 `/spec <스펙>`으로 한 번에 하나씩 씁니다. P3는 P2가 끝나갈 때 `/spec pr-lens-p3-web`으로 요구사항 수정, 설계, 작업 목록 순서로 씁니다.
 - 스펙에서 결정 대기(D-n, G-n)로 표시된 항목은 팀이 정합니다. Claude는 제안값으로 구현하고 임의로 확정하지 않습니다.
+- 구현하면서 뒤 작업이 알아야 할 것이 생기면 `/task`가 `docs/specs/<스펙>/handoff/<번호>.md`에 메모합니다. `/pr-ready`가 이를 스펙 문서(작업 본문의 `주의`, `미정` 줄)에 반영한 뒤 메모 파일을 지웁니다.
 
 **스택 간 규칙**: web이 쓰는 API가 바뀌면 backend DTO와 `web/src/lib/api/types.ts`를 같은 PR에서 함께 바꿉니다. P3 전에는 web이 PR Lens API를 쓰지 않으므로 backend만 바꿉니다. 비즈니스 로직은 backend에만 두고, web은 조회와 표시만 합니다.
 
