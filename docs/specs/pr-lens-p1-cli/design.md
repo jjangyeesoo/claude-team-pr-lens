@@ -446,7 +446,9 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 **MarkdownFormatter**: 순수 함수 `String format(ReviewResult, ReviewContext)`. 구역 순서는 `[불완전 경고] → 요약 → 심각도별 지적 수 → 파일별 지적 → 라인 밖 지적 → 제외 파일 → 사용된 컨텍스트 파일 (N) → 토큰 사용량과 추정 비용`입니다. 요약 전용 모드면 요약 구역에 "PR을 나누세요" 안내와 Changed_Line_Count, 3×Size_Limit를 넣습니다(`ReviewStats`에서 읽음). 강등된 Finding 수는 심각도별 구역 아래 한 줄로 표시합니다. "제외 파일" 구역은 `excludedFileDetails`의 경로와 사유를 함께 씁니다(요구사항 15.14). 줄바꿈은 `\n` 고정입니다.
 
-**ExitCodeResolver** (요구사항 15.9~15.11, 16.7, 16.8): 결과 생성 실패 → 2, 그 외 `blocker ≥ 1` → 1, `incomplete` → 3, 나머지 → 0.
+구현 형식(작업 17.1): `new MarkdownFormatter().format(result, context)`로 부릅니다. 구역 제목은 `## 불완전한 결과`(incomplete일 때만), `## 요약`, `## 심각도별 지적 수`, `## 파일별 지적 (N건)`, `## 라인 밖 지적 (N건)`, `## 제외 파일 (N건)`, `## 사용된 컨텍스트 파일 (N)`, `## 토큰 사용량과 추정 비용`입니다. 파일별 지적은 `verdict`가 `inline_eligible`인 Finding을 `### 경로` 아래 `` - `L라인` **심각도** · 카테고리 ``로, 라인 밖 지적은 `summary_only`인 Finding을 `` - `경로:라인` (사유: …) ``로 씁니다. 정렬은 경로의 코드 포인트 순서(UTF-16 순서가 아님)이고 라인이 없는 것이 먼저입니다. 결과와 컨텍스트의 문자열은 `\r\n`과 `\r`을 `\n`으로 바꾸며, 출력은 줄바꿈 한 번으로 끝납니다.
+
+**ExitCodeResolver** (요구사항 15.9~15.11, 16.7, 16.8): 결과가 있을 때만 정한다. `blocker ≥ 1` → 1, `incomplete` → 3, 나머지 → 0. 결과 생성 실패 → 2는 `cli`의 예외 매핑이 정한다(작업 18.5). `static int resolve(ReviewResult)`로 부른다.
 
 **stdout/stderr 규칙**: stdout에는 최종 결과 한 번만 씁니다. 결과를 모두 문자열로 만든 뒤 한 번에 쓰므로, 도중에 실패하면 stdout은 비어 있습니다(요구사항 1.9, 15.11, 21.6). 진행·경고·오류는 `StderrReporter`(마스킹된 스트림)로만 씁니다.
 
@@ -984,8 +986,9 @@ for attempt in 1..(maxRetries+1):
 | G-11 | ReviewContext 크기 상한이 없음(rule 파일 수·크기 무제한, 스펙만 20개 제한). 입력이 너무 커서 Claude API가 4xx를 내면 종료 코드 2 | 상한을 두지 않음. 총량 상한과 초과 시 동작(경고 후 절단 등)은 미정 | 5, 7.7, 20.3 |
 | G-12 | contents API가 1MB 초과 파일에 빈 `content`를 돌려줌 | `FileFetch.TooLarge`로 받아 경고 후 그 파일을 건너뜀. raw 미디어 타입으로 다시 조회할지는 미정 | 4, 5, 6, 7 |
 | G-13 | 응답의 `file`, `message`, `suggestion`이 이스케이프된 경로·인용문(`<~prlens:…`)일 수 있음. 요구사항 14.8은 왕복만 정하고 응답 쪽 `unescape` 시점을 정하지 않음 | `FindingValidator`가 정규화 전에 `file`만 `unescape`해 비교. `message`·`suggestion`은 표시용이라 그대로 둠. 경로에 태그 꼴이 있는 드문 경우만 영향. 응답 본문에도 `unescape`할지는 미정 | 11.1, 12.4, 14.5, 14.8 |
+| G-14 | LLM이 만든 `summary`, `file`, `message`에 Markdown 구조 문자(줄 시작 `#` 제목, 백틱, 경로 안의 줄바꿈)가 있을 때 출력을 어떻게 다룰지 요구사항에 없음 | 현재 구현(작업 17.1): `message`·`suggestion`은 이어지는 줄을 들여써 목록 안에 두고, `summary`와 경로는 원문 그대로 씀. 그래서 요약에 `## …` 줄이 있으면 구역이 하나 더 생기고, 경로의 백틱·줄바꿈은 코드 스팬이나 목록을 깰 수 있음. 이스케이프할지와 방법은 미정 | 17.1, 20.1 |
 
-G-8~G-12는 스펙 검토(2026-10-04)에서 추가한 항목이고, G-13은 작업 11.1~11.4 리뷰에서 추가했습니다. "미정"으로 적은 부분은 팀이 정합니다.
+G-8~G-12는 스펙 검토(2026-10-04)에서 추가한 항목이고, G-13은 작업 11.1~11.4 리뷰에서, G-14는 작업 17 리뷰에서 추가했습니다. "미정"으로 적은 부분은 팀이 정합니다.
 
 ## Testing Strategy
 

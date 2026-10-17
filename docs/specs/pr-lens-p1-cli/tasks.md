@@ -368,18 +368,18 @@
     - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries.configurations()`는 요구사항 18.6 범위 안의 값만 내므로 Property 38의 범위 밖 값은 따로 만듭니다. `pricing`에는 기본 단가 모델이 항상 있고(G-10 병합 전제) 그 단가는 기본값과 다를 수 있으므로, "기본 모델 단가를 적지 않으면 기본값 유지"는 부분 지정 쪽이나 예시 테스트로 확인합니다. 비용 상한은 소수 넷째 자리까지만 나와 다섯째 자리 이하 처리는 검증되지 않습니다. 패턴 중복은 한 목록 안에서만 없고, 같은 패턴이 추가 목록과 해제 목록에 함께 나올 수 있습니다
     - **Validates: Requirements 18.5, 18.6, 18.7, 18.10, 18.11**
 
-- [ ] 17. 출력 형식과 종료 코드
-  - [ ] 17.1 `MarkdownFormatter` 구현
+- [x] 17. 출력 형식과 종료 코드
+  - [x] 17.1 `MarkdownFormatter` 구현
     - 구역 순서: [불완전 경고(사유, 불완전 Chunk 파일, 부분 결과 표시)] → 요약(요약 전용이면 "PR을 나누세요", Changed_Line_Count, 3×Size_Limit) → 심각도별 지적 수(4개 모두, 강등 수 한 줄) → 파일별 지적((경로, 라인) 오름차순, 없는 `suggestion`·`basis.ref` 생략) → 라인 밖 지적(사유 포함) → 제외 파일(경로와 제외 사유) → 사용된 컨텍스트 파일 (N)(출처 → 경로 순, 0개 안내) → 토큰 사용량과 추정 비용(넷째 자리, 단가 없으면 "알 수 없음")
     - 빈 구역도 제목과 0건 표시, 줄바꿈은 `\n`
     - 주의(15 리뷰): `inline_eligible`의 `line`이 null이 아니라는 보장은 코덱의 읽기 검증이 아니라 10.4의 판정 순서에서 옵니다. 포매터는 엔진 결과를 직접 받으므로 코덱 검증에 기대지 않고, 라인 밖 지적(`not_target_file`, `line_missing`)은 `line`이 null일 수 있습니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 8.1, 8.3, 8.4, 11.6, 12.8, 13.9, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.14, 16.3, 20.5, 22.5_
-  - [ ]* 17.2 Property 35: Markdown 구조와 개수 일관성 테스트
+  - [x]* 17.2 Property 35: Markdown 구조와 개수 일관성 테스트
     - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries.findings()`는 `file`을 Finding마다 따로 뽑아 같은 파일의 Finding이 거의 겹치지 않으므로, "같은 파일 안 라인 오름차순"(요구사항 15.5)을 보려면 작은 경로 풀에서 `file`을 뽑는 생성기를 따로 둡니다. `file`은 드물게 `""`이고 `summary`·`message`·`suggestion`도 `""`일 수 있습니다. 문자열에 `\r\n`, 탭, 백틱은 나오지만 `#`, `-`, `|` 같은 Markdown 표식은 나오지 않아, 내용이 구역 구조를 깨는 경우는 이 생성기로 검증되지 않습니다
     - **Validates: Requirements 8.1, 8.3, 11.6, 12.8, 15.2, 15.3, 15.4, 15.5, 15.13, 16.3, 22.5**
-  - [ ] 17.3 `ExitCodeResolver` 구현 (blocker ≥ 1 → 1, incomplete → 3, 그 외 0)
+  - [x] 17.3 `ExitCodeResolver` 구현 (blocker ≥ 1 → 1, incomplete → 3, 그 외 0)
     - _Requirements: 15.9, 15.10, 16.7, 16.8_
-  - [ ]* 17.4 Property 36: 종료 코드 결정 테스트
+  - [x]* 17.4 Property 36: 종료 코드 결정 테스트
     - **Validates: Requirements 15.9, 15.10, 16.7, 16.8**
 
 - [ ] 18. CLI 명령과 파이프라인
@@ -404,6 +404,7 @@
     - 주의(3 리뷰): `RetryPolicy` 생성자는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 설정 검증(`ConfigLoader`, 요구사항 18.6)이 조립보다 먼저 돌아야 사용자에게 설정 오류로 보입니다
     - 주의(3 리뷰): 결과 문자열이 `\n`으로 끝나지 않으면 끝 글자가 비밀값 첫 글자와 같을 때(`g`, `s` 등) `flush()`만으로는 그 글자가 나오지 않습니다. 결과 끝에 `\n`을 보장하고 쓴 뒤 flush합니다(스트림을 닫는 것은 18.2의 주의대로 `PrLensMain`에서만). 18.6 통합 테스트에 "`\n` 없이 `s`로 끝나는 출력이 끝까지 나온다" 사례를 넣습니다 (스펙을 읽고 추론한 항목)
     - 주의(15 리뷰): `ResultCodec.write`의 결과는 `\n`으로 끝나지 않습니다. `--format json`은 결과 뒤에 `\n`을 붙여 stdout에 한 번에 쓰고 flush합니다(끝의 `\n`은 `read`가 받아들입니다)
+    - 주의(17 리뷰): `MarkdownFormatter.format`의 결과는 이미 `\n` 하나로 끝납니다. Markdown 출력에는 `\n`을 더 붙이지 않고, `--format json`일 때만 `ResultCodec.write` 결과에 `\n`을 붙입니다. 무조건 덧붙이면 stdout이 `\n\n`으로 끝나 20.2의 골든 비교가 어긋납니다
     - _Requirements: 15.7, 15.8, 17.2_
   - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -411,6 +412,7 @@
     - _Requirements: 1.14, 3.10, 13.12, 15.8, 16.6, 20.3, 20.4, 20.5, 21.7_
   - [ ] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
     - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
+    - 주의(17 리뷰): `ExitCodeResolver.resolve(ReviewResult)`는 정적 메서드이고 0, 1, 3만 돌려줍니다. 결과를 만들지 못한 경우의 종료 코드 2는 이 매핑이 정합니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
@@ -446,10 +448,12 @@
     - `snapshot.json`과 `context.json`을 읽는 픽스처 로더를 `testkit`에 작성(테스트 전용. `model`에는 Jackson 애너테이션을 넣지 않음)
     - 픽스처 폴더를 `.gitattributes`에 `-text`로 지정(줄 끝 변환 방지). Stop hook은 `.md`만 바뀐 경우 검증을 건너뛰므로 `expected.md`만 고쳤을 때는 `./gradlew test`를 직접 실행
     - 주의(15 리뷰): `ResultCodec.read`는 `schemaVersion`이 1이 아니거나, `inline_eligible`인데 `line`이 null이거나, `line_missing`인데 `line`이 있거나, `excludedFiles`와 `excludedFileDetails[].path`가 순서까지 같지 않으면 `CodecException`으로 거부합니다. 손으로 쓴 `expected-result.json`도 이 조건을 지켜야 합니다
+    - 주의(17 리뷰): `expected.md`는 `MarkdownFormatter` 출력과 바이트까지 같아야 합니다. 손으로 쓰지 말고 포매터 출력으로 만든 뒤 검토하며, 형식은 `design.md`의 "구현 형식(작업 17.1)"을 따릅니다
     - _Requirements: 14.7, 17.10, 17.11, 17.12_
   - [ ] 20.2 골든 파이프라인 테스트 작성 (픽스처의 스냅샷과 컨텍스트를 주입해 엔진과 출력을 실행. 가짜 `LlmClient`, stdout 바이트와 종료 코드 비교. `--format json` 출력 전체가 `ResultCodec`으로 다시 읽히는지도 확인)
     - `PrFetcher`와 `ContextCollector`는 이 테스트를 거치지 않음(각자의 테스트 7.x, 8.x로 검증)
     - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
+    - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
   - [ ] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - _Requirements: 17.12_
@@ -493,6 +497,7 @@
   | D-7 스펙 head SHA fallback | 2.1, 8.9, 8.10, 11.5 |
   | D-8 리뷰 대상 저장소 한정 | 결정되면 요구사항과 작업을 추가 |
   | G-13 응답 `file`의 이스케이프 해제 (설계 "요구사항 공백") | 10.4, 12.1 |
+  | G-14 LLM이 만든 문자열의 Markdown 구조 문자 처리 (설계 "요구사항 공백") | 17.1, 20.1 |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
