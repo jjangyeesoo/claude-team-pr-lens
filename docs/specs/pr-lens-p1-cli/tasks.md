@@ -395,6 +395,7 @@
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 `FileDescriptor.out`/`err`를 직접 열므로 `close()`하면 프로세스의 실제 표준 스트림이 닫힙니다. `close()`는 `PrLensMain`의 `System.exit` 직전에만 하고, 테스트가 같은 JVM에서 부르는 경로(`CliPipeline`, 조립 함수)에서는 닫지 않고 `\n`으로 끝낸 뒤 flush합니다. 실제로 닫히는지는 직접 실행해 확인하지 않았으므로 18.6의 하위 프로세스 테스트에서 확인합니다 (스펙을 읽고 추론한 항목)
     - 주의(3 리뷰): `SecretMasker`는 값을 다듬지 않고 받은 문자열 그대로 찾습니다. 환경변수 값 끝에 공백이나 `\r`이 있는데(cmd의 `set GITHUB_TOKEN=abc & ...`) 요청에는 다듬은 값을 쓰면 오류 메시지에 나온 토큰이 가려지지 않습니다. 마스커에 넣는 값과 자격 증명에 쓰는 값을 같은 문자열로 하거나 둘 다 등록합니다
     - 주의(3 리뷰): `MaskingPrintStream`은 받은 바이트를 UTF-8로 풀어 다시 쓰므로 UTF-8이 아닌 바이트는 대체 문자가 됩니다. Java 17의 Windows 기본 문자 집합은 UTF-8이 아니므로 `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시합니다. Logback encoder의 기본 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
+    - 주의(16 리뷰): `ConfigLoader`는 사용자 홈을 스스로 찾지 않습니다. `new ConfigLoader(Path.of("").toAbsolutePath(), Path.of(System.getProperty("user.home")))`처럼 현재 작업 폴더와 홈을 넘깁니다. `ConfigException.getMessage()`는 문제 전체를 여러 줄로 담고 잘못된 제외 패턴 원문을 포함하므로, 마스커를 설치한 뒤 그대로 stderr에 씁니다
     - _Requirements: 1.9, 1.10, 3.11, 15.12, 18.7, 19.1, 19.2, 19.3, 19.4, 22.3_
   - [ ] 18.3 파이프라인 조립 구현
     - Spring 컨텍스트 없이 `HttpGitHubClient`, `PrFetcher`, `ContextCollector`, `RetryingLlmClient(AnthropicLlmClient)`, `ReviewEngine`을 직접 조립
@@ -417,6 +418,7 @@
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 실제 `FileDescriptor`를 열어 단위 테스트가 없고, 둘이 서로 바뀌어도 실패하는 테스트가 없습니다. 하위 프로세스로 실행해 결과는 stdout, 오류는 stderr에 BOM 없는 UTF-8로 나오는지, `\n` 없이 `s`로 끝나는 출력이 끝까지 나오는지, `PrLensMain`이 `System.exit` 직전에 스트림을 닫아도 출력이 잘리지 않는지 한 번 확인합니다
+    - 주의(16 리뷰): 설정 사례에서 문자열 값은 큰따옴표로 감쌉니다. 따옴표 없는 `model: 5.5`나 `effort: yes`는 `llm.model`/`llm.effort` 오류가 됩니다. 단가표에 값 없이 적은 모델(`"m":`)은 네 단가 누락 오류입니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
   - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요
