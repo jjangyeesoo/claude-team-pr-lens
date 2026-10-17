@@ -48,6 +48,7 @@ Glossary 용어는 밑줄 표기(`Diff_Parser`), 클래스는 붙여 쓴 이름(
 | G-11 | 컨텍스트 크기 상한 없음 | 팀 | 상한 없음 |
 | G-12 | 1MB 초과 컨텍스트 파일 | 팀 | 경고 후 건너뜀 |
 | G-13 | 응답 `file`이 이스케이프된 경로일 때의 비교 | 팀 | 비교 전 `file`만 `unescape` |
+| G-14 | LLM이 만든 문자열(`summary`, `file`)의 Markdown 구조 문자 처리 | 팀 | `message`·`suggestion`은 들여써 목록 안에 두고 `summary`·경로는 원문 그대로 |
 
 ## 관련 문서
 - 패키지 구조: [ADR 0003](../../adr/0003-role-based-flat-packages.md)
