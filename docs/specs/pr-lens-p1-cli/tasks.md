@@ -256,6 +256,7 @@
     - `basis`, `demotion`, 판정 필드 외에는 변경하지 않음
     - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
     - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
+    - 주의(15 리뷰): `ResultCodec.read`는 `inline_eligible`인데 `line`이 null인 Finding을 거부하지만 `write`는 막지 않습니다. 판정이 이 조합을 만들면 `--format json` 출력이 다시 읽히지 않고 20.2에서야 드러납니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
@@ -344,7 +345,7 @@
     - Spring Boot 4의 Jackson 3 패키지(`tools.jackson`)는 spike 결과를 따름
     - 주의(선머지 리뷰): `model` 타입은 불변식 위반과 음수 토큰에 `IllegalArgumentException`, 필수 필드 null에 `NullPointerException`을 던집니다. 코덱이 생성 전에 직접 검증해야(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`) 필드 경로를 담은 `CodecException`이 나가고 `PrLensException`이 아닌 예외가 새지 않습니다. `Usage`는 `estimatedCostUsd`를 `setScale(4, HALF_UP)`으로 맞추므로 `0.1`을 읽으면 `0.1000`으로 저장됩니다
     - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries`는 토큰 수를 `Long.MAX_VALUE`까지, `estimatedCostUsd`를 유효 숫자 18자리(scale 4)까지 냅니다. 토큰 수를 `int`로 읽거나 비용이 `double`을 한 번이라도 거치면, 작은 값을 쓰는 예시 테스트는 통과하고 15.2의 Property 19에서 실패합니다
-    - 결정(15.1): `inline_eligible`인데 `line`이 null이거나 `line_missing`인데 `line`이 있는 JSON은 `findings[i].line` 경로의 `CodecException`으로 거부합니다. 읽는 쪽에서 막으면 17.1의 (경로, 라인) 정렬이 null `line`을 견디지 않아도 되기 때문입니다. 쓰는 쪽은 막지 않으므로 Property 19에는 영향이 없습니다
+    - 결정(15.1): `inline_eligible`인데 `line`이 null이거나 `line_missing`인데 `line`이 있는 JSON은 `findings[i].line` 경로의 `CodecException`으로 거부합니다. 읽는 쪽에서 막아 두면 코덱을 거친 결과가 서로 모순된 판정을 갖지 않기 때문입니다(`MarkdownFormatter`는 엔진 결과를 직접 받으므로 이 검증에 기대지 않습니다. 17.1의 주의 참고). 쓰는 쪽은 막지 않으므로 Property 19에는 영향이 없습니다
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.7, 12.9, 16.4_
   - [x]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
@@ -371,6 +372,7 @@
   - [ ] 17.1 `MarkdownFormatter` 구현
     - 구역 순서: [불완전 경고(사유, 불완전 Chunk 파일, 부분 결과 표시)] → 요약(요약 전용이면 "PR을 나누세요", Changed_Line_Count, 3×Size_Limit) → 심각도별 지적 수(4개 모두, 강등 수 한 줄) → 파일별 지적((경로, 라인) 오름차순, 없는 `suggestion`·`basis.ref` 생략) → 라인 밖 지적(사유 포함) → 제외 파일(경로와 제외 사유) → 사용된 컨텍스트 파일 (N)(출처 → 경로 순, 0개 안내) → 토큰 사용량과 추정 비용(넷째 자리, 단가 없으면 "알 수 없음")
     - 빈 구역도 제목과 0건 표시, 줄바꿈은 `\n`
+    - 주의(15 리뷰): `inline_eligible`의 `line`이 null이 아니라는 보장은 코덱의 읽기 검증이 아니라 10.4의 판정 순서에서 옵니다. 포매터는 엔진 결과를 직접 받으므로 코덱 검증에 기대지 않고, 라인 밖 지적(`not_target_file`, `line_missing`)은 `line`이 null일 수 있습니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 8.1, 8.3, 8.4, 11.6, 12.8, 13.9, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.14, 16.3, 20.5, 22.5_
   - [ ]* 17.2 Property 35: Markdown 구조와 개수 일관성 테스트
     - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries.findings()`는 `file`을 Finding마다 따로 뽑아 같은 파일의 Finding이 거의 겹치지 않으므로, "같은 파일 안 라인 오름차순"(요구사항 15.5)을 보려면 작은 경로 풀에서 `file`을 뽑는 생성기를 따로 둡니다. `file`은 드물게 `""`이고 `summary`·`message`·`suggestion`도 `""`일 수 있습니다. 문자열에 `\r\n`, 탭, 백틱은 나오지만 `#`, `-`, `|` 같은 Markdown 표식은 나오지 않아, 내용이 구역 구조를 깨는 경우는 이 생성기로 검증되지 않습니다
@@ -401,6 +403,7 @@
     - 출력 문자열을 모두 만든 뒤 stdout에 한 번만 쓰기, `--format json`은 `ResultCodec` 결과 하나만
     - 주의(3 리뷰): `RetryPolicy` 생성자는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 설정 검증(`ConfigLoader`, 요구사항 18.6)이 조립보다 먼저 돌아야 사용자에게 설정 오류로 보입니다
     - 주의(3 리뷰): 결과 문자열이 `\n`으로 끝나지 않으면 끝 글자가 비밀값 첫 글자와 같을 때(`g`, `s` 등) `flush()`만으로는 그 글자가 나오지 않습니다. 결과 끝에 `\n`을 보장하고 쓴 뒤 flush합니다(스트림을 닫는 것은 18.2의 주의대로 `PrLensMain`에서만). 18.6 통합 테스트에 "`\n` 없이 `s`로 끝나는 출력이 끝까지 나온다" 사례를 넣습니다 (스펙을 읽고 추론한 항목)
+    - 주의(15 리뷰): `ResultCodec.write`의 결과는 `\n`으로 끝나지 않습니다. `--format json`은 결과 뒤에 `\n`을 붙여 stdout에 한 번에 쓰고 flush합니다(끝의 `\n`은 `read`가 받아들입니다)
     - _Requirements: 15.7, 15.8, 17.2_
   - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -442,9 +445,11 @@
     - 픽스처마다 `snapshot.json`, `context.json`, `llm-responses/*.json`, `expected-result.json`, `expected.md`. 비밀정보·개인정보는 가짜 값
     - `snapshot.json`과 `context.json`을 읽는 픽스처 로더를 `testkit`에 작성(테스트 전용. `model`에는 Jackson 애너테이션을 넣지 않음)
     - 픽스처 폴더를 `.gitattributes`에 `-text`로 지정(줄 끝 변환 방지). Stop hook은 `.md`만 바뀐 경우 검증을 건너뛰므로 `expected.md`만 고쳤을 때는 `./gradlew test`를 직접 실행
+    - 주의(15 리뷰): `ResultCodec.read`는 `schemaVersion`이 1이 아니거나, `inline_eligible`인데 `line`이 null이거나, `line_missing`인데 `line`이 있거나, `excludedFiles`와 `excludedFileDetails[].path`가 순서까지 같지 않으면 `CodecException`으로 거부합니다. 손으로 쓴 `expected-result.json`도 이 조건을 지켜야 합니다
     - _Requirements: 14.7, 17.10, 17.11, 17.12_
   - [ ] 20.2 골든 파이프라인 테스트 작성 (픽스처의 스냅샷과 컨텍스트를 주입해 엔진과 출력을 실행. 가짜 `LlmClient`, stdout 바이트와 종료 코드 비교. `--format json` 출력 전체가 `ResultCodec`으로 다시 읽히는지도 확인)
     - `PrFetcher`와 `ContextCollector`는 이 테스트를 거치지 않음(각자의 테스트 7.x, 8.x로 검증)
+    - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
   - [ ] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - _Requirements: 17.12_
