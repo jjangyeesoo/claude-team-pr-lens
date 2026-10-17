@@ -336,17 +336,17 @@
 
 ### T3 CLI 출력 (C)
 
-- [ ] 15. `ResultCodec` 구현
-  - [ ] 15.1 직렬화·역직렬화 구현
+- [x] 15. `ResultCodec` 구현
+  - [x] 15.1 직렬화·역직렬화 구현
     - Jackson 트리 모델로 직접 매핑(애너테이션 없음), `schemaVersion: 1`, camelCase 필드, enum 소문자 snake_case, 선택 필드는 키 유지 + `null`, 목록은 `[]`
     - `estimatedCostUsd`는 JSON 숫자 ↔ `BigDecimal`(부동소수점 경유 금지)
     - 오류: 필드 경로(`findings[2].severity`)와 enum 허용 값, 문법 오류 줄·열, 음수 토큰 경로. 모르는 필드 무시
     - Spring Boot 4의 Jackson 3 패키지(`tools.jackson`)는 spike 결과를 따름
     - 주의(선머지 리뷰): `model` 타입은 불변식 위반과 음수 토큰에 `IllegalArgumentException`, 필수 필드 null에 `NullPointerException`을 던집니다. 코덱이 생성 전에 직접 검증해야(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`) 필드 경로를 담은 `CodecException`이 나가고 `PrLensException`이 아닌 예외가 새지 않습니다. `Usage`는 `estimatedCostUsd`를 `setScale(4, HALF_UP)`으로 맞추므로 `0.1`을 읽으면 `0.1000`으로 저장됩니다
     - 주의(2.4~2.6 리뷰): `ReviewResultArbitraries`는 토큰 수를 `Long.MAX_VALUE`까지, `estimatedCostUsd`를 유효 숫자 18자리(scale 4)까지 냅니다. 토큰 수를 `int`로 읽거나 비용이 `double`을 한 번이라도 거치면, 작은 값을 쓰는 예시 테스트는 통과하고 15.2의 Property 19에서 실패합니다
-    - 미정(여기서 정함): `verdict`가 `inline_eligible`인데 `line`이 null인 JSON(또는 `line_missing`인데 `line`이 있는 JSON)을 필드 경로 오류로 거부할지, 그대로 받을지. `model`은 이 조합을 막지 않고 `testkit` 생성기는 이 조합을 내지 않으므로 속성 테스트로는 드러나지 않습니다. 그대로 받기로 하면 17.1의 (경로, 라인) 정렬이 null `line`을 견뎌야 하므로 17.1에 알립니다
+    - 결정(15.1): `inline_eligible`인데 `line`이 null이거나 `line_missing`인데 `line`이 있는 JSON은 `findings[i].line` 경로의 `CodecException`으로 거부합니다. 읽는 쪽에서 막으면 17.1의 (경로, 라인) 정렬이 null `line`을 견디지 않아도 되기 때문입니다. 쓰는 쪽은 막지 않으므로 Property 19에는 영향이 없습니다
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.7, 12.9, 16.4_
-  - [ ]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
+  - [x]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
 
 - [ ] 16. 설정 파일
