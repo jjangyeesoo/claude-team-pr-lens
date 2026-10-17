@@ -350,21 +350,21 @@
   - [x]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
 
-- [ ] 16. 설정 파일
-  - [ ] 16.1 `ConfigLoader`, `ConfigException` 구현
+- [x] 16. 설정 파일
+  - [x] 16.1 `ConfigLoader`, `ConfigException` 구현
     - `--config` 경로만 읽고 없으면 대체 없이 오류, 옵션이 없으면 `./.prlens.yml` → `~/.prlens.yml` 첫 파일, 없으면 기본값
     - UTF-8로 읽고 허용 키와 대조, 범위 검증(요구사항 18.6, effort 허용 값 포함), 모든 문제를 모아 한 번에 보고
     - `cost.pricing`은 모델 이름 단위로 기본 단가표에 병합, 지정한 모델은 네 단가 필수(설계 G-10)
     - 비밀 키 이름(`token`, `githubToken`, `apiKey`, `anthropicApiKey`, 대소문자·`_`/`-` 무시)은 값을 읽지 않고 환경변수 안내
     - `exclude.add`/`exclude.remove` 패턴을 `GlobMatcher`로 검증
     - 주의(선머지 리뷰): `Configuration`은 값 범위를 검증하지 않고, `maxCostUsdPerReview`를 `setScale(4, HALF_UP)`으로 맞춥니다. 범위 검사(0.01~100.00)는 `Configuration`을 만들기 전 원본 값에 합니다. 만든 뒤에 하면 `0.00996`이 `0.0100`으로 반올림돼 통과합니다. `GlobMatcher.validate`는 `GlobSyntaxException(pattern, reason)`을 던지고, 이 타입은 2.3에서 만들어 두었습니다(던지는 조건은 6.1). `pricing` 맵은 null 키·값을 거부합니다
-    - 미정(여기서 정함): 설정 파일의 `0.123456`처럼 소수 다섯째 자리 이하가 있는 비용 상한을 오류로 거부할지 `0.1235`로 반올림할지
+    - 결정(16.1): 소수 다섯째 자리 이하가 있는 비용 상한(`0.123456`)은 `0.1235`로 반올림합니다(HALF_UP). `Configuration`이 이미 이렇게 맞추고 요구사항 18.6은 범위 안의 값을 유효하다고 하므로 거부하지 않습니다. 범위 검사(0.01~100.00)는 반올림 전 원본 값에 하므로 `0.00996`은 거부합니다
     - _Requirements: 3.11, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 19.1, 22.2, 22.3_
-  - [ ] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
+  - [x] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
     - 주의(선머지 리뷰): `maxCostUsdPerReview`는 scale 4라 그대로 쓰면 `0.5000`으로 나옵니다. 단가(`ModelPricing`)는 `stripTrailingZeros`를 거쳐 `20.00`이 `2E+1`이 되므로 `toPlainString()`으로 씁니다. `pricing`은 모델 이름의 자연 순서로 순회됩니다
     - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries`는 `model`뿐 아니라 `pricing`의 키에도 `true`, `123`, `null`, `model: v1`, `"quoted"`, `a\b`를 냅니다. `pricing`의 키도 큰따옴표로 감싸고 `"`와 `\`를 이스케이프해야 16.3의 round-trip이 성립합니다
     - _Requirements: 18.10_
-  - [ ]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
+  - [x]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
     - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries.configurations()`는 요구사항 18.6 범위 안의 값만 내므로 Property 38의 범위 밖 값은 따로 만듭니다. `pricing`에는 기본 단가 모델이 항상 있고(G-10 병합 전제) 그 단가는 기본값과 다를 수 있으므로, "기본 모델 단가를 적지 않으면 기본값 유지"는 부분 지정 쪽이나 예시 테스트로 확인합니다. 비용 상한은 소수 넷째 자리까지만 나와 다섯째 자리 이하 처리는 검증되지 않습니다. 패턴 중복은 한 목록 안에서만 없고, 같은 패턴이 추가 목록과 해제 목록에 함께 나올 수 있습니다
     - **Validates: Requirements 18.5, 18.6, 18.7, 18.10, 18.11**
 

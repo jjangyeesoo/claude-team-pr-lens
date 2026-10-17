@@ -615,6 +615,7 @@ cost:
 - `effort` 허용 값은 `low`, `medium`, `high`, `xhigh`, `max`입니다. 분할 모드의 모든 Chunk는 같은 모델과 effort로 요청합니다. 요청 사이에 effort를 바꾸면 프롬프트 캐시가 깨집니다.
 - `ConfigLoader`는 YAML을 트리로 읽은 뒤 허용 키 목록과 대조해 **모든 문제를 모아** 한 번에 보고합니다. 키 이름이 `token`, `githubToken`, `apiKey`, `anthropicApiKey`(대소문자·`_`/`-` 무시)와 같으면 값을 읽지 않고 환경변수 안내 오류를 냅니다.
 - `ConfigPrinter`는 모든 항목을 위 순서로 빠짐없이 쓰고, 문자열은 항상 큰따옴표로 감쌉니다. `**/x`처럼 `*`로 시작하는 값은 따옴표 없이 쓰면 YAML alias로 해석되므로 round-trip(요구사항 18.11)에 필요합니다.
+- 구현 형식(작업 16.1, 16.2): `new ConfigLoader(workingDir, homeDir).load(Path explicit)`(explicit이 null이면 기본 위치)와 `parse(String yaml)`로 읽고, `ConfigPrinter.print(Configuration)`로 씁니다. YAML은 snakeyaml의 노드 트리로 읽어 숫자를 원문 문자열에서 `BigDecimal`로 만듭니다. 값이 없는 섹션(`exclude:`)은 빈 섹션으로 받고, 숫자나 `true`처럼 읽히는 문자열 값은 큰따옴표가 필요합니다. 문제는 `ConfigException.problems()`의 `Problem(item, message)` 목록이며 항목 이름은 `llm.effort`, `exclude.add[1]`, `cost.pricing.<모델>.input`처럼 점으로 잇고, 항목이 아닌 문제는 `syntax`, `encoding`, `--config`, `file`입니다. 문자열 값은 오류 메시지에 싣지 않고, 비밀 항목은 `token`·`githubToken` → `GITHUB_TOKEN`, `apiKey`·`anthropicApiKey` → `ANTHROPIC_API_KEY`로 안내합니다. 소수 다섯째 자리 이하가 있는 비용 상한은 반올림하고 범위는 반올림 전 값으로 검사합니다. `ConfigPrinter`의 비용 상한은 소수 둘째 자리 이상(`0.50`), 단가는 평문(`20`)으로 씁니다.
 
 
 ## Correctness Properties
