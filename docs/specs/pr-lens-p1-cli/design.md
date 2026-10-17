@@ -446,6 +446,8 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 **MarkdownFormatter**: 순수 함수 `String format(ReviewResult, ReviewContext)`. 구역 순서는 `[불완전 경고] → 요약 → 심각도별 지적 수 → 파일별 지적 → 라인 밖 지적 → 제외 파일 → 사용된 컨텍스트 파일 (N) → 토큰 사용량과 추정 비용`입니다. 요약 전용 모드면 요약 구역에 "PR을 나누세요" 안내와 Changed_Line_Count, 3×Size_Limit를 넣습니다(`ReviewStats`에서 읽음). 강등된 Finding 수는 심각도별 구역 아래 한 줄로 표시합니다. "제외 파일" 구역은 `excludedFileDetails`의 경로와 사유를 함께 씁니다(요구사항 15.14). 줄바꿈은 `\n` 고정입니다.
 
+구현 형식(작업 17.1): `new MarkdownFormatter().format(result, context)`로 부릅니다. 구역 제목은 `## 불완전한 결과`(incomplete일 때만), `## 요약`, `## 심각도별 지적 수`, `## 파일별 지적 (N건)`, `## 라인 밖 지적 (N건)`, `## 제외 파일 (N건)`, `## 사용된 컨텍스트 파일 (N)`, `## 토큰 사용량과 추정 비용`입니다. 파일별 지적은 `verdict`가 `inline_eligible`인 Finding을 `### 경로` 아래 `` - `L라인` **심각도** · 카테고리 ``로, 라인 밖 지적은 `summary_only`인 Finding을 `` - `경로:라인` (사유: …) ``로 씁니다. 정렬은 경로의 코드 포인트 순서(UTF-16 순서가 아님)이고 라인이 없는 것이 먼저입니다. 결과와 컨텍스트의 문자열은 `\r\n`과 `\r`을 `\n`으로 바꾸며, 출력은 줄바꿈 한 번으로 끝납니다.
+
 **ExitCodeResolver** (요구사항 15.9~15.11, 16.7, 16.8): 결과 생성 실패 → 2, 그 외 `blocker ≥ 1` → 1, `incomplete` → 3, 나머지 → 0.
 
 **stdout/stderr 규칙**: stdout에는 최종 결과 한 번만 씁니다. 결과를 모두 문자열로 만든 뒤 한 번에 쓰므로, 도중에 실패하면 stdout은 비어 있습니다(요구사항 1.9, 15.11, 21.6). 진행·경고·오류는 `StderrReporter`(마스킹된 스트림)로만 씁니다.
