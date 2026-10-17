@@ -582,6 +582,9 @@ PRD 5장 필드 이름(camelCase)을 유지하고 확장 필드를 더합니다.
 
 - 구현은 Jackson 트리 모델(`JsonNode`)로 직접 매핑합니다(애너테이션 없이). 오류 경로(`findings[2].severity`)를 직접 만들 수 있고, 모르는 필드 무시(요구사항 10.6)도 명시적으로 처리됩니다. 문법 오류의 줄/열은 Jackson 파서 예외의 위치 정보를 씁니다.
 - `estimatedCostUsd`는 JSON 숫자로 쓰고 `BigDecimal`로 읽습니다(부동소수점 경유 금지).
+- `ResultCodec`은 `String write(ReviewResult)`와 `ReviewResult read(String)`을 가진 `final` 클래스입니다(인스턴스를 만들어 씀). 읽기 오류는 `CodecException`(`PrLensException`의 하위 타입)으로 나가며 `path()`(필드 경로. 문법 오류면 null), `allowed()`(열거형 허용 값), `line()`·`column()`(문법 오류 위치)을 가집니다. 쓰기는 2칸 들여쓰기, 줄바꿈 `\n`입니다(끝에 줄바꿈 없음).
+- 읽을 때 `schemaVersion`이 1이 아니면 `schemaVersion` 경로의 `CodecException`으로 거부합니다. 선택 필드(`line`, `suggestion`, `basis.ref`, `demotion`, `summaryOnlyReason`, `estimatedCostUsd`, `fileCountGap`, `lastStatusCode`, `rawResponseExcerpt`)는 키가 없어도 null로 받고, 그 밖의 필드는 없거나 null이면 필드 경로 오류입니다.
+- `model`의 불변식(`status`와 `incompleteReasons`, `verdict`와 `summaryOnlyReason`, `excludedFiles`와 `excludedFileDetails`)과 `line`(`inline_eligible`이면 있어야 하고 `line_missing`이면 null이어야 함)은 객체를 만들기 전에 코덱이 검사해 `CodecException`으로 보고합니다.
 - Spring Boot 4는 Jackson 3(`tools.jackson` 패키지)을 기본으로 씁니다. `jackson-annotations`만 `com.fasterxml.jackson.core`에 남습니다. 스타터의 Jackson 버전을 따릅니다.
 
 ### 설정 파일 (D-5 제안, 요구사항 18)

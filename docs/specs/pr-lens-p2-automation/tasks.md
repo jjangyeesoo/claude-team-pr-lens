@@ -278,6 +278,7 @@
   - [ ] 16.2 쓰기 메서드 구현 (`markRunning`, `completeRun`(결과·usage·시각과 Finding 전부를 1 트랜잭션에), `failRun`, `markRunningAsInterrupted`, `saveCliRun`, `recordPublished`, `markSuperseded`, `recordSummaryComment`, `recordPublishError`, `recordFindingOutcomes`, `updateFeedback`)
     - 조건부 갱신 가드, 트랜잭션 경계 표, U+0000 치환(G-4), 비용은 `NUMERIC`으로 scale 보존, `completeRun`은 가져온 base SHA로 `base_sha` 갱신(G-2), `recordFindingOutcomes`는 재사용한 Line_Comment의 기존 Feedback_State 복사
     - JSONB 컬럼 네 개(`excluded_files`, `excluded_file_details`, `incomplete_reasons`, `incomplete_details`)는 P1 `ResultCodec`으로 `ReviewResult` 전체를 직렬화한 트리에서 해당 노드를 꺼내 저장하고, 읽을 때 다시 끼워 역직렬화
+    - 주의(P1 15 리뷰): P1 `ResultCodec`은 `String`만 주고받으므로 트리에서 노드를 꺼내거나 다시 끼우려면 별도의 `JsonMapper`로 파싱해야 합니다. 이때 `DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS`를 켜지 않으면 `usage.estimatedCostUsd`가 `double`을 거쳐 정밀도를 잃습니다. 다시 끼운 트리는 `schemaVersion: 1`과 `excludedFiles`·`excludedFileDetails` 일치 검사를 통과해야 `read`가 받습니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 4.2, 4.4, 4.5, 4.8, 7.8, 7.13, 7.17, 8.1, 8.2, 8.3, 9.1, 13.3, 14.2, 15.5, 15.6_
   - [ ] 16.3 조회 메서드 구현 (`findRun`, `findFindings`, `findPullRequest`, `listRepositories`, `listPullRequests`(`JOIN LATERAL`), `listRuns`, `listFindings`, `listFeedbackTargets`, 복구용 목록)
     - `count(*) OVER ()`로 전체 수, 대소문자 무시 저장소 조회는 `updated_at`이 가장 최근인 행(G-9)
