@@ -27,7 +27,6 @@ import java.util.function.BiFunction;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamWriteFeature;
 import tools.jackson.core.TokenStreamLocation;
-import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.core.util.DefaultIndenter;
 import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.DeserializationFeature;
@@ -191,15 +190,16 @@ public final class ResultCodec {
   private static JsonNode parse(String json) {
     try {
       return MAPPER.readTree(json);
-    } catch (StreamReadException e) {
+    } catch (JacksonException e) {
       TokenStreamLocation location = e.getLocation();
-      int line = location == null ? -1 : location.getLineNr();
-      int column = location == null ? -1 : location.getColumnNr();
+      if (location == null) {
+        throw new CodecException(
+            "JSON을 읽을 수 없습니다: " + e.getOriginalMessage(), null, List.of(), null, null);
+      }
+      int line = location.getLineNr();
+      int column = location.getColumnNr();
       String message = "JSON 문법 오류 (줄 " + line + ", 열 " + column + "): " + e.getOriginalMessage();
       throw new CodecException(message, null, List.of(), line, column);
-    } catch (JacksonException e) {
-      throw new CodecException(
-          "JSON을 읽을 수 없습니다: " + e.getOriginalMessage(), null, List.of(), null, null);
     }
   }
 

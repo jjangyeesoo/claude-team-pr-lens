@@ -228,6 +228,18 @@ class ResultCodecTest {
             });
   }
 
+  // 10.8
+  @Test
+  void reportsLineAndColumnForTrailingValue() {
+    assertThatThrownBy(() -> codec.read("{}\n  {}"))
+        .isInstanceOfSatisfying(
+            CodecException.class,
+            e -> {
+              assertThat(e.line()).isEqualTo(2);
+              assertThat(e.column()).isPositive();
+            });
+  }
+
   // 10.9
   @Test
   void reportsPathForNegativeTokens() {
