@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -25,6 +26,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.Mark;
 import org.yaml.snakeyaml.error.MarkedYAMLException;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.nodes.MappingNode;
@@ -38,7 +40,7 @@ import org.yaml.snakeyaml.nodes.Tag;
  * 설정 파일을 Configuration으로 읽는다 (요구사항 18).
  *
  * <p>YAML을 노드 트리로 읽고 허용 키와 대조하며 문제를 모두 모아 한 번에 보고한다. 숫자는 원문 문자열에서 {@code BigDecimal}로 읽어 정밀도를 잃지
- * 않는다. 문자열 값은 오류 메시지에 싣지 않는다 (토큰을 엉뚱한 항목에 붙여 넣었을 때 새는 것을 막기 위해서다).
+ * 않는다. 문자열 값은 오류 메시지에 싣지 않는다 (토큰을 엉뚱한 항목에 붙여 넣었을 때 새는 것을 막기 위해서다). 예외로 잘못된 제외 패턴은 원문을 함께 보여 준다.
  */
 public final class ConfigLoader {
 
@@ -67,10 +69,9 @@ public final class ConfigLoader {
       Path file = workingDir.resolve(explicit);
       try {
         return parse(read(file));
-      } catch (NoSuchFileException e) {
-        throw ConfigException.of("--config", "설정 파일이 없습니다: " + explicit);
       } catch (IOException e) {
-        throw ConfigException.of("--config", "설정 파일을 읽을 수 없습니다: " + explicit);
+        throw ConfigException.of(
+            "--config", "설정 파일을 읽을 수 없습니다: " + explicit + " (" + cause(e, file) + ")");
       }
     }
     for (Path dir : List.of(workingDir, homeDir)) {
@@ -79,11 +80,26 @@ public final class ConfigLoader {
         try {
           return parse(read(file));
         } catch (IOException e) {
-          throw ConfigException.of("file", "설정 파일을 읽을 수 없습니다: " + file);
+          throw ConfigException.of(
+              "file", "설정 파일을 읽을 수 없습니다: " + file + " (" + cause(e, file) + ")");
         }
       }
     }
     return Configuration.defaults();
+  }
+
+  /** 읽지 못한 원인을 사용자가 알아볼 수 있는 말로 바꾼다 (요구사항 18.9). */
+  private static String cause(IOException e, Path file) {
+    if (e instanceof NoSuchFileException) {
+      return "파일이 없습니다";
+    }
+    if (e instanceof AccessDeniedException) {
+      return "읽기 권한이 없습니다";
+    }
+    if (Files.isDirectory(file)) {
+      return "파일이 아니라 폴더입니다";
+    }
+    return e.getClass().getSimpleName();
   }
 
   private static String read(Path file) throws IOException {
@@ -119,14 +135,10 @@ public final class ConfigLoader {
     try {
       return new Yaml(options).compose(new StringReader(yaml));
     } catch (MarkedYAMLException e) {
-      throw ConfigException.of(
-          "syntax",
-          "문법 오류 (줄 "
-              + (e.getProblemMark().getLine() + 1)
-              + ", 열 "
-              + (e.getProblemMark().getColumn() + 1)
-              + "): "
-              + e.getProblem());
+      Mark mark = e.getProblemMark();
+      String where =
+          mark == null ? "" : " (줄 " + (mark.getLine() + 1) + ", 열 " + (mark.getColumn() + 1) + ")";
+      throw ConfigException.of("syntax", "문법 오류" + where + ": " + e.getProblem());
     } catch (YAMLException e) {
       throw ConfigException.of("syntax", "YAML을 읽을 수 없습니다");
     }
@@ -358,7 +370,7 @@ public final class ConfigLoader {
           String item = base + "." + field;
           Node value = fields.get(field);
           if (value == null) {
-            if (model.getValue() instanceof MappingNode) {
+            if (model.getValue() instanceof MappingNode || isNull(model.getValue())) {
               problem(item, "네 단가(input, output, cacheWrite, cacheRead)를 모두 적어야 합니다");
             }
             continue;

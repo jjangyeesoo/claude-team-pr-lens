@@ -284,6 +284,21 @@ class ConfigLoaderTest {
         .containsExactlyInAnyOrder("cost.pricing.m.cacheWrite", "cost.pricing.m.cacheRead");
   }
 
+  // 18.6 (G-10): 값 없이 적은 모델도 네 단가 누락이다
+  @Test
+  void rejectsPricedModelWithoutValue() {
+    Set<String> four =
+        Set.of(
+            "cost.pricing.m.input",
+            "cost.pricing.m.output",
+            "cost.pricing.m.cacheWrite",
+            "cost.pricing.m.cacheRead");
+
+    assertThat(itemsOf(yaml("cost:", "  pricing:", "    \"m\":"))).isEqualTo(four);
+    assertThat(itemsOf(yaml("cost:", "  pricing:", "    \"m\": ~"))).isEqualTo(four);
+    assertThat(itemsOf(yaml("cost:", "  pricing:", "    \"m\": {}"))).isEqualTo(four);
+  }
+
   // 18.7
   @Test
   void reportsAllProblemsAtOnce() {
@@ -362,12 +377,15 @@ class ConfigLoaderTest {
             ConfigException.class,
             e -> {
               assertThat(e.problems().get(0).item()).isEqualTo("--config");
-              assertThat(e.getMessage()).contains("nope.yml");
+              assertThat(e.getMessage()).contains("nope.yml").contains("파일이 없습니다");
             });
     assertThatThrownBy(() -> loader().load(work))
         .isInstanceOfSatisfying(
             ConfigException.class,
-            e -> assertThat(e.problems().get(0).item()).isEqualTo("--config"));
+            e -> {
+              assertThat(e.problems().get(0).item()).isEqualTo("--config");
+              assertThat(e.getMessage()).contains("폴더");
+            });
   }
 
   // 3.11
@@ -416,14 +434,14 @@ class ConfigLoaderTest {
             e -> assertThat(e.problems().get(0).item()).isEqualTo("encoding"));
   }
 
-  // 미정(16.1)
+  // 결정(16.1)
   @Test
   void roundsCostBeyondFourDecimals() {
     assertThat(loader().parse(yaml("cost: { maxUsdPerReview: 0.123456 }")).maxCostUsdPerReview())
         .isEqualTo(new BigDecimal("0.1235"));
   }
 
-  // 미정(16.1): 범위 검사는 반올림 전 원본 값에 한다
+  // 결정(16.1): 범위 검사는 반올림 전 원본 값에 한다
   @Test
   void rejectsCostBelowMinimumBeforeRounding() {
     assertThat(itemsOf(yaml("cost: { maxUsdPerReview: 0.00996 }")))
