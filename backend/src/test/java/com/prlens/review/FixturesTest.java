@@ -5,15 +5,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.prlens.codec.ResultCodec;
 import com.prlens.filter.DiffFilter;
 import com.prlens.filter.FilterOutcome;
+import com.prlens.llm.LlmResponse;
+import com.prlens.llm.LlmUsage;
 import com.prlens.model.Category;
 import com.prlens.model.Configuration;
 import com.prlens.model.Finding;
+import com.prlens.model.ModelPricing;
 import com.prlens.model.ReviewMode;
 import com.prlens.model.ReviewResult;
 import com.prlens.model.Severity;
+import com.prlens.model.Usage;
 import com.prlens.output.MarkdownFormatter;
 import com.prlens.testkit.FixtureLoader;
 import com.prlens.testkit.FixtureLoader.Fixture;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -79,8 +85,10 @@ class FixturesTest {
     assertThat(split).isEqualTo(ReviewMode.SPLIT);
     assertThat(excluded.excluded()).hasSizeGreaterThanOrEqualTo(3);
     assertThat(
-            codec.read(FixtureLoader.load("excluded-files").expectedResultJson()).excludedFiles())
-        .containsExactlyElementsOf(excluded.excluded().stream().map(e -> e.path()).toList());
+            codec
+                .read(FixtureLoader.load("excluded-files").expectedResultJson())
+                .excludedFileDetails())
+        .containsExactlyElementsOf(excluded.excluded());
   }
 
   @Test
@@ -100,11 +108,51 @@ class FixturesTest {
           .isEqualTo(
               targets.isEmpty()
                   ? 0
-                  : ChunkPlanner.plan(filter(name, config).targets(), 400).size());
+                  : ChunkPlanner.plan(filter(name, config).targets(), config.sizeLimit()).size());
       assertThat(FixtureLoader.load(name).llmResponses())
           .as(name)
           .hasSize(result.stats().chunkCount());
     }
+  }
+
+  @Test
+  void expectedUsageSumsTokensAndPerChunkCosts() {
+    ModelPricing pricing = Configuration.defaults().pricing().get("claude-opus-5-5");
+    for (String name : FixtureLoader.names()) {
+      Fixture fixture = FixtureLoader.load(name);
+      Usage usage = codec.read(fixture.expectedResultJson()).usage();
+      long input = 0;
+      long output = 0;
+      long cacheWrite = 0;
+      long cacheRead = 0;
+      BigDecimal cost = BigDecimal.ZERO;
+      for (LlmResponse response : fixture.llmResponses()) {
+        LlmUsage u = response.usage();
+        input += u.inputTokens();
+        output += u.outputTokens();
+        cacheWrite += u.cacheWriteTokens();
+        cacheRead += u.cacheReadTokens();
+        cost = cost.add(chunkCost(u, pricing));
+      }
+
+      assertThat(usage.inputTokens()).as(name).isEqualTo(input);
+      assertThat(usage.outputTokens()).as(name).isEqualTo(output);
+      assertThat(usage.cacheWriteTokens()).as(name).isEqualTo(cacheWrite);
+      assertThat(usage.cacheReadTokens()).as(name).isEqualTo(cacheRead);
+      assertThat(usage.estimatedCostUsd()).as(name).isEqualByComparingTo(cost);
+    }
+  }
+
+  /** 비용은 Chunk마다 소수 넷째 자리로 반올림한 뒤 더한다 (요구사항 13.5, 20.10). */
+  private static BigDecimal chunkCost(LlmUsage u, ModelPricing pricing) {
+    BigDecimal sum =
+        pricing
+            .inputPerMTok()
+            .multiply(BigDecimal.valueOf(u.inputTokens()))
+            .add(pricing.outputPerMTok().multiply(BigDecimal.valueOf(u.outputTokens())))
+            .add(pricing.cacheWritePerMTok().multiply(BigDecimal.valueOf(u.cacheWriteTokens())))
+            .add(pricing.cacheReadPerMTok().multiply(BigDecimal.valueOf(u.cacheReadTokens())));
+    return sum.divide(BigDecimal.valueOf(1_000_000), 4, RoundingMode.HALF_UP);
   }
 
   @Test
@@ -129,8 +177,15 @@ class FixturesTest {
     return switch (name) {
       case "inject-title" -> fixture.snapshot().title();
       case "inject-body" -> fixture.snapshot().body();
+      case "inject-closing-tag" -> closingTagLine(fixture);
       default -> fixture.snapshot().files().toString();
     };
+  }
+
+  private static String closingTagLine(Fixture fixture) {
+    String diff = fixture.snapshot().files().toString();
+    assertThat(diff).contains("</prlens:file_diff>");
+    return diff;
   }
 
   private static FilterOutcome filter(String name, Configuration config) {

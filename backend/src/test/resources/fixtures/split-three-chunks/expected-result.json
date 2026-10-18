@@ -68,6 +68,6 @@
     "cacheWriteTokens" : 7200,
     "cacheReadTokens" : 14400,
     "model" : "claude-opus-5-5",
-    "estimatedCostUsd" : 0.1795
+    "estimatedCostUsd" : 0.1794
   }
 }

@@ -5,7 +5,7 @@
   },
   "number": 102,
   "title": "feat: 리포트 빌더 세 개를 추가한다",
-  "body": "감사, 청구, 사용량 리포트를 만드는 빌더입니다.\n",
+  "body": "감사, 청구, 사용량 리포트를 만드는 빌더입니다.\n\n설계: docs/specs/report/design.md\n",
   "baseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "headSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "reportedChangedFiles": 3,
