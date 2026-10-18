@@ -39,5 +39,5 @@ CLI 명령 해석에 picocli를 쓴다.
   - P1 작업 18.1, 18.5: 명령 정의와 예외 → 종료 코드 매핑.
   - P1 작업 18.7: 시작 클래스 지정과 실행 패키징.
 - 아직 확인하지 않은 것
-  - picocli의 자동 오류 처리를 끄는 방법(`setParameterExceptionHandler`)은 확인하지 않았다(2026-10-04 스펙 검토가 "확인하지 않은 주장"으로 분류). 작업 18.1에서 실제로 확인한다.
+  - (확인함, 작업 18.1) `setParameterExceptionHandler`가 던진 예외는 `execute()` 안에서 삼켜지고 스택이 stderr로 나간다. 그래서 `parseArgs`로 파싱한 뒤 `ParameterException`을 `UsageException`으로 바꿔 던지고, 실행은 `getExecutionStrategy().execute(parseResult)`로 부른다.
   - macOS와 Linux에서의 실행. P1 작업 21의 CI 매트릭스에서 확인한다.

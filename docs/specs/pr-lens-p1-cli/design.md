@@ -443,7 +443,7 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 ### T3 CLI 출력 (요구사항 15, 16, 18, 22)
 
-**ReviewCommand (picocli, ADR 0004)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 자동 오류 처리는 끄고(`setParameterExceptionHandler`), 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다. Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동).
+**ReviewCommand (picocli, ADR 0004)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 `execute()`는 오류 처리기가 던진 예외를 삼키므로 쓰지 않고, `parseArgs`가 던지는 `ParameterException`을 `UsageException`으로 바꿔 던져 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다(작업 18.1). Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동).
 
 **MarkdownFormatter**: 순수 함수 `String format(ReviewResult, ReviewContext)`. 구역 순서는 `[불완전 경고] → 요약 → 심각도별 지적 수 → 파일별 지적 → 라인 밖 지적 → 제외 파일 → 사용된 컨텍스트 파일 (N) → 토큰 사용량과 추정 비용`입니다. 요약 전용 모드면 요약 구역에 "PR을 나누세요" 안내와 Changed_Line_Count, 3×Size_Limit를 넣습니다(`ReviewStats`에서 읽음). 강등된 Finding 수는 심각도별 구역 아래 한 줄로 표시합니다. "제외 파일" 구역은 `excludedFileDetails`의 경로와 사유를 함께 씁니다(요구사항 15.14). 줄바꿈은 `\n` 고정입니다.
 

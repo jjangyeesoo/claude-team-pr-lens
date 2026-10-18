@@ -386,17 +386,17 @@
 
 - [ ] 18. CLI 명령과 파이프라인
   - PR 경계: 18.1~18.2 / 18.3~18.6 / 18.7
-  - [ ] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
-    - 주의(3 리뷰): picocli가 직접 쓰는 출력(사용법, 버전)은 `CommandLine.setOut`/`setErr`에 UTF-8 `PrintWriter`(설치한 `System.out`/`System.err` 위)를 넘깁니다. 기본 writer가 콘솔 코드 페이지로 인코딩하면 `MaskingPrintStream`에서 한글이 대체 문자로 바뀝니다. picocli 기본 writer의 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
+  - [x] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
+    - 결정(18.1): picocli가 직접 쓰는 출력(사용법)은 `setOut`/`setErr`에 UTF-8 `PrintWriter`를 명시해 넘깁니다. 기본 writer의 문자 집합은 확인하지 않고 명시로 피했습니다. 인자 오류는 `execute()`가 처리기의 예외를 삼키므로 `parseArgs`를 직접 불러 `UsageException`으로 바꿉니다
     - _Requirements: 15.1, 15.7, 15.12, 22.1_
-  - [ ] 18.2 `CliPipeline.preflight` 구현
+  - [x] 18.2 `CliPipeline.preflight` 구현
     - 순서: 환경변수 값을 읽어 `SecretMasker`와 UTF-8 `MaskingPrintStream` 설치(빈 값은 제외) → 인자(URL, `--format`) → 설정 → 환경변수 검사(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, 둘 다 없으면 한 메시지). 마스커를 가장 먼저 설치해 인자·설정 오류 메시지도 마스킹합니다
     - 어느 단계든 실패하면 외부 API 호출 없이 종료 코드 2
     - CLI용 `logback.xml` 추가(대상 `System.err`, 기본 수준 WARN). Spring 컨텍스트 없이 실행하면 Logback 기본 설정이 로그를 stdout에 써서 결과 출력에 섞임(요구사항 15.7, 15.8)
     - 주의(3 리뷰): `MaskingPrintStream`은 `\n`으로 끝나지 않은 나머지를 들고 있고, `flush()`는 그 끝이 비밀값의 앞부분과 같으면(한 글자도 해당. `ghp_…`이면 `g`, `sk-ant-…`이면 `s`) 그 부분을 내보내지 않습니다. JVM은 바꿔 끼운 스트림을 종료할 때 flush하지 않으므로, 모든 출력을 `\n`으로 끝내고 프로세스를 끝내기 전에(정상·오류 경로 모두) 두 스트림을 flush합니다
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 `FileDescriptor.out`/`err`를 직접 열므로 `close()`하면 프로세스의 실제 표준 스트림이 닫힙니다. `close()`는 `PrLensMain`의 `System.exit` 직전에만 하고, 테스트가 같은 JVM에서 부르는 경로(`CliPipeline`, 조립 함수)에서는 닫지 않고 `\n`으로 끝낸 뒤 flush합니다. 실제로 닫히는지는 직접 실행해 확인하지 않았으므로 18.6의 하위 프로세스 테스트에서 확인합니다 (스펙을 읽고 추론한 항목)
-    - 주의(3 리뷰): `SecretMasker`는 값을 다듬지 않고 받은 문자열 그대로 찾습니다. 환경변수 값 끝에 공백이나 `\r`이 있는데(cmd의 `set GITHUB_TOKEN=abc & ...`) 요청에는 다듬은 값을 쓰면 오류 메시지에 나온 토큰이 가려지지 않습니다. 마스커에 넣는 값과 자격 증명에 쓰는 값을 같은 문자열로 하거나 둘 다 등록합니다
-    - 주의(3 리뷰): `MaskingPrintStream`은 받은 바이트를 UTF-8로 풀어 다시 쓰므로 UTF-8이 아닌 바이트는 대체 문자가 됩니다. Java 17의 Windows 기본 문자 집합은 UTF-8이 아니므로 `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시합니다. Logback encoder의 기본 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
+    - 결정(18.2): 마스커에는 환경변수 원본과 `strip()`한 값을 둘 다 등록하고, 요청에는 다듬은 값을 씁니다(`CliPipeline.secretMasker`)
+    - 결정(18.2): `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시했습니다. Logback encoder의 기본 문자 집합은 확인하지 않고 명시로 피했습니다. 설정이 stderr, WARN, UTF-8인지는 `LogbackConfigTest`가 읽어 확인합니다
     - 주의(16 리뷰): `ConfigLoader`는 사용자 홈을 스스로 찾지 않습니다. `new ConfigLoader(Path.of("").toAbsolutePath(), Path.of(System.getProperty("user.home")))`처럼 현재 작업 폴더와 홈을 넘깁니다. `ConfigException.getMessage()`는 문제 전체를 여러 줄로 담고 잘못된 제외 패턴 원문을 포함하므로, 마스커를 설치한 뒤 그대로 stderr에 씁니다
     - _Requirements: 1.9, 1.10, 3.11, 15.12, 18.7, 19.1, 19.2, 19.3, 19.4, 22.3_
   - [ ] 18.3 파이프라인 조립 구현
