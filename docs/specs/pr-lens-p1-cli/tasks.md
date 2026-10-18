@@ -448,7 +448,7 @@
 
 - [ ] 20. 골든 픽스처와 전체 파이프라인 테스트
   - PR 경계: 20.1 / 20.2~20.3 (20.4는 실행 기록이라 코드 PR이 아님)
-  - [ ] 20.1 테스트 픽스처 작성 (`src/test/resources/fixtures/<name>/`) (수요일부터 시작 가능. 공유 타입과 `ResultCodec`만 있으면 됨)
+  - [x] 20.1 테스트 픽스처 작성 (`src/test/resources/fixtures/<name>/`) (수요일부터 시작 가능. 공유 타입과 `ResultCodec`만 있으면 됨)
     - 실제 PR diff 샘플 3~5개: 단일 모드, 분할 모드, 제외 파일 포함
     - 인젝션 픽스처 4개: diff 추가 줄, PR 제목, PR 본문, diff 안 닫는 Delimiter_Tag. 기대 결과에 인젝션 위치 `security` Finding과 심어 둔 `blocker` Finding
     - 픽스처마다 `snapshot.json`, `context.json`, `llm-responses/*.json`, `expected-result.json`, `expected.md`. 비밀정보·개인정보는 가짜 값
