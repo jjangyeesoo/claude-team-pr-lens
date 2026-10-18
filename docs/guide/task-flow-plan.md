@@ -1,6 +1,6 @@
 # `/task-flow` 계획: 단계를 나눈 task skill
 
-임시 문서입니다. `/task-flow`를 만들기 전의 계획이고, 구현하면 지우거나 `task-workflow.md`의 절로 옮깁니다. 지금의 `/task`(`.claude/skills/task/SKILL.md`)는 이 계획에서 고치지 않습니다.
+구현 기록입니다. `/task-flow`를 만들기 전의 계획에 구현하며 바뀐 점과 검증 결과를 더했습니다. 지금 동작의 원본은 `.claude/skills/task-flow/SKILL.md`와 `docs/guide/claude-code-setup.md` "구현 중 검증"이고, 이 문서와 다르면 그쪽을 따릅니다. 특히 "구현 중 검증" 절의 SubagentStart·SubagentStop 설계는 그 절 머리말의 변경으로 대체되었습니다. 지금의 `/task`(`.claude/skills/task/SKILL.md`)는 이 PR에서 고치지 않습니다("다음 PR"의 대체).
 
 ## 배경
 - 마지막 주차에 task 오케스트레이션(매니저가 단계별 에이전트를 관리)을 적용합니다. 처음에는 의존이 없는 작업의 병렬 진행까지 목표로 했으나, 검토 결과 병렬은 보류했습니다(아래 "병렬 실행" 줄).

@@ -64,7 +64,7 @@
 - **implementer 종료 검증**: `settings.json`의 PreToolUse hook(matcher `SubagentHandback`)이 `VerifyOnStop.java handback`을 돌립니다. 서브에이전트는 보고 도구 `SubagentHandback`을 불러야 끝나는데, SubagentStop hook은 그 보고 **뒤에** 와서 exit 2로 붙잡을 수 없기 때문입니다(2026-10-18 이 저장소에서 시험으로 확인. SubagentStop 입력에는 `last_assistant_message`도 없었음). 입력의 `agent_type`이 `implementer`가 아니면 아무것도 하지 않습니다.
   - 보고가 `BLOCKED:`로 시작하면(질문하려고 멈춤) 검증하지 않고 표시 파일을 `blocked`로 둡니다
   - 실패하거나, 통과했어도 `git status --porcelain`이 비어 있지 않으면(포맷터가 고친 파일, 커밋하지 않은 체크박스) exit 2로 보고를 막아 implementer가 고치고 커밋하게 합니다. 같은 implementer가 두 번째로 막히면 놓아주고, 실패였으면 표시를 `failed`로 둡니다. PreToolUse 입력에는 `stop_hook_active`가 없어 횟수를 표시 파일에 셉니다
-  - 기록이 없어도 기준선만 잡지 않고 검증합니다(implementer는 커밋하고 끝나 트리가 늘 깨끗하므로). 이 브랜치가 건드리지 않은 스택은 `pass-nothing-to-verify`입니다
+  - 기록이 없어도 기준선만 잡지 않고 검증합니다(implementer는 커밋하고 끝나 트리가 늘 깨끗하므로). 이 브랜치가 건드리지 않은 스택은 통과 기록과 관계없이 `pass-nothing-to-verify`입니다(기록은 작업 폴더 단위라 다른 브랜치나 main의 변경으로 달라질 수 있음)
   - 결과(스택별 `pass`·`pass-nothing-to-verify`·`fail`·`unavailable`·`blocked`, 내용 해시, `clean`, `agent_id`)를 `build/claude-verify/implementer-result.json`에 남깁니다. 매니저는 `java .claude/hooks/VerifyOnStop.java --check <agentId>`로 이 파일이 그 implementer의 통과 기록이고 지금 내용과 같은지 확인합니다
 - **메인 Stop이 건너뛰는 경우** (건너뛸 때마다 `systemMessage`로 알림)
   - hook 입력의 `background_tasks`에 `agent_type: implementer`, `status: running`인 작업이 있음. harness가 주는 값이라 파일로 꾸밀 수 없습니다. implementer를 멈추면 목록에서 빠지므로 다음 Stop부터 다시 검증합니다(멈출 때 SubagentStop은 오지 않았음)
@@ -73,7 +73,7 @@
   - `--mark <agentId> [blocked|failed]`: `/clear`나 새 세션 뒤 빨간 트리로 질문을 기다릴 때 표시를 다시 씁니다. 세션 ID를 모르므로 세션 확인 없이 유효합니다(출처 `mark`)
   - `--unmark`: 작업을 중단할 때 표시를 지웁니다
   - `--check <agentId>`: 위의 결과 확인
-- **우회로와 대책.** 표시 파일은 일반 파일이라 Bash로 만들면 메인 Stop 검증을 끌 수 있습니다(이 변경은 hook 완화이며, 도입 PR에서 이유를 설명하고 승인받았습니다). 대책은 아래와 같고, 셸로 만드는 것 자체는 막지 못합니다.
+- **우회로와 대책.** 표시 파일은 일반 파일이라 Bash로 만들면 메인 Stop 검증을 끌 수 있습니다(이 변경은 hook 완화이며, 도입 PR(`chore/task-flow-skill`)에서 이유를 설명하고 컨텍스트 담당의 승인을 받습니다). 대책은 아래와 같고, 셸로 만드는 것 자체는 막지 못합니다.
   - 형식(`agent_id`, `at`)이 맞지 않거나 `status`가 `blocked`·`failed`가 아닌 표시, 다른 세션의 표시, 12시간이 지난 표시는 무시하고 검증합니다
   - 실행 중 판정은 표시가 아니라 `background_tasks`로 합니다
   - `ProtectFiles`가 Edit·Write로 `build/claude-verify/`를 고치지 못하게 막습니다

@@ -191,8 +191,9 @@ public class VerifyOnStop {
       List<String> notices) {}
 
   /**
-   * 바뀐 스택을 병렬로 검증하고 통과 기록을 state에 남긴다. baselineAllowed가 false(handback)이면 기록이 없을 때
-   * 기준선만 잡지 않고, 이 브랜치가 그 스택을 바꿨으면 검증한다 (implementer는 커밋하고 끝나 트리가 늘 깨끗하므로).
+   * 바뀐 스택을 병렬로 검증하고 통과 기록을 state에 남긴다. baselineAllowed가 false(handback)이면 기준선을 잡지 않고,
+   * 이 브랜치가 그 스택을 바꿨으면 검증한다 (implementer는 커밋하고 끝나 트리가 늘 깨끗하므로). 바꾸지 않은 스택은 통과
+   * 기록과 관계없이 검증하지 않는다 (기록은 작업 폴더 단위라 다른 브랜치나 main의 변경으로 달라질 수 있음).
    */
   static Outcome verify(Path root, Path stateDir, Properties state, boolean baselineAllowed)
       throws Exception {
@@ -212,14 +213,14 @@ public class VerifyOnStop {
       hashes.put(stack.name(), content);
       String key = "lastPass." + stack.name();
       String lastPass = state.getProperty(key);
+      if (!baselineAllowed && !hasWorkingChanges(root, stack) && !changedOnBranch(root, stack)) {
+        results.put(stack.name(), "pass-nothing-to-verify"); // 이 브랜치가 건드리지 않은 스택은 main의 상태다
+        continue;
+      }
       if (lastPass == null && !hasWorkingChanges(root, stack)) {
         if (baselineAllowed) {
           state.setProperty(key, content); // 첫 실행 + 깨끗한 트리: 커밋된 상태를 기준으로 삼는다
           results.put(stack.name(), "baseline");
-          continue;
-        }
-        if (!changedOnBranch(root, stack)) { // 이 브랜치가 건드리지 않은 스택은 main의 상태다
-          results.put(stack.name(), "pass-nothing-to-verify");
           continue;
         }
       } else if (content.equals(lastPass)) {
