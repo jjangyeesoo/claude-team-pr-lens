@@ -159,6 +159,7 @@
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
     - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. API 이름은 `GitHub`, HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
     - 미정(여기서 정함): 헤더 마스킹은 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`인데 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`에는 `SecretMasker`가 없습니다. 생성자에 더할지 다른 방법으로 넘길지 정합니다. 값 전체를 가리는 이름은 `Authorization`과 `x-api-key`뿐이고 이 둘은 값이 null이어도 `***`를 돌려줍니다. 그 밖의 헤더는 값 안의 비밀값만 치환하며 값이 null이면 NPE입니다. 이름이 null이면 항상 NPE입니다
+    - 미정(7.2~7.5 리뷰): `PullRequestUrl`은 요구사항 1.3의 문자 규칙대로 owner나 repo가 `.`·`..`인 URL(예: `https://github.com/o/../pull/1`)도 받아 `RepoRef("o", "..")`를 만듭니다. `/repos/{owner}/{repo}/…`를 조립할 때 이 세그먼트가 경로 이동으로 해석되지 않게 할지(거부하거나 그대로 보내 404로 처리) 정합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 1.8, 1.11, 1.13, 19.5, 19.6, 21.2, 21.9, 21.10, 21.11_
   - [x] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
     - _Requirements: 1.3, 1.4, 1.9_
@@ -202,6 +203,7 @@
     - `.claude/rules/**` 중 소문자 `.md`, `paths` 없으면 포함, 있으면 대상 파일(이름 변경이면 이전 경로 또는 새 경로)과 일치할 때만 포함
     - 무효 glob 패턴은 그 패턴만 무시하고 경고, 모두 무효면 포함 + 경고(설계 G-4)
     - 주의(6 리뷰): `GlobMatcher.matches`는 무효 패턴이면 unchecked `GlobSyntaxException`을 던집니다. rule `paths`는 먼저 패턴마다 `GlobMatcher.validate`로 무효 패턴을 걸러 패턴당 경고 1건을 내고, 남은 패턴으로만 `matches`를 부르세요. 파일마다 `matches`를 try/catch하면 같은 경고가 대상 파일 수만큼 반복됩니다
+    - 미정(7.2~7.5 리뷰): `copied`인 파일은 `FileStatus.ADDED`로 오지만 `previousPath`에 복사 원본 경로가 들어 있습니다(`PrFetcher`는 상태와 관계없이 `previousFilename`이 있으면 담음). `DiffFilter`는 상태를 보지 않고 `previousPath != null`이면 이전 경로로도 패턴을 맞춥니다. rule `paths`를 맞출 때 `status == RENAMED`일 때만 이전 경로를 볼지, `DiffFilter`처럼 `previousPath`가 있으면 볼지 정합니다
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
   - [ ]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
