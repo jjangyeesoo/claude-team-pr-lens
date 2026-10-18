@@ -22,7 +22,7 @@
 | [`docs/specs/`](docs/specs/README.md) | 단계별 스펙 (`pr-lens-p1-cli`, `pr-lens-p2-automation`, `pr-lens-p3-web`)과 읽는 법 |
 | [`docs/adr/`](docs/adr/README.md) | 아키텍처 결정 기록 |
 | [`docs/spikes/`](docs/spikes/) | 기술 검증 기록 |
-| [`docs/guide/`](docs/guide/) | 팀 방법론 가이드("소규모 IT 팀을 위한 Claude Code 개발 방법론"), Claude Code 설정의 동작과 한계, [작업 수행 흐름 안내서](docs/guide/task-workflow.md) |
+| [`docs/guide/`](docs/guide/) | 팀 방법론 가이드("소규모 IT 팀을 위한 Claude Code 개발 방법론"), Claude Code 설정의 동작과 한계, [작업 수행 흐름 안내서](docs/guide/task-workflow.md), [`/task-flow` 수행 흐름 안내서](docs/guide/task-flow-workflow.md) |
 
 문서 전체 지도는 [`docs/README.md`](docs/README.md)에 있습니다.
 

@@ -12,6 +12,7 @@
 | 확정한 아키텍처 결정 | [adr/](adr/README.md) |
 | 실행해서 확인한 기술 사실 | [spikes/](spikes/) |
 | 작업 하나를 고르고 머지하기까지의 순서 | [guide/task-workflow.md](guide/task-workflow.md) (안내서. 규칙의 원본은 PLAYBOOK과 스킬) |
+| 단계를 에이전트로 나눈 `/task-flow`의 진행 순서 (시험 중) | [guide/task-flow-workflow.md](guide/task-flow-workflow.md) (안내서. 원본은 `/task-flow` 스킬) |
 | Claude Code 설정이 무엇을 강제하고 어디까지 막는가 | [guide/claude-code-setup.md](guide/claude-code-setup.md) |
 | 팀 방법론 (일반 가이드. PR Lens 전용이 아님) | [guide/claude-code-team-methodology.md](guide/claude-code-team-methodology.md) |
 | Claude에게 주는 지시 | 루트 `CLAUDE.md`, `backend/CLAUDE.md`, `web/CLAUDE.md`, `.claude/rules/` |
@@ -19,7 +20,7 @@
 ## 임시 문서
 
 - [spec-review/](spec-review/README.md): 스펙 검토 결과 중 아직 쓰는 것입니다(01 Claude Code 활용, 05 외부 사실, 06 P3 요구사항). P1·P2 검토(02, 03, 04)는 스펙에 반영하고 지웠습니다. P3 스펙을 고친 뒤 폴더째 지웁니다. P1 스펙이 출처로 가리키는 05번의 내용은 지우기 전에 P1 설계 문서로 옮기거나 출처 표기를 고칩니다.
-- [guide/task-flow-plan.md](guide/task-flow-plan.md): 단계를 에이전트로 나눈 `/task-flow`의 구현 전 계획입니다. 구현하면 지우거나 `task-workflow.md`의 절로 옮깁니다.
+- [guide/task-flow-plan.md](guide/task-flow-plan.md): 단계를 에이전트로 나눈 `/task-flow`의 계획과 구현·검증 기록입니다. 사용법은 [guide/task-flow-workflow.md](guide/task-flow-workflow.md)에 있습니다. `/task-flow`가 `/task`를 대체하면 지웁니다.
 
 ## 문서를 고칠 때
 

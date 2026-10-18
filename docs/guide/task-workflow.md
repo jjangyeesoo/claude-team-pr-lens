@@ -137,25 +137,9 @@ PR이 열리면 CI가 `backend`, `web` 두 job을 실행합니다. 둘 다 필�
 머지되면 `origin/main`의 `tasks.md` 체크박스가 바뀌고, 그때부터 다른 사람의 `/task <스펙>` 목록에 완료로 보입니다.
 
 ## `/task-flow`: 단계를 에이전트로 나눈 진행 (시험 중)
-`/task`와 같은 일을 단계별 에이전트에게 맡깁니다. 메인 세션은 매니저로서 상태와 사람 확인만 하고, 계획은 `planner`(opus), 구현은 `implementer`(지금 세션의 모델), 리뷰는 `reviewer`·`context-reviewer`(opus)가 합니다. 안정되면 `/task`를 대체합니다. 그때까지 두 skill은 함께 고칩니다.
+`/task`와 같은 일을 단계별 에이전트에게 맡깁니다. 메인 세션은 매니저로서 상태와 사람 확인(G1 브랜치, G2 계획, G3 최종 보고)만 하고, 계획은 `planner`, 구현은 `implementer`, 리뷰는 `reviewer`·`context-reviewer`가 합니다. 받은 번호가 속한 PR 경계 전체를 한 번에 다루고, implementer가 슬라이스마다 실패 테스트 커밋부터 커밋합니다. Checkpoint 작업은 `/task`로 합니다.
 
-| 단계 | 누가 | 사람이 하는 일 |
-|---|---|---|
-| G1 브랜치 | 매니저 | 제안한 브랜치 이름 확인. 확인하면 만들고 push한 뒤 계획 파일 골격을 만든다 |
-| 계획 | planner | — |
-| G2 계획 승인 | 매니저 | 슬라이스, 테스트 목록, 주의·미정 대응, 질문을 보고 승인하거나 고쳐 달라고 한다 |
-| 구현 (슬라이스마다) | implementer | 막히면(`BLOCKED`) 질문에 답한다. 슬라이스가 다음 슬라이스의 계획을 바꾸면 다시 승인한다 |
-| 리뷰 | reviewer·context-reviewer | 고칠 "선택" ID를 고른다 |
-| 수정과 확인 리뷰 | implementer, 리뷰어 | 확인 리뷰 뒤에도 "반드시 수정"이 남으면 고칠지 그대로 둘지 정한다 |
-| G3 최종 보고 | 매니저 | 보고를 읽고 `/pr-ready`를 실행한다 |
-
-`/task`와 다른 점:
-- 받은 번호가 속한 **PR 경계 전체**를 한 번에 다룹니다. 계획, 리뷰, G2·G3는 경계 단위이고, 구현은 planner가 나눈 슬라이스(구현 작업 하나와 그것을 검증하는 `*` 작업)마다 새 implementer가 합니다.
-- implementer가 커밋합니다. 슬라이스마다 실패 테스트(와 스텁)만 담은 `test:` 커밋이 먼저 오고, G3가 그 뒤 테스트가 약해졌는지 봅니다. PR은 squash 머지하므로 이 커밋은 `main`에 남지 않습니다.
-- 진행 상태는 gitignore된 계획 파일(`docs/specs/<스펙>/handoff/<번호>-plan.md`)의 상태 줄에 남습니다. `/clear`나 새 세션 뒤 같은 명령을 다시 실행하면 이어 갑니다(체크아웃한 브랜치가 상태 줄의 브랜치와 다르면 멈춥니다). 계획·리뷰 파일은 그 PC에만 있으므로 다른 PC에서는 이어받지 못합니다. `/pr-ready`가 이 파일들을 지웁니다.
-- implementer가 일하는 동안 메인 Stop hook은 검증을 건너뛰고 그렇다고 알립니다. 검증은 implementer가 끝날 때 합니다([claude-code-setup.md](claude-code-setup.md) "구현 중 검증"). 매니저 턴 끝에 메인 Stop 검증이 실패하면 매니저는 고치지 않고 알린 뒤, 새 implementer로 다시 할지 묻습니다.
-- 백그라운드 implementer의 `git add`·`git commit`은 `settings.json` allow에 없습니다. `auto` 모드에서만 시험했으므로, 다른 권한 모드에서 이 권한이 어떻게 처리되는지는 아직 확인하지 않았습니다.
-- Checkpoint 작업은 `/task`로 합니다.
+단계별 설명, 상태 줄과 이어 가기, 게이트 조건, 구현 중 검증은 [task-flow-workflow.md](task-flow-workflow.md)에 있습니다. 안정되면 `/task`를 대체하고, 그때까지 두 skill은 함께 고칩니다.
 
 ## 자주 헷갈리는 것
 
