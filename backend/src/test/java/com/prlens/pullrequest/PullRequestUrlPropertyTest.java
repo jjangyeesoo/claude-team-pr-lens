@@ -111,19 +111,12 @@ class PullRequestUrlPropertyTest {
 
   // Feature: pr-lens-p1-cli, Property 1: PR URL 파싱 round-trip과 거부
   @Property(tries = 300)
-  void roundTrip(@ForAll("validParts") Parts parts) {
+  void parsesRoundTripAndRejectsAnySingleMutation(
+      @ForAll("validParts") Parts parts, @ForAll("mutations") Mutation mutation) {
     var parsed = PullRequestUrl.parse(parts.url());
-
     assertThat(parsed).as(parts.url()).isPresent();
     assertThat(parsed.get().repo()).isEqualTo(new RepoRef(parts.owner(), parts.repo()));
     assertThat(parsed.get().number()).isEqualTo((int) parts.number());
-  }
-
-  // Feature: pr-lens-p1-cli, Property 1: PR URL 파싱 round-trip과 거부
-  @Property(tries = 300)
-  void rejectsAnySingleMutation(
-      @ForAll("validParts") Parts parts, @ForAll("mutations") Mutation mutation) {
-    assertThat(PullRequestUrl.parse(parts.url())).as(parts.url()).isPresent();
 
     String mutated = mutation.apply(parts);
     assertThat(PullRequestUrl.parse(mutated)).as(mutated).isEmpty();
