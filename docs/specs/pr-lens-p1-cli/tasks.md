@@ -177,6 +177,7 @@
     - **Validates: Requirements 1.7**
   - [ ]* 7.6 GitHub 가짜 서버 통합 테스트
     - 401/403/404 메시지, rate limit 응답 세 종류(`retry-after`, remaining 0 + reset, secondary)의 분류와 대기 시간, 60초 초과 시 즉시 종료, 짧게 주입한 타임아웃, `Authorization` 헤더, base/head ref 선택, 트리 `truncated` 대체 경로
+    - 미정(7.1 리뷰): `HttpGitHubClient`의 요청 제한 시간은 상수 30초(`TIMEOUT`)이고 `Options`로 바꿀 수 없습니다. "짧게 주입한 타임아웃" 사례를 쓰려면 `Options`에 제한 시간 구성 요소를 더할지(design "공유 경계"의 `Options` 설명도 같이 고침), 다른 방법으로 검증할지 정합니다. 기준 주소는 `Options.apiBase`로 바꾸고, 뒤의 `/`는 잘라서 씁니다
     - _Requirements: 1.8, 1.11, 1.13, 21.2, 21.9, 21.10, 21.11_
 
   - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
@@ -185,6 +186,7 @@
     - base SHA로 재귀 트리 조회와 contents 조회가 되는지 확인
     - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
+    - 주의(7.1 리뷰): 7.1은 다음을 가정으로 구현했습니다. secondary rate limit은 본문의 `secondary rate limit`(대소문자 무시)으로 판별합니다. 트리 항목 `type`이 `blob`/`tree`/`commit` 밖이면 버립니다. contents API의 symlink는 `NotFound`, submodule은 `IsDirectory`입니다. `getFile`은 `Accept: application/vnd.github.object+json`으로 요청하고, 다음 두 가지를 가정합니다. 폴더는 `{"type":"dir","entries":[...]}` 객체로 옵니다. 1MB를 넘는 파일은 `content`가 비고 `encoding: "none"`인 200 응답으로 와서 `TooLarge`가 됩니다. 이것들을 실제 응답으로 확인합니다
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
 - [ ] 8. 컨텍스트 수집
@@ -318,7 +320,7 @@
     - 요청 매핑: 모델, `max_tokens`, effort, system, user 블록 2개(첫 블록 ephemeral `cache_control`), `output_config.format`
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
     - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
-    - 미정(여기서 정함): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. `AnthropicLlmClient`가 `SecretMasker`를 어떻게 받을지 정합니다(7.1과 같은 방식으로 맞춤). 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
+    - 결정(7.1 리뷰): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. 7.1이 `SecretMasker`를 중첩 public record `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`와 4인자 생성자 오버로드로 받기로 정했습니다(원래 생성자는 `Options.defaults()`, 곧 빈 마스커와 꺼진 디버그 로그로 넘김). `AnthropicLlmClient`도 같은 방식으로 맞춥니다. 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
   - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
@@ -407,6 +409,8 @@
     - 주의(3 리뷰): 결과 문자열이 `\n`으로 끝나지 않으면 끝 글자가 비밀값 첫 글자와 같을 때(`g`, `s` 등) `flush()`만으로는 그 글자가 나오지 않습니다. 결과 끝에 `\n`을 보장하고 쓴 뒤 flush합니다(스트림을 닫는 것은 18.2의 주의대로 `PrLensMain`에서만). 18.6 통합 테스트에 "`\n` 없이 `s`로 끝나는 출력이 끝까지 나온다" 사례를 넣습니다 (스펙을 읽고 추론한 항목)
     - 주의(15 리뷰): `ResultCodec.write`의 결과는 `\n`으로 끝나지 않습니다. `--format json`은 결과 뒤에 `\n`을 붙여 stdout에 한 번에 쓰고 flush합니다(끝의 `\n`은 `read`가 받아들입니다)
     - 주의(17 리뷰): `MarkdownFormatter.format`의 결과는 이미 `\n` 하나로 끝납니다. Markdown 출력에는 `\n`을 더 붙이지 않고, `--format json`일 때만 `ResultCodec.write` 결과에 `\n`을 붙입니다. 무조건 덧붙이면 stdout이 `\n\n`으로 끝나 20.2의 골든 비교가 어긋납니다
+    - 주의(7.1 리뷰): 3인자 `HttpGitHubClient` 생성자는 빈 `SecretMasker`를 쓰고 디버그 로그가 꺼져 있습니다. 디버그 모드에서 HTTP 로그를 내려면 18.2에서 만든 같은 `SecretMasker`와 stderr로 가는 `debugLog`를 `Options`에 넣어 4인자 생성자로 조립합니다 (스펙을 읽고 추론한 항목)
+    - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
     - _Requirements: 15.7, 15.8, 17.2_
   - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -415,6 +419,7 @@
   - [ ] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
     - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
     - 주의(17 리뷰): `ExitCodeResolver.resolve(ReviewResult)`는 정적 메서드이고 0, 1, 3만 돌려줍니다. 결과를 만들지 못한 경우의 종료 코드 2는 이 매핑이 정합니다
+    - 주의(7.1 리뷰): `x-ratelimit-reset`까지 60초를 넘으면 `github.RateLimitResetException`이 옵니다. `RetryAfterTooLongException`의 하위 타입이고 해제 시각(UTC ISO-8601)은 `getMessage()`와 `resetAt()`에만 있습니다. 상위 타입으로 잡아 `api()`·`seconds()`로 메시지를 새로 만들면 요구사항 21.10의 시각이 빠지므로 `getMessage()`를 그대로 씁니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음

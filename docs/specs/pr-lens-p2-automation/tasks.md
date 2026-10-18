@@ -89,6 +89,7 @@
     - `review`의 `--save`, `--publish` 옵션과 `feedback sync`, `server` 서브커맨드를 등록하고, 각 처리는 빈 클래스(`SaveFlow`, `PublishFlow`, `FeedbackSyncCommand`, `ServerCommand`)로 위임. 본문은 `UnsupportedOperationException`
     - `HttpGitHubClient` 생성자를 `(HttpClient, GitHubCredentials, RetryExecutor, PrincipalResolver, CancellationToken)`으로 바꾸고 `implements GitHubApi`를 선언(게시 메서드 본문은 `UnsupportedOperationException`, 20.1이 채움). P1 조립 코드와 P1 테스트(7.6)는 `TokenPrincipalResolver` 스텁과 `CancellationToken.NONE`을 넘기도록 고침. P1의 `BoundarySignatureTest.adaptersTakeCollaboratorsThroughConstructors`가 이 생성자의 인자 3개를 리플렉션으로 고정하고 있으므로 그 단언도 새 시그니처로 함께 고침
     - P1 `CliPipeline.preflight`를 명령별로 필요한 환경변수 목록을 받는 형태로 바꿈(`feedback sync`는 `ANTHROPIC_API_KEY` 불필요)
+    - 주의(P1 7.1 리뷰): P1 7.1이 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor, Options)` 오버로드를 더했고 3인자 생성자는 이 오버로드에 위임합니다. 생성자를 `(…, PrincipalResolver, CancellationToken)`으로 바꿀 때 `Options`를 받는 오버로드에도 같은 인자를 더합니다. 그렇지 않으면 그 오버로드로 조립하는 코드(P1 7.6 가짜 서버 테스트, 디버그 로그 조립)가 resolver 없이 컴파일됩니다
     - _Requirements: 9.1, 15.4, 15.9, 20.1_
   - [ ] 2.7 작업 범위 도구의 타입 작성 (월요일 선머지)
     - `support`: `CancellationToken`(`NONE` 포함), `SecretRegistry`의 공개 시그니처(구현은 4.1)
