@@ -10,6 +10,9 @@ paths:
 - 서로 맞물린 파일은 같은 PR에서 함께 고친다
   - `/task` ↔ `/pr-ready` ↔ `reviewer`: 용어, 단계 번호, 보고 그룹("반드시 수정", "선택", "뒤 작업에 넘길 것"), 메모 파일(`docs/specs/<스펙>/handoff/`)의 경로와 형식
   - `/pr-ready` 3·4번 ↔ `context-reviewer`(보고 그룹 두 개), 이 파일의 Grep 대상 목록 ↔ `context-reviewer` 2번
+  - `/task` ↔ `/task-flow`: 상태 확인, 목록, 시작 가능 판정, 브랜치 맞추기, 메모 규칙, 마무리(`/task-flow`가 `/task`를 대체할 때까지 함께 고친다)
+  - `/task-flow` ↔ `planner`·`implementer`·`reviewer`·`context-reviewer`·`/pr-ready`: handoff 파일(`<번호>-plan.md`, `-review.md`, `-context-review.md`)의 이름과 형식, 계획 파일의 절 제목과 상태 줄, 리뷰 ID 표와 확인 리뷰 모드
+  - `/task-flow`의 구현 중 검증 ↔ `.claude/hooks/VerifyOnStop.java`(모드, 표시·결과 파일) ↔ `settings.json`의 PreToolUse(`SubagentHandback`) 항목
   - 브랜치 이름 형식 ↔ 루트 `CLAUDE.md` Conventions, `/task`의 진행 중 판정과 브랜치 맞추기, `/pr-ready` 5번의 진행 중 판정
   - `/pr-ready`가 만드는 PR 설명 ↔ `.github/pull_request_template.md`
   - skill과 agent의 절차 ↔ `docs/guide/task-workflow.md` (사람이 읽는 안내서. 원본은 skill이다)

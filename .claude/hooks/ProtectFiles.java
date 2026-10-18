@@ -108,6 +108,8 @@ public class ProtectFiles {
     if (name.equals("package-lock.json")) return "npm lock 파일 (npm install/npm ci가 갱신)";
     if (path.contains("/node_modules/")) return "설치된 의존성 (npm이 관리)";
     if (path.contains("/.next/")) return "Next.js 빌드 산출물";
+    if (path.contains("/build/claude-verify/"))
+      return "VerifyOnStop의 검증 기록과 implementer 표시 (hook만 씀)";
     return null;
   }
 
