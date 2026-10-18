@@ -135,4 +135,14 @@ class ReviewCommandTest {
     assertThat(stdout()).contains("리뷰").doesNotContain("�");
     assertThat(received).isEmpty();
   }
+
+  @Test
+  void noSubcommandExitsWith2AndShowsUsage() {
+    int code = run();
+
+    assertThat(code).isEqualTo(2);
+    assertThat(stdout()).isEmpty();
+    assertThat(stderr()).contains("review").endsWith("\n");
+    assertThat(received).isEmpty();
+  }
 }

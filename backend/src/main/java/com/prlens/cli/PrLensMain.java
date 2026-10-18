@@ -90,6 +90,10 @@ public final class PrLensMain {
     } catch (ParameterException ex) {
       throw new UsageException(usageMessage(ex));
     }
+    if (!parsed.hasSubcommand() && !parsed.isUsageHelpRequested()) {
+      throw new UsageException(
+          "명령을 지정하세요.\n사용법: prlens review <PR URL> [--format markdown|json] [--config <경로>]");
+    }
     try {
       return cmd.getExecutionStrategy().execute(parsed);
     } catch (ExecutionException ex) {

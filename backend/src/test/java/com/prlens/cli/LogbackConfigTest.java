@@ -3,6 +3,7 @@ package com.prlens.cli;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.joran.JoranConfigurator;
@@ -22,7 +23,7 @@ class LogbackConfigTest {
     configurator.setContext(context);
     configurator.doConfigure(resource);
 
-    ch.qos.logback.classic.Logger root = context.getLogger("ROOT");
+    Logger root = context.getLogger("ROOT");
     assertThat(root.getLevel()).isEqualTo(Level.WARN);
     var appenders = root.iteratorForAppenders();
     assertThat(appenders.hasNext()).isTrue();

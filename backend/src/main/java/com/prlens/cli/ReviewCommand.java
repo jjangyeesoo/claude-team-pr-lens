@@ -3,6 +3,7 @@ package com.prlens.cli;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.TypeConversionException;
@@ -48,7 +49,7 @@ final class ReviewCommand implements Callable<Integer> {
   }
 
   /** 허용 값 밖이면 값과 허용 값을 담아 던진다 (요구사항 15.12). 대소문자는 구분한다. */
-  static final class FormatConverter implements picocli.CommandLine.ITypeConverter<OutputFormat> {
+  static final class FormatConverter implements ITypeConverter<OutputFormat> {
 
     @Override
     public OutputFormat convert(String value) {
