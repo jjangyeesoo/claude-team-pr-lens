@@ -89,6 +89,17 @@
             "args": ["-Dfile.encoding=UTF-8", "${CLAUDE_PROJECT_DIR}/.claude/hooks/ProtectFiles.java"]
           }
         ]
+      },
+      {
+        "matcher": "SubagentHandback",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "java",
+            "args": ["-Dfile.encoding=UTF-8", "${CLAUDE_PROJECT_DIR}/.claude/hooks/VerifyOnStop.java", "handback"],
+            "timeout": 600
+          }
+        ]
       }
     ],
     "Stop": [

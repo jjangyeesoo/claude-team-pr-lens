@@ -8,6 +8,7 @@
 |---|---|
 | 브랜치, PR 단위, 승인 규칙 | [PLAYBOOK](../product/PLAYBOOK.md) 2장 "승인 규칙 요약", 6장 "작업 규칙" |
 | `/task`, `/pr-ready`가 하는 일 | [`.claude/skills/task/SKILL.md`](../../.claude/skills/task/SKILL.md), [`.claude/skills/pr-ready/SKILL.md`](../../.claude/skills/pr-ready/SKILL.md) |
+| `/task-flow`와 그 에이전트가 하는 일 | [`.claude/skills/task-flow/SKILL.md`](../../.claude/skills/task-flow/SKILL.md), [`planner`](../../.claude/agents/planner.md), [`implementer`](../../.claude/agents/implementer.md) |
 | Stop hook과 권한 규칙 | [claude-code-setup.md](claude-code-setup.md) |
 
 ## 한눈에 보기
@@ -115,7 +116,7 @@ push를 계획보다 먼저 하는 것은, 계획을 검토하는 동안 다른 
 1. 변경 범위를 확인합니다. 브랜치가 PR 경계 하나에 해당하는지, `src/main` 변경이 400줄 이하인지 봅니다.
 2. 바뀐 스택을 검증하고 결과를 증거로 남깁니다.
 3. reviewer 에이전트가 diff를 스펙과 팀 규칙에 대조해 리뷰합니다. 이 에이전트는 구현 대화의 맥락을 모르는 상태로 코드와 스펙만 봅니다. `.claude/`나 `CLAUDE.md`를 고친 변경은 `context-reviewer` 에이전트가 리뷰합니다(지침끼리 맞물리는지, 기존 규칙이나 hook과 충돌하는지). 설정과 그 문서만 바뀐 브랜치는 `context-reviewer`만 실행하고, `backend/`나 `web/`도 함께 바뀌었으면 둘 다 실행합니다(`.claude/hooks/`의 Java 파일이 바뀌어도 `reviewer`를 함께 실행합니다).
-4. 리뷰 결과를 "반드시 수정", "선택", "뒤 작업에 넘길 것"으로 나눠 보여 주고, "반드시 수정"만 고친 뒤 테스트를 다시 실행합니다.
+4. 리뷰 결과를 "반드시 수정", "선택", "뒤 작업에 넘길 것"으로 나눠 보여 줍니다. "반드시 수정"과 "선택"은 ID가 붙은 표로 나옵니다. "반드시 수정"은 고치고, "선택"은 추천·수정안·이유를 보고 고칠 ID를 고르면 그것만 고칩니다(고르지 않으면 고치지 않음). 고친 뒤 테스트를 다시 실행합니다. `/task-flow`로 진행한 브랜치는 리뷰 파일의 SHA가 `HEAD`와 같으면 리뷰를 다시 돌리지 않고 그 결과를 씁니다.
 5. "뒤 작업에 넘길 것"(reviewer가 보고한 것과 메모 파일에 적힌 것)이 있으면 스펙 문서 수정안(대상 작업 본문에 넣을 `주의(… 리뷰)`, `미정(여기서 정함)` 줄)을 보여 주고, 승인한 항목만 반영합니다. 메모 파일의 항목은 최종 코드와 대조해 여전히 유효하고 뒤 작업이 스펙만 읽고 구현하면 틀리게 되는 것만 넣고, 넣을 항목이 없더라도 5번을 마칠 때 메모 파일을 지웁니다. PR 설명은 뒤 작업을 하는 세션이 읽지 못하므로 `/task`가 읽는 `tasks.md`에 남깁니다.
 6. [PR 템플릿](../../.github/pull_request_template.md) 형식으로 PR 설명 초안을 출력합니다.
 
@@ -134,6 +135,11 @@ PR이 열리면 CI가 `backend`, `web` 두 job을 실행합니다. 둘 다 필�
 사람이 리뷰하고 승인합니다. 누가 승인하는지는 PR 종류에 따라 다르고, 표는 [PLAYBOOK](../product/PLAYBOOK.md)의 "승인 규칙 요약"에 있습니다.
 
 머지되면 `origin/main`의 `tasks.md` 체크박스가 바뀌고, 그때부터 다른 사람의 `/task <스펙>` 목록에 완료로 보입니다.
+
+## `/task-flow`: 단계를 에이전트로 나눈 진행 (시험 중)
+`/task`와 같은 일을 단계별 에이전트에게 맡깁니다. 메인 세션은 매니저로서 상태와 사람 확인(G1 브랜치, G2 계획, G3 최종 보고)만 하고, 계획은 `planner`, 구현은 `implementer`, 리뷰는 `reviewer`·`context-reviewer`가 합니다. 받은 번호가 속한 PR 경계 전체를 한 번에 다루고, implementer가 슬라이스마다 실패 테스트 커밋부터 커밋합니다. Checkpoint 작업은 `/task`로 합니다.
+
+단계별 설명, 상태 줄과 이어 가기, 게이트 조건, 구현 중 검증은 [task-flow-workflow.md](task-flow-workflow.md)에 있습니다. 안정되면 `/task`를 대체하고, 그때까지 두 skill은 함께 고칩니다.
 
 ## 자주 헷갈리는 것
 

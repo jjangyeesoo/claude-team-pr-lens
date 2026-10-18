@@ -1,6 +1,6 @@
 # `/task-flow` 계획: 단계를 나눈 task skill
 
-임시 문서입니다. `/task-flow`를 만들기 전의 계획이고, 구현하면 지우거나 `task-workflow.md`의 절로 옮깁니다. 지금의 `/task`(`.claude/skills/task/SKILL.md`)는 이 계획에서 고치지 않습니다.
+구현 기록입니다. `/task-flow`를 만들기 전의 계획에 구현하며 바뀐 점과 검증 결과를 더했습니다. 지금 동작의 원본은 `.claude/skills/task-flow/SKILL.md`와 `docs/guide/claude-code-setup.md` "구현 중 검증"이고, 이 문서와 다르면 그쪽을 따릅니다. 특히 "구현 중 검증" 절의 SubagentStart·SubagentStop 설계는 그 절 머리말의 변경으로 대체되었습니다. 지금의 `/task`(`.claude/skills/task/SKILL.md`)는 이 PR에서 고치지 않습니다("다음 PR"의 대체).
 
 ## 배경
 - 마지막 주차에 task 오케스트레이션(매니저가 단계별 에이전트를 관리)을 적용합니다. 처음에는 의존이 없는 작업의 병렬 진행까지 목표로 했으나, 검토 결과 병렬은 보류했습니다(아래 "병렬 실행" 줄).
@@ -66,7 +66,7 @@ planner: <agentId> · implementer: <agentId>
 | 게이트 | 멈추는 조건 | 확인 방법 |
 |---|---|---|
 | G1 | 같은 `-<단계>-<번호>-` 또는 `/<단계>-<번호>-` 패턴의 **다른** 브랜치가 원격이나 로컬에 있음(다른 사람이 진행 중). 이 작업의 계획 파일에 적힌 브랜치는 제외하고, 재개할 때는 G1을 건너뜀 | `git fetch --prune origin` 뒤 `git branch -a`에서 이름 패턴 검사(`/task` 1.1·1.3과 같음) |
-| G2 | 작업이 결정 대기(D-n, G-n)에 걸림 | `tasks.md` Notes "막는 작업" 표의 행 가운데, 항목이 확정되지 않은 행에 경계 안 하위 작업 번호가 있음. 확정 여부는 항목 이름에 `확정`이 있거나 그 행이 링크한 ADR이 `docs/adr/README.md`에 대체되지 않은 결정으로 올라 있는지로 봅니다(P1 D-2는 문구에 `확정`이 없고 ADR 0005로 확정됨). 스펙 색인의 결정 대기 표는 그 D/G의 제안값을 보여 주는 데만 씀. `tasks.md` Notes에 "막는 작업" 표가 없는 스펙(지금 P2)이면 판정할 수 없으므로 멈추고, 표를 먼저 더하라고 알림 |
+| G2 | 작업이 결정 대기(D-n, G-n)에 걸림 | `tasks.md` Notes "막는 작업" 표의 행 가운데, 항목이 확정되지 않은 행에 경계 안 하위 작업 번호가 있음. 확정 여부는 항목 이름에 `확정`이 있거나 그 행이 링크한 ADR이 `docs/adr/README.md`에 대체되지 않은 결정으로 올라 있는지로 봅니다(P1 D-2는 문구에 `확정`이 없고 ADR 0005로 확정됨). 스펙 색인의 결정 대기 표는 그 D/G의 제안값을 보여 주는 데만 씀. `tasks.md` Notes에 "막는 작업" 표가 없는 스펙(지금 P2)이면 "판정할 수 없음"으로 출력하고, 결정 대기는 색인과 작업 본문으로 확인함 |
 | G2 | 선행 spike가 끝나지 않음 | 작업 본문의 `막는 작업:` 줄(P2 0.2~0.4 형식)에 경계 안 하위 작업 번호가 있고, 그 줄이 속한 작업이 아직 `- [ ]`임 |
 | G2 | 계획이 요구사항 변경을 제안함 | 계획 파일의 "요구사항 변경" 절이 비어 있지 않음(planner는 이 절을 항상 두고, 없으면 "없음"이라고 적음) |
 | G2 | planner가 사용자에게 물을 것을 남김 | 계획 파일의 "질문" 절이 "없음"이 아님 |
@@ -83,6 +83,14 @@ planner: <agentId> · implementer: <agentId>
 | 슬라이스 사이 | 다음 슬라이스의 계획이 바뀜 | implementer 보고의 `다음 슬라이스 영향:`이 `없음`이 아님(D10. G2와 같은 사람 확인이며 `--auto`에서도 멈춤) |
 
 ### 구현 중 검증
+> **구현하면서 바뀜 (2026-10-18, 체크리스트 0 결과).** SubagentStop은 서브에이전트의 보고(`SubagentHandback`) 뒤에 와서 exit 2로 붙잡을 수 없었습니다. 그래서 아래를 바꿨고, 구현된 동작의 원본은 `docs/guide/claude-code-setup.md` "구현 중 검증"입니다.
+> - 종료 검증은 PreToolUse(matcher `SubagentHandback`)에서 합니다. `BLOCKED:` 판별은 보고 원문(`tool_input.message`)으로, 재시도 횟수는 표시 파일에 셉니다. SubagentStart·SubagentStop hook은 쓰지 않습니다
+> - 실행 중 판정은 표시 파일이 아니라 메인 Stop 입력의 `background_tasks`(실행 중인 implementer)로 합니다. 표시 파일은 `blocked`·`failed`(끝났지만 트리가 빨감)에만 씁니다. 그래서 "실재 확인"과, 멈춘 implementer의 표시가 12시간 남는 문제가 없어졌습니다
+> - 매니저의 결과 확인은 `VerifyOnStop.java --check <agentId>`로 합니다(agent_id, 스택 결과, 내용 해시, 끝날 때 깨끗했는지)
+> - handback 모드는 기록이 없을 때 `baseline`을 쓰지 않고 검증합니다(이 브랜치가 건드리지 않은 스택은 `pass-nothing-to-verify`)
+>
+> 아래는 처음 계획입니다.
+
 검증을 메인의 Stop에서 implementer의 SubagentStop으로 옮깁니다. 검증 명령과 판정은 지금의 `VerifyOnStop.java`를 그대로 씁니다.
 
 hook은 모두 `settings.json`에 둡니다(SubagentStart·SubagentStop, matcher `implementer`). 에이전트 frontmatter의 `hooks`로도 걸 수 있지만, 설정을 한 파일에 모으고 판정 로직도 `VerifyOnStop.java` 한 곳에 두기 위해서입니다.
@@ -210,31 +218,43 @@ planner는 implementer가 먼저 쓸 실패 테스트를 슬라이스 절마다 
 ### 0. 사전 확인 (hook을 바꾸기 전)
 hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전체가 성립하지 않으므로, `VerifyOnStop.java`를 고치기 전에 입력을 파일로 남기기만 하는 시험용 hook으로 먼저 봅니다.
 
-| 확인 | 근거 | 막히면 |
-|---|---|---|
-| [ ] 이 폴더의 워크스페이스 신뢰를 수락했음 | 문서 | 수락 뒤 다시 확인 |
-| [ ] SubagentStart·SubagentStop이 matcher `implementer`로 걸리고 입력에 `agent_id`, `session_id`, `transcript_path`가 옴 | 문서 | 멈춤 |
-| [ ] SubagentStart 입력의 `session_id`가 같은 세션 메인 Stop 입력의 `session_id`와 같음("세션 확인"의 전제. 다르면 표시가 늘 무효가 되어 메인 Stop이 구현 도중을 검증함) | 미확인 | 멈춤(또는 "세션 확인"을 뺌) |
-| [ ] SubagentStop 입력에 `stop_hook_active`, `last_assistant_message`, `agent_transcript_path`가 옴 | 문서 | `BLOCKED` 건너뛰기나 재시도 상한을 다른 방법으로 |
-| [ ] SubagentStop에서 exit 2면 implementer가 멈추지 않고 실패 내용을 받아 계속 고침 | 문서 | 멈춤 |
-| [ ] 두 번째 차단에서 `stop_hook_active`가 true로 옴(Stop과 같은 의미) | 미확인 | 재시도 횟수를 표시 파일에 직접 셈 |
-| [ ] SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝남 | 미확인 | 표시를 매니저가 호출 직전에 `--mark`로 씀 |
-| [ ] `SendMessage`로 재개할 때 SubagentStart가 다시 발생함 | 미확인 | `--mark` 절차("구현 중 검증" 5번) |
-| [ ] 백그라운드 서브에이전트가 끝날 때 settings의 Stop은 돌지 않음 | 미확인(문서상 간접적으로 아님) | 돈다면 그때도 표시를 보고 건너뛰는지 확인 |
-| [ ] Stop의 `systemMessage`가 사용자에게 보임 | 미확인(지금 `VerifyOnStop`도 씀) | 건너뛸 때 안내 방식을 바꿈 |
-| [ ] SubagentStart의 `transcript_path`로 만든 서브에이전트 transcript 경로가 SubagentStop의 `agent_transcript_path`와 같음 | 미확인 | "실재 확인" 검사를 뺌 |
-| [ ] `claude --resume`·`--continue`로 이어 간 뒤 `session_id`가 바뀜 | 미확인 | 바뀌지 않으면 "세션 확인"이 막는 것은 새 세션뿐임. SessionStart hook 등 대안을 그때 정함 |
-| [ ] frontmatter `background: true`인 planner·implementer가 백그라운드로 돌고, 끝나면 완료 알림으로 매니저가 이어 감 | 문서, 이 세션(검토 에이전트) | 사용자가 `/task-flow`를 다시 불러 재개하는 흐름으로 |
-| [ ] 백그라운드 서브에이전트의 Write·Edit·`git add`·`git commit` 권한 프롬프트가 메인 세션에 에이전트 이름과 함께 뜨고 거기서 처리됨 | 문서 | 멈춤 |
-| [ ] `ProtectFiles`가 서브에이전트의 Edit·Write에도 걸림 | 문서 | 편집 보호를 우회로 대책에서 뺌 |
-| [ ] 사용자가 백그라운드 implementer를 멈췄을 때 SubagentStop이 옴 | 미확인 | 오지 않으면 같은 세션에서 12시간 동안 검증이 꺼지므로, 매니저가 중단을 알아챘을 때 표시를 지우는 절차를 더함 |
+2026-10-18에 입력을 파일로 남기는 시험 hook(`settings.local.json`)과 시험용 implementer로 확인했습니다. 결과 열이 실제로 본 것입니다.
+
+| 확인 | 결과 |
+|---|---|
+| [x] 이 폴더의 워크스페이스 신뢰를 수락했음 | hook이 돎 |
+| [x] SubagentStart·SubagentStop이 matcher `implementer`로 걸리고 입력에 `agent_id`, `session_id`, `transcript_path`가 옴 | 옴 (`agent_type`도 옴) |
+| [x] SubagentStart 입력의 `session_id`가 같은 세션 메인 Stop 입력의 `session_id`와 같음 | 같음 |
+| [x] SubagentStop 입력에 `stop_hook_active`, `last_assistant_message`, `agent_transcript_path`가 옴 | `last_assistant_message`는 보고 도구로 끝날 때 **없음**. 나머지는 옴 |
+| [x] SubagentStop에서 exit 2면 implementer가 계속 고침 | **안 됨**: 보고(`SubagentHandback`) 뒤에 와서 무시됨. PreToolUse(`SubagentHandback`)의 exit 2는 보고를 막고 계속 일하게 함 → 설계 변경("구현 중 검증" 머리말) |
+| [x] 두 번째 차단에서 `stop_hook_active`가 true로 옴 | SubagentStop에서는 true. PreToolUse 입력에는 이 필드가 없어 횟수를 표시 파일에 셈 |
+| [x] SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝남 | 먼저 끝남 (새 설계에서는 쓰지 않음) |
+| [x] `SendMessage`로 재개할 때 SubagentStart가 다시 발생함 | 발생함 |
+| [x] 백그라운드 서브에이전트가 끝날 때 settings의 Stop은 돌지 않음 | 돌지 않음. 대신 메인 Stop 입력의 `background_tasks`에 실행 중인 implementer가 보임 → 실행 중 판정에 씀 |
+| [x] Stop의 `systemMessage`가 사용자에게 보임 | 보임 (사용자 확인) |
+| [x] 서브에이전트 transcript 경로를 만든 값이 `agent_transcript_path`와 같음 | 같음 (새 설계에서는 쓰지 않음) |
+| [x] `claude --continue`로 이어 간 뒤 `session_id`가 바뀜 | **바뀌지 않음**. 세션 확인이 막는 것은 새 세션뿐. `/clear` 뒤는 체크리스트 3에서 확인 |
+| [x] frontmatter `background: true`가 백그라운드로 돌고 완료 알림으로 이어 감 | 됨 |
+| [ ] 백그라운드 서브에이전트의 권한 프롬프트가 메인 세션에 뜸 | `auto` 모드라 프롬프트 없이 허용되어 확인하지 못함 |
+| [x] `ProtectFiles`가 서브에이전트의 Edit·Write에도 걸림 | 걸림 |
+| [x] 백그라운드 implementer를 멈췄을 때 SubagentStop이 옴 | **오지 않음** (`TaskStop`으로 확인). 새 설계에서는 `background_tasks`에서 빠지므로 영향 없음 |
 
 ### 1. 목록
 | 확인 | 막히면 |
 |---|---|
-| [ ] `/task-flow pr-lens-p1-cli`(번호 없음)의 시작 가능·진행 중·막힘·완료 목록이 `/task pr-lens-p1-cli`와 같음 | 차이를 고침 |
+| [x] `/task-flow pr-lens-p1-cli`(번호 없음)의 시작 가능·진행 중·막힘·완료 목록이 `/task pr-lens-p1-cli`와 같음 (2026-10-18: 판정은 모두 같음. 묶는 단위와 완료 개수 세는 법이 달라 `/task-flow` 2번에 "PR 경계 단위로 묶고, 완료는 말단 작업 수로 센다"를 더함) | 차이를 고침 |
 
 ### 2. 작업 하나 끝까지 (시작 가능한 실제 작업)
+**결과 (2026-10-18, P1 7.2~7.5).** 브랜치 `feat/t2-p1-7.2-pr-fetcher`를 `chore/task-flow-skill`에서 갈라(새 hook과 에이전트가 필요해서) 끝까지 진행했고 G3까지 갔습니다. hook 실패 경로는 시험용 브랜치에서 따로 확인했습니다(시험 A~D). 항목별 결과는 이 목록에 적고, 아래 표는 처음 계획 그대로 둡니다(SubagentStart를 전제한 행은 "구현 중 검증" 머리말대로 바뀌었습니다).
+- 통과: G1 멈춤과 골격, planner가 공통·슬라이스 절로 나눠 씀, G2 요약과 게이트 조건, 승인 뒤 상태 줄, 슬라이스마다 새 implementer, `test:` 커밋이 테스트와 스텁만 담음, implementer가 전체 검증을 직접 돌리지 않음, 구현 중 메인 Stop 건너뛰기(안내 보임), 종료 검증 통과 뒤 표시 삭제와 결과 파일, 실패 붙잡기와 두 번째에 놓아주기(시험 A·B, 놓아준 뒤 `failed` 표시로 메인 Stop 건너뜀), 포맷 변경을 커밋하라고 돌려보냄(시험 C), `BLOCKED`와 재개(시험 D, `blocked` 표시로 메인 Stop 건너뜀), 리뷰가 마지막 슬라이스 뒤 한 번, ID 표와 "선택"의 추천·수정안·이유, 고른 "선택"만 수정 모드로 넘어감, 확인 리뷰가 수정 diff만 보고 `## 리뷰 2`로 이어 씀, reviewer의 테스트 목록 대조, G3 보고와 `PR 준비`
+- 확인하지 못함: 수정 요청을 `SendMessage`로 planner에 보내기(G2에서 수정 요청이 없었음), "다음 슬라이스 영향: 있음"의 재승인(실제로 생기지 않음), `context-reviewer`가 함께 도는 경우(`.claude/`를 바꾸지 않는 작업), 일부러 하위 작업이나 인수 기준을 빼 G2가 멈추는지, 일부러 diff 밖에 문제를 남겨 `diff 밖`이 나오는지
+- 드러난 것과 조치
+  - 매니저가 상태 줄에 planner agentId를 적는 사이 planner가 파일 전체를 다시 쓰려다 막힘(다시 읽고 덧붙여 보존) → `planner.md`에 "Write로 다시 쓰지 말고 Edit, 바뀌었으면 다시 읽기"를 더함
+  - planner가 `.claude/rules/backend/testing.md`를 읽지 않아 Property 하나를 메서드 둘로 계획함(리뷰 R-S1으로 고침) → `planner.md`에 테스트 규칙 읽기를 더함
+  - G3 "테스트 약화" 어림 검사가 R-S1(두 메서드 합치기)에서 지운 `assertThat` 한 줄에 걸림. 의도대로 사람에게 보여 주는 경우였음
+  - 커밋 뒤 자동 보안 리뷰(플러그인)가 `PrFetcher`에 4건을 냄. 매니저가 reviewer에게 넘겨 판정하게 함(2건 선택 "두기", 2건 스펙상 해당 없음)
+  - 시험상 기준 브랜치가 `origin/main`이 아니어서 매니저가 커밋 범위와 reviewer 비교 기준을 `chore/task-flow-skill`로 바꿔 넘김(이 PR이 머지되면 필요 없음)
+
 | 단계 | 확인 |
 |---|---|
 | G1 | [ ] 브랜치 이름을 제안하고 멈춤 → 확인 뒤 생성·push, 상태 줄만 있는 계획 파일 골격이 생김 |
@@ -270,54 +290,86 @@ hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전�
 | | [ ] 상태 줄이 `PR 준비`로 바뀜 |
 
 ### 3. 이어 가기
-| 확인 |
-|---|
-| [ ] G2 전, G2 승인 뒤, 구현 중, 리뷰 중에 각각 `/clear`하고 `/task-flow <스펙> <번호>`를 다시 실행하면 G1을 건너뛰고 상태 표의 "재개 시 할 일"을 함 |
-| [ ] 구현 중 재개 때 상태 줄의 슬라이스부터 이어 가고, 새 implementer에게 트리 상태, 커밋, 실패하는 테스트 목록이 넘어감 |
-| [ ] 상태 줄을 일부러 틀리게 고치면 산출물과 어긋난다고 알리고 멈춤 |
-| [ ] `BLOCKED` 상태에서 `/clear`하고 재개하면 매니저가 `--mark`로 표시를 다시 쓰고, 질문을 전한 뒤 턴을 끝내도 메인 Stop이 빨간 트리를 검증하지 않음 |
+2026-10-18에 `pr-lens-p1-cli` 7.2~7.5 경계(브랜치 `feat/t2-p1-7.2-pr-fetcher`)에서 확인했습니다. 이 브랜치는 리뷰를 마치고 상태 줄이 `상태: PR 준비`인 상태였습니다(reviewer 확인 리뷰 SHA가 `HEAD`와 같고 "반드시 수정" 없음, `남긴 반드시 수정: 없음`). 아래 두 시험을 차례로 했고 둘 다 통과했습니다.
+
+| 시험 | 절차 | 통과 기준 | 결과 |
+|---|---|---|---|
+| 3-1. 정상 재개 | `/clear` 뒤 `/task-flow pr-lens-p1-cli 7.3`. 첫 하위 작업(7.2)이 아니라 경계 안의 다른 번호를 줌 | 7.3을 7.2~7.5 경계로 묶음. 계획 파일(`7.2-plan.md`)을 찾고 G1을 건너뜀. 상태가 `PR 준비`이고 교차 확인(리뷰 파일 마지막 절 "반드시 수정"이 비어 있고 `남긴 반드시 수정: 없음`)이 맞으므로 G3 보고를 다시 보여 주고 `/pr-ready`를 안내함 | 통과 |
+| 3-2. 상태 줄과 산출물이 어긋날 때 | 3-1 뒤 상태 줄 1행만 `상태: 계획 중`으로 바꿈(`승인: G2 2026-10-18`과 어긋남). `/clear` 뒤 `/task-flow pr-lens-p1-cli 7.2` | 교차 확인이 어긋난다고 알리고 멈춤. 그 뒤 요청으로 상태 줄을 `PR 준비`로 되돌림 | 통과. 산출물(슬라이스 2/2 완료, 실패 테스트 SHA, 리뷰 2절)을 근거로 맞는 상태를 제안했고, 상태 줄은 사용자 확인 뒤에만 고침 |
+
+| 확인 | 결과 |
+|---|---|
+| [ ] G2 전, G2 승인 뒤, 구현 중, 리뷰 중에 각각 `/clear`하고 `/task-flow <스펙> <번호>`를 다시 실행하면 G1을 건너뛰고 상태 표의 "재개 시 할 일"을 함 | 일부 확인(3-1). `/clear` 뒤 G1 건너뛰기, 경계 안 다른 번호로 계획 파일 찾기, "PR 준비" 행의 재개는 통과. 나열한 네 상태 각각의 재개는 이번에 시험하지 않음 |
+| [ ] 구현 중 재개 때 상태 줄의 슬라이스부터 이어 가고, 새 implementer에게 트리 상태, 커밋, 실패하는 테스트 목록이 넘어감 | 이번에 시험하지 않음 |
+| [x] 상태 줄을 일부러 틀리게 고치면 산출물과 어긋난다고 알리고 멈춤 | 통과(3-2) |
+| [ ] `BLOCKED` 상태에서 `/clear`하고 재개하면 매니저가 `--mark`로 표시를 다시 쓰고, 질문을 전한 뒤 턴을 끝내도 메인 Stop이 빨간 트리를 검증하지 않음 | 이번에 시험하지 않음 |
+
+확인하면서 발견한 것(통과 판정과는 별개로, 정할 것):
+- **`/clear` 뒤에는 G3의 검증 증거를 다시 만들 수 없음.** "PR 준비" 재개로 G3 보고를 다시 낼 때 `--check <상태 줄의 implementer>`가 `결과 없음: implementer-result.json이 없습니다`(exit 1)로 끝나, G3 조건 "종료 검증이 통과가 아님"에 걸림. 이전 세션의 implementer 결과 파일이 남지 않았기 때문임. 재개한 G3에서 이 결과를 어떻게 다룰지(다시 검증할지, 이전 G3의 출력을 계획 파일에 남길지) 정해야 함 → 정함(`/pr-ready` 리뷰 C-S3): G3가 `--check` 출력과 `HEAD`를 계획 파일 `## G3 검증` 절에 남기고, 재개한 G3는 그 절을 씀
+- **"PR 준비"의 교차 확인이 빠진 리뷰어를 잡지 못함.** 이 브랜치에는 `.claude/` 변경(`/task-flow` 도입 커밋)이 섞여 있어 7번 2 규칙상 `context-reviewer`도 돌아야 하지만, `-context-review.md`가 없어도 교차 확인은 있는 리뷰 파일만 보고 통과함. 교차 확인에 "7번 2로 고른 리뷰어마다 리뷰 파일이 있음"을 더할지 정해야 함 → 더함(`/pr-ready` 리뷰 C-S2)
+- G3 조건 "실패 테스트 커밋 뒤 테스트가 약해짐"은 잘 동작함. R-S1 수정에서 지운 `isPresent()` assertion 한 줄을 잡아 보여 줌(확인 리뷰는 겹치는 assertion이라고 판정)
 
 ### 4. `/pr-ready`와 회귀
-| 확인 |
-|---|
-| [ ] 같은 브랜치에서 `/pr-ready`가 `-review.md`(SHA가 `HEAD`와 같음)를 재사용하고 reviewer를 다시 돌리지 않음 |
-| [ ] `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지고, 넘길 것이 없을 때도 지워짐 |
-| [ ] 그 뒤 `/task-flow`를 다시 실행하면 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈춤 |
-| [ ] 회귀: `-review.md`가 없는 브랜치(기존 `/task`로 만든 것)에서 `/pr-ready`가 지금처럼 reviewer를 돌림 |
-| [ ] 두 리뷰 파일이 있을 때 `/pr-ready`가 리뷰어마다 재사용을 판정함(한쪽 SHA만 다르면 그쪽만 다시 돌림). 넘길 것이 없어도 5번 끝에서 `-plan.md`·`-review.md`·`-context-review.md`가 지워짐 |
-| [ ] `/pr-ready` 4번이 "선택" 표를 보여 주고 고칠 ID를 묻고, 고르지 않으면 "반드시 수정"만 고침. `context-reviewer` 결과도 같은 표로 나옴 |
-| [ ] 회귀: 기존 `/task`가 지금처럼 동작함(`VerifyOnStop` 변경 뒤 implementer 없이 메인 Stop이 평소대로 검증) |
+2026-10-18에 확인했습니다. 시험마다 `/clear` 뒤 새 세션에서 실행했습니다.
+- 4-1~4-3은 체크리스트 2·3을 마친 `feat/t2-p1-7.2-pr-fetcher`에서 했습니다. 이 브랜치의 HEAD는 `c399d94`, 트리는 깨끗했습니다. `7.2-review.md`의 마지막 절 SHA는 HEAD와 같았고, `7.2-context-review.md`는 없었습니다.
+- 4-4는 이 브랜치(`chore/task-flow-skill`)에서 했습니다.
+- `/pr-ready`가 handoff 파일을 지우므로, 다시 시험할 수 있게 계획·리뷰 파일을 미리 복사해 두었습니다.
+
+| 시험 | 절차 | 통과 기준 | 결과 |
+|---|---|---|---|
+| 4-1. 리뷰 파일 재사용과 리뷰어별 판정 | `/clear` 뒤 `/pr-ready` | reviewer는 다시 돌지 않고 `7.2-review.md`를 재사용한다고 알림. context-reviewer는 리뷰 파일이 없어 새로 돎. reviewer 쪽 "선택"은 다시 묻지 않고, 고친 R-S1은 PR 설명의 "선택" 목록에 넣지 않음. context-reviewer의 "선택"은 추천·수정안·이유가 있는 표로 보여 주고 `C-` ID로 물음 | 통과 |
+| 4-2. 스펙 반영 대상과 파일 삭제 | 4-1에 이어 `/pr-ready` 5번 | `-plan.md`·`-review.md`는 반영 대상으로 읽지 않음. 대상은 리뷰의 "뒤 작업에 넘길 것" 2건과 메모 파일 `7.2.md`뿐. 5번이 끝나면 `7.2-plan.md`·`7.2-review.md`가 지워짐 | 통과 |
+| 4-3. `/pr-ready` 뒤 `/task-flow` 재실행 | `/clear` 뒤 `/task-flow pr-lens-p1-cli 7.2` | "계획 파일은 없고 이 작업의 브랜치가 있다"고 알리고, 커밋 목록과 PR 여부를 보여 준 뒤 멈춤 | 통과 |
+| 4-4. 리뷰 파일이 없는 브랜치 | `chore/task-flow-skill`로 바꾸고 `/clear` 뒤 `/pr-ready` | 리뷰 파일이 없으므로 reviewer(`.claude/hooks/*.java` 변경)와 context-reviewer가 둘 다 돎 | 통과. 두 리뷰어가 백그라운드로 함께 돌았고, 결과는 이 PR의 리뷰로 씀 |
+
+| 확인 | 결과 |
+|---|---|
+| [x] 같은 브랜치에서 `/pr-ready`가 `-review.md`(SHA가 `HEAD`와 같음)를 재사용하고 reviewer를 다시 돌리지 않음 | 4-1 |
+| [x] `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지고, 넘길 것이 없을 때도 지워짐 | 4-2. 넘길 것이 있는 경우로 시험함 |
+| [x] 그 뒤 `/task-flow`를 다시 실행하면 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈춤 | 4-3 |
+| [x] 회귀: `-review.md`가 없는 브랜치(기존 `/task`로 만든 것)에서 `/pr-ready`가 지금처럼 reviewer를 돌림 | 4-4. `/task`로 만든 브랜치가 아니라 작업 번호 없는 `chore/` 브랜치로 시험함 |
+| [x] 두 리뷰 파일이 있을 때 `/pr-ready`가 리뷰어마다 재사용을 판정함(한쪽 SHA만 다르면 그쪽만 다시 돌림). 넘길 것이 없어도 5번 끝에서 `-plan.md`·`-review.md`·`-context-review.md`가 지워짐 | 4-1·4-2. 한쪽 파일이 **없는** 경우(reviewer는 재사용, context-reviewer는 새로 돎)로 시험함. 두 파일이 모두 있고 SHA만 다른 경우, `-context-review.md`가 지워지는지는 확인하지 못함 |
+| [x] `/pr-ready` 4번이 "선택" 표를 보여 주고 고칠 ID를 묻고, 고르지 않으면 "반드시 수정"만 고침. `context-reviewer` 결과도 같은 표로 나옴 | 4-1 |
+| [ ] 회귀: 기존 `/task`가 지금처럼 동작함(`VerifyOnStop` 변경 뒤 implementer 없이 메인 Stop이 평소대로 검증) | 시험하지 않음. `/task`로 하는 실제 작업이 있어야 하므로, 아직 시험하지 않은 "구현 중"·`BLOCKED` 상태의 `/clear` 뒤 재개와 함께 다음 실제 작업에서 확인함 |
 
 ### 5. 우회로 대책
 implementer 없이 아래를 만들어, 메인 Stop이 건너뛰지 않고 그대로 검증하는지 봅니다.
 
-| 확인 |
-|---|
-| [ ] 빈 표시 파일 |
-| [ ] 형식이 틀린 표시 파일 |
-| [ ] 시작 시각이 12시간 지난 표시 |
-| [ ] 다른 `session_id`의 표시 |
-| [ ] 없는 transcript를 가리키는 표시(SubagentStart 출처) |
-| [ ] Edit·Write로 표시 파일을 만들려 하면 `ProtectFiles`가 막음 |
-| [ ] 검증 결과 파일의 `agent_id`를 다른 값으로 바꾸면 G3가 "결과 없음"으로 멈춤 |
-| [ ] `test:` 커밋 뒤에 assertion 한 줄을 지우는 커밋을 더하면 G3가 멈추고 그 줄을 보여 줌 |
-| [ ] `test:` 커밋 없이 구현과 테스트를 한 커밋에 담으면 G3가 "실패 테스트 커밋이 없음"으로 멈춤 |
-| [ ] 구현과 테스트를 한 커밋에 담고 제목만 `test:`로 붙이면 G3가 "실패 테스트 커밋에 구현이 섞임"으로 멈춤 |
-| [ ] 검증 결과 파일의 결과를 `unavailable`이나 `baseline`으로 바꾸면 G3가 통과로 보지 않고 멈춤 |
-| [ ] implementer가 끝난 뒤 파일 하나를 고치면 내용 해시가 달라 G3가 "결과 없음"으로 멈춤 |
-| [ ] `test:` 커밋 뒤에 `@Disabled`나 `.skip(`을 더하면 G3가 멈춤 |
+2026-10-18에 `chore/task-flow-skill`(`681e399`)에서 hook을 직접 실행해 확인했습니다. 시험한 방법은 다음과 같습니다.
+- **표시 파일(1~5행)**: Bash로 `build/claude-verify/implementer-marker.json`을 만들고, 메인 Stop에 `{"session_id":"S1"}`을 넣었습니다. 트리는 일부러 빨갛게 했습니다(컴파일되지 않는 테스트 파일을 untracked로 둠). 그래서 "출력 없음"이 아니라 "exit 2로 검증 실패"를 보고 판정했습니다. 대조군(같은 세션의 `blocked` 표시)은 건너뛰기 안내와 exit 0이었습니다.
+- **결과 파일(7·11·12행)**: handback 모드로 진짜 결과 파일을 만들었습니다(`agent_id` `t1`, 두 스택 `pass-nothing-to-verify`). 원본에서 `--check t1`은 `ok`였고, 결과 파일을 변조한 뒤 다시 확인했습니다.
+- **G3에 대한 한계**: 7·11·12행은 `--check`가 "결과 없음"과 exit 1을 내는지까지만 봤습니다. 그 출력을 받은 매니저가 G3에서 멈추는지는 실행하지 않았습니다(스킬상 `--check`가 `ok`가 아니면 G3 조건에 걸림).
+- **정리**: 시험 뒤 표시·결과 파일과 시험 파일을 지우고 `state.properties`를 원래대로 되돌렸습니다.
+- **매니저 G3(9·10·13행, 시험 A·B·C)**: 같은 날 준비 스크립트(`g3-prep.sh A|B|C|cleanup`, 저장소 밖 scratchpad)로 시험마다 로컬 브랜치 `test/g3-<a|b|c>`를 만들었습니다. 브랜치는 `feat/t2-p1-7.2-pr-fetcher`의 커밋을 시험에 맞게 바꾸고 `chore/task-flow-skill`을 합친 것입니다. 계획 파일은 `상태: 리뷰 중`으로 두었고, 리뷰 파일은 마지막 절 SHA를 `HEAD`로 맞춘 사본을 썼습니다. 종료 검증 결과 파일은 handback 모드로 그 `HEAD`에서 만들어 `--check`가 `ok`가 되게 했습니다(시험 대상 조건만 걸리게). 그런 다음 `/clear` 뒤 `/task-flow pr-lens-p1-cli 7.2`로 재개해, 매니저가 "리뷰 중"에서 G3로 가며 조건을 계산하는지 봤습니다. 세 시험 모두 상태 줄을 `PR 준비`로 바꾸고 `## G3 검증` 절을 썼습니다. 시험 뒤 `cleanup`으로 브랜치와 계획·리뷰·결과 파일을 지웠습니다.
+
+| 확인 | 결과 |
+|---|---|
+| [x] 빈 표시 파일 | 검증함(exit 2) |
+| [x] 형식이 틀린 표시 파일 | 검증함(exit 2). JSON이 아닌 내용, `agent_id` 형식 위반(`a 1;rm`), `at` 없음 세 가지로 시험 |
+| [x] 시작 시각이 12시간 지난 표시 | 검증함(exit 2). 13시간 전으로 시험. 미래 시각(2099년)도 검증함 |
+| [x] 다른 `session_id`의 표시 | 검증함(exit 2). `--mark` 출처(`source: mark`)는 세션을 보지 않고 건너뜀(설계대로, 한계) |
+| [x] 없는 transcript를 가리키는 표시(SubagentStart 출처) | 설계가 바뀌어 해당 없음(SubagentStart를 쓰지 않음, "구현 중 검증" 머리말). 대신 `blocked`·`failed`가 아닌 표시(`status: verifying`)가 남아도 건너뛰지 않고 검증함(exit 2)을 확인 |
+| [x] Edit·Write로 표시 파일을 만들려 하면 `ProtectFiles`가 막음 | 막음(Write로 시험. "VerifyOnStop의 검증 기록과 implementer 표시 (hook만 씀)"). Bash 쓰기는 막지 않음(위 시험이 그 방법) |
+| [x] 검증 결과 파일의 `agent_id`를 다른 값으로 바꾸면 G3가 "결과 없음"으로 멈춤 | `--check`가 `결과 없음: agent_id가 다릅니다 (파일: t9, 기대: t1)`, exit 1 |
+| [x] `test:` 커밋 뒤에 assertion 한 줄을 지우는 커밋을 더하면 G3가 멈추고 그 줄을 보여 줌 | 체크리스트 2의 실제 작업에서 확인함. R-S1 수정에서 지운 `assertThat` 한 줄을 잡아 보여 줌 |
+| [x] `test:` 커밋 없이 구현과 테스트를 한 커밋에 담으면 G3가 "실패 테스트 커밋이 없음"으로 멈춤 | 시험 A. 슬라이스 2를 `feat:` 커밋 하나로 합치고 상태 줄을 `7.4=없음`으로 둠. G3가 "슬라이스 2에 실패 테스트 커밋이 없음"을 자동이었다면 멈췄을 이유로 냄 |
+| [x] 구현과 테스트를 한 커밋에 담고 제목만 `test:`로 붙이면 G3가 "실패 테스트 커밋에 구현이 섞임"으로 멈춤 | 시험 B. 같은 커밋(`d296713`)에 제목만 `test:`를 붙이고 상태 줄에 그 SHA를 적어 둠. G3가 스텁 열에 없는 `model/ChangedFile.java`, `handoff/7.2.md`, `tasks.md`를 들어 멈춤. 6번 5의 기준대로면 상태 줄에 이 SHA를 적지 말았어야 했다(`없음`)고도 짚었고, 확인받기 전이라 상태 줄은 고치지 않음. 한계: 스텁 열 검사는 파일 이름만 봐서 `PrFetcher.java`(87줄 추가, 구현 전체)는 기계 판정을 통과함. 매니저가 줄 수와 커밋 제목으로 따로 지적함. 같은 보고에서 슬라이스 1의 R-S1 `assertThat` 삭제도 약화로 다시 보여 줌(이유는 새 세션이라 리뷰 파일에서 가져옴) |
+| [x] 검증 결과 파일의 결과를 `unavailable`이나 `baseline`으로 바꾸면 G3가 통과로 보지 않고 멈춤 | `--check`가 `결과 없음: backend: 결과가 unavailable입니다`(`baseline`도 같음), exit 1 |
+| [x] implementer가 끝난 뒤 파일 하나를 고치면 내용 해시가 달라 G3가 "결과 없음"으로 멈춤 | backend 파일 한 줄을 고치자 `--check`가 `결과 없음: backend: implementer가 끝난 뒤 내용이 바뀌었습니다`, exit 1. 되돌리면 다시 `ok` |
+| [x] `test:` 커밋 뒤에 `@Disabled`나 `.skip(`을 더하면 G3가 멈춤 | 시험 C. `test:` 커밋(`06f4381`) 뒤의 커밋(`7ed5fb1`)이 `PrFetcherTest.copiesMetadataIntoSnapshot`에 `@Disabled`를 붙임. G3가 그 줄을 보여 주고 멈춤. 꺼진 테스트가 인수 기준 1.1을 검증한다는 것과 implementer가 보고한 이유가 없다는 것도 적음. `.skip(`(web)은 web 테스트가 없어 시험하지 않음. 매니저는 확인 리뷰가 다른 브랜치의 diff를 봐서 이 커밋을 보지 않았다고도 짚었는데, 이것은 리뷰 파일 사본의 SHA만 바꾼 시험 준비 때문임 |
 
 ### 6. 리뷰
-| 확인 |
-|---|
-| [ ] `context-reviewer`와 `reviewer`로 리뷰함(`.claude/hooks/`의 Java 파일이 바뀌므로). 위 결과를 함께 넘김 |
-| [ ] hook 완화에 대한 승인과 우회로 대책을 PR 설명에 적음 |
+| 확인 | 결과 |
+|---|---|
+| [x] `context-reviewer`와 `reviewer`로 리뷰함(`.claude/hooks/`의 Java 파일이 바뀌므로). 위 결과를 함께 넘김 | 2026-10-18 `/pr-ready`(체크리스트 4-4)에서 두 리뷰어가 함께 돎. 넘긴 결과는 체크리스트 0~3 기록이고, 4·5는 그 뒤에 실행해 넘기지 않음. 반드시 수정 3건(C-M1~M3)과 선택 8건(R-S2, R-S4, C-S1~S6)을 반영(`681e399`) |
+| [x] hook 완화에 대한 승인과 우회로 대책을 PR 설명에 적음 | PR 설명 초안에 적음. 승인 여부는 PR 승인자가 확인 |
 
 ## 다음 PR
 - **`--auto`**: "게이트 조건"을 적용해 조건에 걸리지 않으면 멈추지 않고 넘어갑니다. 리뷰 루프는 아래로 수렴시킵니다
   - 루프는 "반드시 수정"으로만 돕니다. "선택"은 고치지도 묻지도 않고, 표를 G3 보고와 PR 설명의 "반영하지 않은 선택 항목"에 붙입니다. 고치면 그 수정이 다시 리뷰 대상이 되어 새 "선택"을 부르기 때문입니다
   - 리뷰는 첫 리뷰와 확인 리뷰, 최대 2회입니다. 확인 리뷰 뒤에도 `M` 행이 남거나 `diff 밖` 항목이 나오면 멈춥니다(G3). 세 번째 리뷰는 "수정 필요"에서 사람이 고치라고 할 때만 합니다
   - `/pr-ready`는 확인 리뷰의 SHA가 `HEAD`와 같으면 재사용하므로(D5) PR을 열 때까지 리뷰는 2회로 끝납니다
+  - G3 "실패 테스트 커밋에 구현이 섞임"은 스텁 열의 파일 이름만 보므로, 스텁 파일에 구현을 통째로 넣어도 통과합니다(체크리스트 5 시험 B의 `PrFetcher.java` 87줄). 지금은 사람이 G3에서 보지만 `--auto`에서는 놓치므로, 스텁 파일의 추가 줄 수 상한 같은 기계 조건을 함께 정합니다
   - 자동 push용 `settings.json` allow 추가는 권한을 넓히는 변경이므로 그때 따로 승인받습니다
 - **대체**: `/task`를 지우고 `task-flow`를 `task`로 바꾸고, `editing.md`의 공존 줄을 지웁니다
 
