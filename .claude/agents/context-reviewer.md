@@ -9,7 +9,7 @@ model: opus
 1. 변경을 확인한다. `git status --short -uall`과 `git diff origin/main...HEAD`(브랜치가 주어지면 `origin/main...<브랜치>`. `origin`이 없으면 로컬 `main`)를 본다. diff가 비어 있거나 status에 변경이 있으면 `git diff HEAD`도 본다(`main`도 없으면 `git diff HEAD`만). status에 `??`로 나온 새 파일은 diff에 나오지 않으므로 직접 읽는다. `git fetch`는 부르는 쪽이 이미 했다고 보고 하지 않는다. 앞 리뷰 파일(`docs/specs/<스펙>/handoff/<번호>-context-review.md`)이 주어지면 아래 "확인 리뷰 모드"로 리뷰한다.
 2. 바뀐 파일마다 그 파일을 참조하거나 같은 내용을 적은 곳을 찾는다. 바뀐 skill·agent 이름, 단계 번호, 용어로 `.claude/`, 모든 `CLAUDE.md`, 루트 `README.md`, `docs/guide/`, `docs/product/PLAYBOOK.md`, `.github/pull_request_template.md`를 Grep하고 걸린 부분만 읽는다.
 3. 다음을 검토한다.
-   - 맞물림: 서로 참조하는 파일(`/task`, `/pr-ready`, `reviewer`, PR 템플릿, `docs/guide/task-workflow.md`)의 용어, 단계 번호, 보고 형식이 어긋나지 않는가. 누가 쓰고 누가 보고만 하는지가 파일마다 같은가(읽기 전용 agent에게 수정을 시키지 않는가)
+   - 맞물림: 서로 참조하는 파일(`.claude/rules/context/editing.md`의 "서로 맞물린 파일" 목록. 예: `/task`·`/task-flow`, `/pr-ready`, `reviewer`, `planner`·`implementer`, PR 템플릿, `docs/guide/task-workflow.md`)의 용어, 단계 번호, 보고 형식이 어긋나지 않는가. 누가 쓰고 누가 보고만 하는지가 파일마다 같은가(읽기 전용 agent에게 수정을 시키지 않는가)
    - 기존 규칙과의 충돌: 루트 `CLAUDE.md`(Workflow, Conventions), `backend/CLAUDE.md`, `web/CLAUDE.md`, `.claude/rules/`, `docs/product/PLAYBOOK.md`의 승인 규칙과 작업 규칙, ADR과 모순되는가. 같은 규칙을 두 곳에 다르게 적지 않았는가
    - 강제 수단과의 일치: 지침이 시키는 일을 `.claude/settings.json`의 deny·ask 규칙이나 `.claude/hooks/`가 막지 않는가. 반대로 settings나 hook을 바꿨다면 `docs/guide/claude-code-setup.md`의 설명과 맞는가. deny 규칙을 풀거나 allow를 넓힌 변경은 반드시 보고한다
    - 실제 파일과의 일치: 지침이 가리키는 경로, 명령, 파일 형식(`tasks.md`의 작업 본문, 스펙 색인의 표, PR 템플릿의 절)이 실제와 같은가. 가리키는 파일을 열어 확인하고, 형식이 여러 가지면 모두에서 성립하는지 본다

@@ -365,10 +365,12 @@ public class VerifyOnStop {
         in.get("tool_input") instanceof Map<?, ?> ti && ti.get("message") instanceof String m
             ? m
             : "";
+    // 횟수는 이 보고 시도에서 막힌 수다. BLOCKED·failed 뒤 SendMessage로 재개한 같은 implementer는 새 시도로 0부터 센다
     Map<String, Object> marker = readMarker(stateDir);
     int blocks =
         marker != null
                 && agentId.equals(marker.get("agent_id"))
+                && "verifying".equals(marker.get("status"))
                 && marker.get("blocks") instanceof Double d
             ? d.intValue()
             : 0;
@@ -383,7 +385,7 @@ public class VerifyOnStop {
         if (h != null) hashes.put(stack.name(), h);
       }
       writeResult(stateDir, agentId, sessionId, results, hashes, isClean(root));
-      writeMarker(stateDir, agentId, sessionId, "blocked", blocks, "hook");
+      writeMarker(stateDir, agentId, sessionId, "blocked", 0, "hook");
       return;
     }
 
@@ -618,7 +620,8 @@ public class VerifyOnStop {
    */
   static String contentHash(Path root, Path stateDir, Stack stack) throws Exception {
     Files.createDirectories(stateDir);
-    Path tmpIndex = stateDir.resolve("index-" + stack.name());
+    // 프로세스마다 이름을 달리해 동시에 도는 hook·--check가 서로의 임시 인덱스를 지우지 않게 한다
+    Path tmpIndex = stateDir.resolve("index-" + stack.name() + "-" + ProcessHandle.current().pid());
     Map<String, String> env = Map.of("GIT_INDEX_FILE", tmpIndex.toString());
     try {
       String indexPath = git(root, Map.of(), "rev-parse", "--git-path", "index");
@@ -636,7 +639,7 @@ public class VerifyOnStop {
       return tree == null ? "empty" : tree.trim(); // 폴더에 추적 대상 파일이 하나도 없으면 실패한다
     } finally {
       Files.deleteIfExists(tmpIndex);
-      Files.deleteIfExists(stateDir.resolve("index-" + stack.name() + ".lock"));
+      Files.deleteIfExists(Path.of(tmpIndex + ".lock"));
     }
   }
 
