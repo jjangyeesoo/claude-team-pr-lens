@@ -302,7 +302,7 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 - **FrontmatterParser**: 첫 줄이 `---`일 때만 다음 `---` 줄까지를 YAML(SafeConstructor 수준의 안전 로더)로 읽습니다. `paths`가 문자열이면 한 개짜리 목록으로 바꿉니다. 오류 종류는 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`이고 모두 "포함 + 경고"입니다.
 - **ImportResolver**: 간단한 Markdown 토크나이저로 펜스 블록(```` ``` ````로 열고, 닫히지 않으면 파일 끝까지)과 인라인 코드(같은 길이의 백틱 쌍)를 건너뛰고, `(^|\s)@(\S+)`를 import로 읽습니다. 경로 해석은 선언 파일의 폴더 기준으로 `.`/`..`를 정규화하고, `~/`, `/`, `X:` 시작이나 루트 위로 올라가는 `..`는 거부합니다. BFS 큐에 `(path, depth, declaredBy)`를 넣고, 깊이 5 이상은 가져오지 않고 경고합니다.
 - **SpecLinkExtractor**: 두 정규식(상대 경로 `(?<![\w/])\.?/?docs/specs/[^\s)\]>"'#?]+`, URL `https://github\.com/([^/\s]+)/([^/\s]+)/blob/[^/\s]+/(docs/specs/[^\s)\]>"'#?]+)`)의 일치 위치를 본문 순서로 합쳐 처리합니다. 정규화 후 `..` 포함이나 `docs/specs/` 밖이면 경고하고 건너뜁니다. 조회는 base → (404일 때만) head이며, head에서 가져온 파일은 `Revision.HEAD`로 표시합니다.
-- **파일 조회 API**: `GET /repos/{o}/{r}/contents/{path}?ref={sha}`(base64)를 씁니다. 1MB를 넘는 파일은 `content`가 비고 `encoding`이 `"none"`으로 옵니다. base64만 가정하면 큰 `CLAUDE.md`나 스펙이 조용히 빈 문자열이 되므로, 이 경우를 `FileFetch.TooLarge`로 따로 돌려주고 수집기가 경고합니다(처리 방법은 "요구사항 공백" G-12). contents 응답이 배열이거나 `type`이 `submodule`이면 `IsDirectory`, `symlink`와 그 밖의 `type`이면 `NotFound`입니다. 트리 항목의 `type`이 `blob`/`tree`/`commit` 외이면 그 항목을 버립니다. 트리 API는 재귀 조회에서 100,000 항목 또는 7MB를 넘으면 `truncated`입니다. 두 수치는 스펙 검토에서 공식 문서 요약으로 확인한 값이라 구현 전에 원문을 확인합니다.
+- **파일 조회 API**: `GET /repos/{o}/{r}/contents/{path}?ref={sha}`(base64)를 씁니다. 1MB를 넘는 파일은 `content`가 비고 `encoding`이 `"none"`으로 옵니다. base64만 가정하면 큰 `CLAUDE.md`나 스펙이 조용히 빈 문자열이 되므로, 이 경우를 `FileFetch.TooLarge`로 따로 돌려주고 수집기가 경고합니다(처리 방법은 "요구사항 공백" G-12). `getFile` 요청만 `Accept: application/vnd.github.object+json`으로 보내 폴더도 `{"type":"dir"}` 객체로 받습니다. contents 응답이 배열이거나 `type`이 `dir`/`submodule`이면 `IsDirectory`, `symlink`와 그 밖의 `type`이면 `NotFound`입니다. 트리 항목의 `type`이 `blob`/`tree`/`commit` 외이면 그 항목을 버립니다. 트리 API는 재귀 조회에서 100,000 항목 또는 7MB를 넘으면 `truncated`입니다. 두 수치는 스펙 검토에서 공식 문서 요약으로 확인한 값이라 구현 전에 원문을 확인합니다.
 
 ### T1 리뷰 엔진 (요구사항 9~14, 16, 20)
 
@@ -915,6 +915,7 @@ cost:
 | `ConfigException` (문법, 알 수 없는 항목, 범위, 비밀 항목, `--config` 파일 없음, 잘못된 glob) | `config` | 문제 항목 전부(값은 비밀 항목이면 생략) | 2 |
 | `MissingSecretException` | `cli` preflight | 없는 환경변수 이름 전부와 설정 방법 | 2 |
 | `GitHubApiException(401/403/404)` | `github`(`HttpGitHubClient`가 직접 던짐. 실행기는 그대로 통과시킴) | 상태 코드와 원인 후보(요구사항 1.11) | 2 |
+| `RateLimitResetException(seconds, resetAt)` | `github`(`HttpGitHubClient`가 직접 던짐) | `getMessage()`: 한도가 풀리는 시각(UTC) | 2 |
 | `RetriesExhaustedException(api, lastStatus, attempts)` | `support`(`RetryExecutor`) | API 이름, 마지막 상태/오류 종류, 시도 수 | 2 (분할 모드 개별 Chunk는 `chunk_failed`로 흡수) |
 | `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각. `seconds`는 초 단위로 올린 대기 시간이고, 실행기는 한도가 풀리는 시각을 알 수 없어 메시지에 넣지 않습니다(요구사항 21.10의 시각은 호출자 쪽에서 만듦) | 2 |
 | `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드 | 2 |

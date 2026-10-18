@@ -95,7 +95,11 @@ class HttpGitHubClientTest {
         .allSatisfy(
             r -> {
               assertThat(r.headers().firstValue("Authorization")).hasValue("Bearer " + TOKEN);
-              assertThat(r.headers().firstValue("Accept")).hasValue("application/vnd.github+json");
+              assertThat(r.headers().firstValue("Accept"))
+                  .hasValue(
+                      r.uri().getPath().contains("/contents/")
+                          ? "application/vnd.github.object+json"
+                          : "application/vnd.github+json");
               assertThat(r.headers().firstValue("X-GitHub-Api-Version")).hasValue("2022-11-28");
               assertThat(r.headers().firstValue("User-Agent")).hasValue("prlens");
             });
@@ -478,6 +482,17 @@ class HttpGitHubClientTest {
     assertThat(client.getFile(REPO, "big", "s")).isInstanceOf(FileFetch.TooLarge.class);
     assertThat(client.getFile(REPO, "link", "s")).isInstanceOf(FileFetch.NotFound.class);
     assertThat(client.getFile(REPO, "sub", "s")).isInstanceOf(FileFetch.IsDirectory.class);
+  }
+
+  @Test
+  void getFileAsksForObjectMediaTypeAndMapsDirObjectToIsDirectory() {
+    http.respond(200, "{\"type\":\"dir\",\"entries\":[]}");
+
+    FileFetch result = client().getFile(REPO, "docs", "s");
+
+    assertThat(result).isInstanceOf(FileFetch.IsDirectory.class);
+    assertThat(http.requests().get(0).headers().firstValue("Accept"))
+        .hasValue("application/vnd.github.object+json");
   }
 
   @Test

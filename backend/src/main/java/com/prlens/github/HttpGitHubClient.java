@@ -44,6 +44,9 @@ public final class HttpGitHubClient implements GitHubClient {
   }
 
   private static final String API = "GitHub";
+  private static final String JSON_ACCEPT = "application/vnd.github+json";
+  // 폴더 조회를 배열이 아닌 {"type":"dir"} 객체로 받기 위한 미디어 타입
+  private static final String OBJECT_ACCEPT = "application/vnd.github.object+json";
   private static final Duration TIMEOUT = Duration.ofSeconds(30);
   private static final Duration FALLBACK_WAIT = Duration.ofSeconds(60);
   private static final long MAX_WAIT_SECONDS = 60;
@@ -149,7 +152,8 @@ public final class HttpGitHubClient implements GitHubClient {
         repoPath(repo) + "/contents" + encoded,
         "?ref=" + segment(sha),
         response -> fileOf(parse(response.body())),
-        FileFetch.NotFound::new);
+        FileFetch.NotFound::new,
+        OBJECT_ACCEPT);
   }
 
   private static FileFetch fileOf(JsonNode root) {
@@ -157,7 +161,7 @@ public final class HttpGitHubClient implements GitHubClient {
       return new FileFetch.IsDirectory();
     }
     String type = text(root, "type");
-    if ("submodule".equals(type)) {
+    if ("submodule".equals(type) || "dir".equals(type)) {
       return new FileFetch.IsDirectory();
     }
     if (!"file".equals(type)) {
@@ -191,7 +195,17 @@ public final class HttpGitHubClient implements GitHubClient {
       String query,
       Function<HttpResponse<String>, T> onSuccess,
       Supplier<T> notFound) {
-    HttpRequest request = buildRequest(repo, path, query);
+    return get(repo, path, query, onSuccess, notFound, JSON_ACCEPT);
+  }
+
+  private <T> T get(
+      RepoRef repo,
+      String path,
+      String query,
+      Function<HttpResponse<String>, T> onSuccess,
+      Supplier<T> notFound,
+      String accept) {
+    HttpRequest request = buildRequest(repo, path, query, accept);
     return retry.execute(
         API,
         () -> {
@@ -293,11 +307,11 @@ public final class HttpGitHubClient implements GitHubClient {
         status, "GitHub API가 " + status + "를 반환했습니다 (GET " + path + "): " + cause);
   }
 
-  private HttpRequest buildRequest(RepoRef repo, String path, String query) {
+  private HttpRequest buildRequest(RepoRef repo, String path, String query, String accept) {
     return HttpRequest.newBuilder(URI.create(base() + path + query))
         .timeout(TIMEOUT)
         .header("Authorization", credentials.authorizationHeader(repo))
-        .header("Accept", "application/vnd.github+json")
+        .header("Accept", accept)
         .header("X-GitHub-Api-Version", "2022-11-28")
         .header("User-Agent", "prlens")
         .GET()
