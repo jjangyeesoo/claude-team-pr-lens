@@ -84,7 +84,7 @@ flowchart TB
 | 패키지 | 트랙 | 주요 클래스 | 관련 요구사항 |
 |---|---|---|---|
 | `model` | 리드(월요일 선머지) | 공유 레코드 전부 (Data Models 참고), `RepoPaths`(Normalized_Repo_Path 변환. 여러 패키지가 쓰는 순수 함수) | 17, 4.8, 11.1, 22.2, 22.6 |
-| `github` | T2 (P2와 공유) | `GitHubClient`, `GitHubCredentials`, `HttpGitHubClient`, `GitHubApiException` | 1.8, 1.11, 21 |
+| `github` | T2 (P2와 공유) | `GitHubClient`, `GitHubCredentials`, `HttpGitHubClient`, `PatCredentials`, `GitHubApiException`, `RateLimitResetException` | 1.8, 1.11, 21 |
 | `pullrequest` | T2 | `PullRequestUrl`, `PrFetcher` | 1 |
 | `diff` | T2 | `DiffParser`, `DiffPrinter`, `LineRanges` | 2, 22.4 |
 | `glob` | T2 | `GlobMatcher`, `GlobSyntaxException` | 5.7, 5.8 |
@@ -238,8 +238,11 @@ public interface ReviewListener {                  // CLI는 stderr, P2는 로�
 ```java
 public RetryExecutor(RetryPolicy policy, Sleeper sleeper, RetryListener listener)
 public HttpGitHubClient(HttpClient http, GitHubCredentials credentials, RetryExecutor retry)
+public HttpGitHubClient(HttpClient http, GitHubCredentials credentials, RetryExecutor retry, Options options)
 public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 ```
+
+- `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`는 중첩 public record이고 `Options.defaults()`는 `https://api.github.com`, 시스템 UTC 시계, 빈 `SecretMasker`, `debugLog = null`(디버그 로그 꺼짐)이다. 3인자 생성자는 `Options.defaults()`로 위임한다. `Clock`은 `x-ratelimit-reset`까지의 시간 계산에, `apiBase`는 7.6 가짜 서버에 쓴다.
 
 - 경고 전달 방식은 셋으로 고정합니다.
   - I/O를 하는 구성 요소(`PrFetcher`, `ContextCollector`)는 생성자로 받은 `WarningSink`에 즉시 알립니다.
@@ -299,7 +302,7 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 - **FrontmatterParser**: 첫 줄이 `---`일 때만 다음 `---` 줄까지를 YAML(SafeConstructor 수준의 안전 로더)로 읽습니다. `paths`가 문자열이면 한 개짜리 목록으로 바꿉니다. 오류 종류는 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`이고 모두 "포함 + 경고"입니다.
 - **ImportResolver**: 간단한 Markdown 토크나이저로 펜스 블록(```` ``` ````로 열고, 닫히지 않으면 파일 끝까지)과 인라인 코드(같은 길이의 백틱 쌍)를 건너뛰고, `(^|\s)@(\S+)`를 import로 읽습니다. 경로 해석은 선언 파일의 폴더 기준으로 `.`/`..`를 정규화하고, `~/`, `/`, `X:` 시작이나 루트 위로 올라가는 `..`는 거부합니다. BFS 큐에 `(path, depth, declaredBy)`를 넣고, 깊이 5 이상은 가져오지 않고 경고합니다.
 - **SpecLinkExtractor**: 두 정규식(상대 경로 `(?<![\w/])\.?/?docs/specs/[^\s)\]>"'#?]+`, URL `https://github\.com/([^/\s]+)/([^/\s]+)/blob/[^/\s]+/(docs/specs/[^\s)\]>"'#?]+)`)의 일치 위치를 본문 순서로 합쳐 처리합니다. 정규화 후 `..` 포함이나 `docs/specs/` 밖이면 경고하고 건너뜁니다. 조회는 base → (404일 때만) head이며, head에서 가져온 파일은 `Revision.HEAD`로 표시합니다.
-- **파일 조회 API**: `GET /repos/{o}/{r}/contents/{path}?ref={sha}`(base64)를 씁니다. 1MB를 넘는 파일은 `content`가 비고 `encoding`이 `"none"`으로 옵니다. base64만 가정하면 큰 `CLAUDE.md`나 스펙이 조용히 빈 문자열이 되므로, 이 경우를 `FileFetch.TooLarge`로 따로 돌려주고 수집기가 경고합니다(처리 방법은 "요구사항 공백" G-12). 트리 API는 재귀 조회에서 100,000 항목 또는 7MB를 넘으면 `truncated`입니다. 두 수치는 스펙 검토에서 공식 문서 요약으로 확인한 값이라 구현 전에 원문을 확인합니다.
+- **파일 조회 API**: `GET /repos/{o}/{r}/contents/{path}?ref={sha}`(base64)를 씁니다. 1MB를 넘는 파일은 `content`가 비고 `encoding`이 `"none"`으로 옵니다. base64만 가정하면 큰 `CLAUDE.md`나 스펙이 조용히 빈 문자열이 되므로, 이 경우를 `FileFetch.TooLarge`로 따로 돌려주고 수집기가 경고합니다(처리 방법은 "요구사항 공백" G-12). contents 응답이 배열이거나 `type`이 `submodule`이면 `IsDirectory`, `symlink`와 그 밖의 `type`이면 `NotFound`입니다. 트리 항목의 `type`이 `blob`/`tree`/`commit` 외이면 그 항목을 버립니다. 트리 API는 재귀 조회에서 100,000 항목 또는 7MB를 넘으면 `truncated`입니다. 두 수치는 스펙 검토에서 공식 문서 요약으로 확인한 값이라 구현 전에 원문을 확인합니다.
 
 ### T1 리뷰 엔진 (요구사항 9~14, 16, 20)
 
@@ -942,15 +945,16 @@ for attempt in 1..(maxRetries+1):
 
   | GitHub 403 또는 429 응답 | 분류 | 대기 시간 |
   |---|---|---|
-  | `retry-after` 헤더 있음 | 재시도 대상 | 헤더 값 |
-  | `retry-after` 없음, `x-ratelimit-remaining: 0` | 재시도 대상 | `x-ratelimit-reset`(UTC epoch 초)까지 남은 시간 |
-  | 두 조건에 해당하지 않고 본문이 secondary rate limit 초과를 알림 | 재시도 대상 | 60초 |
+  | `retry-after` 헤더가 숫자 | 재시도 대상 | 헤더 값 |
+  | `retry-after`가 없거나 숫자 아님, `x-ratelimit-remaining: 0` | 재시도 대상 | `x-ratelimit-reset`(UTC epoch 초)까지 남은 시간. 60초를 넘으면 `Retryable`을 돌려주지 않고 `HttpGitHubClient`가 `RateLimitResetException`(해제 시각 포함)을 직접 던진다. reset이 없거나 숫자가 아니면 60초 |
+  | 위에 해당하지 않고 본문에 `secondary rate limit`(대소문자 무시)이 있음 | 재시도 대상 | 60초 |
+  | 위에 해당하지 않지만 숫자가 아닌 `retry-after`가 있음 | 재시도 대상 | 60초 |
   | 그 밖의 403 | 재시도 대상 아님 | 권한 부족(요구사항 1.11) |
 
-  primary rate limit은 reset까지 한 시간이 걸릴 수 있어 대부분 60초 초과로 즉시 종료됩니다. 1·2·4초 백오프로는 rate limit이 풀리지 않으므로 GitHub rate limit 응답에는 지수 백오프를 쓰지 않습니다. 근거는 [GitHub REST API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)입니다. secondary rate limit 본문의 정확한 문구는 문서에 없어 spike에서 확인합니다.
+  primary rate limit은 reset까지 한 시간이 걸릴 수 있어 대부분 60초 초과로 즉시 종료됩니다. 1·2·4초 백오프로는 rate limit이 풀리지 않으므로 GitHub rate limit 응답에는 지수 백오프를 쓰지 않습니다. 근거는 [GitHub REST API rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)입니다. secondary rate limit 본문의 정확한 문구는 문서에 없어 판별 문구 `secondary rate limit`을 7.7에서 실제 응답으로 확인합니다.
 - 제한 시간: GitHub 30초(`HttpClient` 요청 타임아웃), Claude 180초(SDK 타임아웃). 제한 시간 초과는 재시도 대상입니다.
 - `Sleeper`는 인터페이스라 테스트에서 실제로 기다리지 않습니다. 대기 시간 합은 listener가 집계해 요구사항 9.7의 "재시도 대기 제외" 측정과 P2 요구사항 17.3에 씁니다.
-- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다. 숫자만으로 된 값이 `long` 범위를 넘으면 무효가 아니라 60초 초과로 처리합니다.
+- `retry-after`가 HTTP 날짜 형식이거나 음수·소수이면 "유효하지 않음"으로 보고 지수 백오프를 씁니다(GitHub 403/429는 위 표대로 60초). 숫자만으로 된 값이 `long` 범위를 넘으면 무효가 아니라 60초 초과로 처리합니다.
 - 호출자가 정한 `delay`가 음수이면(이미 지난 `x-ratelimit-reset`) 0초로 보고 바로 재시도합니다.
 - `RetryPolicy`는 `maxRetries`가 0~10을 벗어나면 `IllegalArgumentException`을 던집니다. 조립 실수를 막는 검사이고, 사용자에게 보이는 범위 오류는 `ConfigLoader`가 수집합니다(요구사항 18.6).
 

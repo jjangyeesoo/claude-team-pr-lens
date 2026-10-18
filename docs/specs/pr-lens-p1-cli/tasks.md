@@ -144,22 +144,22 @@
 
 - [ ] 7. GitHub 클라이언트와 PR 가져오기
   - PR 경계: 7.1 / 7.2~7.5 / 7.6~7.7
-  - [ ] 7.1 `HttpGitHubClient`, PAT용 `GitHubCredentials` 구현
+  - [x] 7.1 `HttpGitHubClient`, PAT용 `GitHubCredentials` 구현
     - 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`. 요청 제한 시간 30초, 모든 요청을 `GitHubCredentials`로 인증(P1은 `GITHUB_TOKEN`)
     - `RetryExecutor` 적용. rate limit 분류(design.md "재시도 정책"의 표): 403/429에 `retry-after`가 있으면 그 값, 없고 `x-ratelimit-remaining == 0`이면 `x-ratelimit-reset`까지 남은 시간, 둘 다 아니고 본문이 secondary rate limit을 알리면 60초를 `Attempt.Retryable`의 대기 시간으로 전달. 그 밖의 403은 권한 부족
     - 401, 404, rate limit이 아닌 403은 `HttpGitHubClient`가 직접 `GitHubApiException`(상태 코드와 원인 후보 메시지. final로 두지 않음: P2가 `GitHubAuthException`으로 상속)으로 던짐. 그 밖의 429 외 4xx는 `Attempt.Fatal`로 돌려줌
     - contents API(base64) 조회, 404 → `NotFound`, 폴더 → `IsDirectory`. 재귀 트리 조회와 `truncated` 전달. 1MB 초과 파일(`encoding: "none"`, 빈 `content`)은 빈 문자열로 넘기지 말고 `FileFetch.TooLarge`로 돌려줌(설계 G-12)
     - HTTP 디버그 로그(기본 꺼짐)는 헤더 마스킹 함수를 거쳐 기록
     - 주의(선머지 리뷰): `getTree`는 `Optional` 없이 `RepoTree`를 돌려줍니다. 트리를 찾지 못하면(404) `getPullRequest`·`listFiles`처럼 `GitHubApiException`을 던지고, 404를 결과 값(`NotFound`)으로 돌려주는 것은 `getFile`뿐입니다. `FilePage.Entry`는 GitHub 값 그대로 채웁니다(상태 매핑과 patch 해석은 7.4)
-    - 미정(여기서 정함): 트리 항목의 `type`이 `blob`/`tree`/`commit` 외의 값일 때(`RepoTree.Entry.kind`는 null 불가), contents API의 symlink·submodule 응답을 `FileFetch`의 어느 결과로 보낼지
+    - 결정(7.1): 트리 항목의 `type`이 `blob`/`tree`/`commit` 외이면 그 항목을 버린다(경고 없음, 7.7에서 실제로 있는지 확인). contents API는 배열과 `submodule`을 `IsDirectory`, `symlink`와 그 밖의 `type`을 `NotFound`로 돌려준다
     - 2.3의 record는 `PullRequestMeta.title`·`baseSha`·`headSha`, `FilePage.Entry.filename`·`status`, `RepoTree.Entry.path`에 null을 거부합니다. GitHub가 이 값들을 항상 채워 준다는 가정이고 실제 응답으로 확인한 것은 아닙니다(7.7에서 확인)
-    - 미정(여기서 정함): `RetryAfterTooLongException`은 `api`와 올림한 초(`seconds`)만 담고 메시지가 고정입니다. 요구사항 21.10의 "한도가 풀리는 시각" 메시지를 어디서 만들지 정합니다(예: `x-ratelimit-reset`까지 60초를 넘으면 `Retryable`을 돌려주지 않고 하위 타입을 직접 던짐)
+    - 결정(7.1): `x-ratelimit-reset`까지 60초를 넘으면 `Retryable`을 돌려주지 않고 `HttpGitHubClient`가 `RateLimitResetException`(`RetryAfterTooLongException`의 하위 타입, UTC 시각 포함 메시지)을 직접 던진다
     - 주의(3 리뷰): `Attempt.Retryable`에 `delay`를 주면 실행기는 `retryAfter`를 보지 않고 `delay`만 씁니다. 음수 `delay`는 0초로 보고 바로 재시도하고, 60초를 1ms라도 넘으면 `RetryAfterTooLongException`입니다. 설계 표의 "`retry-after`가 reset보다 먼저"라는 우선순위는 `HttpGitHubClient`가 `delay`를 정할 때 직접 적용합니다
-    - 미정(여기서 정함): GitHub 403/429의 `retry-after`가 정수 초가 아닐 때(HTTP 날짜 등)의 분류를 정합니다. 원문을 `retryAfter`로만 넘기면 실행기가 지수 백오프를 쓰는데, 설계는 GitHub rate limit 응답에 지수 백오프를 쓰지 않는다고 합니다 (스펙을 읽고 추론한 항목)
+    - 결정(7.1): 숫자가 아닌 `retry-after`는 remaining/reset, secondary 판정을 먼저 거치고 둘 다 아니면 60초 `delay`로 재시도한다(지수 백오프를 쓰지 않음. GitHub 문서의 "최소 1분")
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
     - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. API 이름은 `GitHub`, HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
-    - 미정(여기서 정함): 헤더 마스킹은 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`인데 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`에는 `SecretMasker`가 없습니다. 생성자에 더할지 다른 방법으로 넘길지 정합니다. 값 전체를 가리는 이름은 `Authorization`과 `x-api-key`뿐이고 이 둘은 값이 null이어도 `***`를 돌려줍니다. 그 밖의 헤더는 값 안의 비밀값만 치환하며 값이 null이면 NPE입니다. 이름이 null이면 항상 NPE입니다
-    - 미정(7.2~7.5 리뷰): `PullRequestUrl`은 요구사항 1.3의 문자 규칙대로 owner나 repo가 `.`·`..`인 URL(예: `https://github.com/o/../pull/1`)도 받아 `RepoRef("o", "..")`를 만듭니다. `/repos/{owner}/{repo}/…`를 조립할 때 이 세그먼트가 경로 이동으로 해석되지 않게 할지(거부하거나 그대로 보내 404로 처리) 정합니다 (스펙을 읽고 추론한 항목)
+    - 결정(7.1): `SecretMasker`는 오버로드 생성자 `HttpGitHubClient(…, Options)`의 `Options`로 받는다. 3인자 생성자는 빈 마스커와 디버그 로그 꺼짐이다. 참고: 값 전체를 가리는 이름은 `Authorization`과 `x-api-key`뿐이고 이 둘은 값이 null이어도 `***`를 돌려줍니다. 그 밖의 헤더는 값 안의 비밀값만 치환하며 값이 null이면 NPE입니다. 이름이 null이면 항상 NPE입니다
+    - 결정(7.1): owner나 repo가 `.`·`..`이면 요청을 보내지 않고 `GitHubApiException(404)`를 던진다. `getFile`의 path에 `.`·`..`·빈 구간이 있으면 요청 없이 `NotFound`다. `PullRequestUrl`은 그대로 둔다
     - _Requirements: 1.8, 1.11, 1.13, 19.5, 19.6, 21.2, 21.9, 21.10, 21.11_
   - [x] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
     - _Requirements: 1.3, 1.4, 1.9_
