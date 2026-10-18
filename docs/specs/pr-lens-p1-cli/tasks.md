@@ -159,20 +159,21 @@
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
     - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. API 이름은 `GitHub`, HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
     - 미정(여기서 정함): 헤더 마스킹은 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`인데 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`에는 `SecretMasker`가 없습니다. 생성자에 더할지 다른 방법으로 넘길지 정합니다. 값 전체를 가리는 이름은 `Authorization`과 `x-api-key`뿐이고 이 둘은 값이 null이어도 `***`를 돌려줍니다. 그 밖의 헤더는 값 안의 비밀값만 치환하며 값이 null이면 NPE입니다. 이름이 null이면 항상 NPE입니다
+    - 미정(7.2~7.5 리뷰): `PullRequestUrl`은 요구사항 1.3의 문자 규칙대로 owner나 repo가 `.`·`..`인 URL(예: `https://github.com/o/../pull/1`)도 받아 `RepoRef("o", "..")`를 만듭니다. `/repos/{owner}/{repo}/…`를 조립할 때 이 세그먼트가 경로 이동으로 해석되지 않게 할지(거부하거나 그대로 보내 404로 처리) 정합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 1.8, 1.11, 1.13, 19.5, 19.6, 21.2, 21.9, 21.10, 21.11_
-  - [ ] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
+  - [x] 7.2 `PullRequestUrl` 구현 (설계의 정규식, 번호 `long` 파싱 후 2,147,483,647 이하 확인, `github.com`만 허용, `repo()`와 `number()` 제공)
     - _Requirements: 1.3, 1.4, 1.9_
-  - [ ]* 7.3 Property 1: PR URL 파싱 round-trip과 거부 테스트
+  - [x]* 7.3 Property 1: PR URL 파싱 round-trip과 거부 테스트
     - **Validates: Requirements 1.3, 1.4, 1.9**
-  - [ ] 7.4 `PrFetcher` 구현 (`fetch(RepoRef, int)`, 경고는 `WarningSink`로)
+  - [x] 7.4 `PrFetcher` 구현 (`fetch(RepoRef, int)`, 경고는 `WarningSink`로)
     - 메타데이터 조회, 파일 목록 `per_page=100` 페이지 조회(누적 수 == `changed_files` 또는 빈 페이지/next 없음에서 중단), 같은 `filename` 버림
     - 상태 매핑: `copied` → `ADDED`, `unchanged` → `MODIFIED`(설계 G-6), 이름 변경은 이전 경로 기록
     - patch 없음 → `Absent`, `DiffParseException` → `Unparseable` + 경고
     - 주의(선머지 리뷰): `FilePage.Entry`는 GitHub 값 그대로(`status` 문자열, `patch`는 없으면 null)이고 다음 페이지 여부는 `FilePage.hasNext`입니다. `ChangedFile`은 경로 정규화를 강제하지 않으므로 `filename`을 `RepoPaths.normalize`에 거쳐 담습니다. `PullRequestMeta.body`는 null일 수 있고 `PullRequestSnapshot` 생성자가 `""`로 바꿉니다
-    - 미정(여기서 정함): `DiffParser.parse`는 `""`과 `"\n"`에 빈 목록을 돌려주고 null이면 NPE를 던집니다. `patch == null`만 `Absent`로 보내면 빈 문자열 patch는 Hunk 없는 `Parsed`가 되어 필터를 통과합니다(G-2의 줄 수 0인 대상 파일). `""`도 `Absent`로 볼지 정합니다
+    - 결정(7.4): `patch == null`만 `Absent`이고 `""`·`"\n"`은 `DiffParser.parse`를 거쳐 Hunk 없는 `Parsed`가 됩니다(경고 없음). `Absent`는 DiffFilter에서 사유 `binary_or_too_large`가 되는데 빈 patch는 바이너리도 큰 파일도 아니어서 사유가 틀리고, 줄 수 0인 대상 파일은 G-2(단일 모드 1회 호출)가 이미 처리하기 때문입니다
     - 주의(5 리뷰): `DiffParseException`을 `PatchContent.Unparseable`로 옮길 때는 `kind().name().toLowerCase(Locale.ROOT)`, `lineNo()`(1부터, 줄바꿈 정규화 뒤 기준), `hunkIndex()`(0부터)를 넘깁니다. `name()`이나 `toString()`을 그대로 넘겨도 컴파일되므로 주의합니다
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
-  - [ ]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
+  - [x]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
   - [ ]* 7.6 GitHub 가짜 서버 통합 테스트
     - 401/403/404 메시지, rate limit 응답 세 종류(`retry-after`, remaining 0 + reset, secondary)의 분류와 대기 시간, 60초 초과 시 즉시 종료, 짧게 주입한 타임아웃, `Authorization` 헤더, base/head ref 선택, 트리 `truncated` 대체 경로
@@ -202,6 +203,7 @@
     - `.claude/rules/**` 중 소문자 `.md`, `paths` 없으면 포함, 있으면 대상 파일(이름 변경이면 이전 경로 또는 새 경로)과 일치할 때만 포함
     - 무효 glob 패턴은 그 패턴만 무시하고 경고, 모두 무효면 포함 + 경고(설계 G-4)
     - 주의(6 리뷰): `GlobMatcher.matches`는 무효 패턴이면 unchecked `GlobSyntaxException`을 던집니다. rule `paths`는 먼저 패턴마다 `GlobMatcher.validate`로 무효 패턴을 걸러 패턴당 경고 1건을 내고, 남은 패턴으로만 `matches`를 부르세요. 파일마다 `matches`를 try/catch하면 같은 경고가 대상 파일 수만큼 반복됩니다
+    - 미정(7.2~7.5 리뷰): `copied`인 파일은 `FileStatus.ADDED`로 오지만 `previousPath`에 복사 원본 경로가 들어 있습니다(`PrFetcher`는 상태와 관계없이 `previousFilename`이 있으면 담음). `DiffFilter`는 상태를 보지 않고 `previousPath != null`이면 이전 경로로도 패턴을 맞춥니다. rule `paths`를 맞출 때 `status == RENAMED`일 때만 이전 경로를 볼지, `DiffFilter`처럼 `previousPath`가 있으면 볼지 정합니다
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
   - [ ]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**

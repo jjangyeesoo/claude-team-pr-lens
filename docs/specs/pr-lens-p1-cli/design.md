@@ -269,7 +269,8 @@ public RetryingLlmClient(LlmClient delegate, RetryExecutor retry)
 - `GET /repos/{o}/{r}/pulls/{n}`으로 메타데이터, `GET /repos/{o}/{r}/pulls/{n}/files?per_page=100&page=k`로 파일 목록을 받습니다. 중단 조건은 "누적 수 == `changed_files`" 또는 "빈 페이지/`Link: rel=next` 없음"입니다. 같은 `filename`이 다시 오면 버립니다.
 - GitHub 문서상 이 엔드포인트의 최대 파일 수는 3,000개이지만 실제로는 300개에서 끊긴다는 보고가 있습니다([GitHub REST: pulls](https://docs.github.com/en/rest/pulls/pulls), [community discussion #118311](https://github.com/orgs/community/discussions/118311)). 어느 쪽이든 요구사항 1.14의 `files_truncated` 경로로 처리되므로 설계는 상한 값에 의존하지 않습니다. **1주차 spike에서 확인할 항목**: 실제 상한, `changed_files` 필드와의 관계.
 - GitHub 상태 문자열 매핑: `added`→`ADDED`, `modified`/`changed`→`MODIFIED`, `removed`→`REMOVED`, `renamed`→`RENAMED`, `copied`→`ADDED`(이전 경로 유지), `unchanged`→`MODIFIED`. `copied`/`unchanged`는 요구사항에 없는 값이라 이 매핑을 제안합니다.
-- patch가 없으면 `PatchContent.Absent`, 해석 오류면 `PatchContent.Unparseable(error)`로 담습니다(아래 "요구사항 공백" 참고).
+- patch가 없으면 `PatchContent.Absent`, 해석 오류면 `PatchContent.Unparseable(error)`로 담습니다(아래 "요구사항 공백" 참고). 해석 오류의 경고(G-1)는 `PrFetcher`가 코드 `unparseable_patch`로 내고, `DiffFilter`는 제외 사유만 기록하고 경고하지 않습니다.
+- 표에 없는 상태 문자열은 `MODIFIED`로 담고 경고 `unknown_file_status`(메시지에 경로와 원래 상태)를 냅니다.
 
 **DiffParser / DiffPrinter** (요구사항 2, 22.4):
 
