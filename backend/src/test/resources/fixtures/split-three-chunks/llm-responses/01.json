@@ -1,0 +1,26 @@
+{
+  "stopReason": "end_turn",
+  "text": {
+    "summary": "감사 리포트 빌더입니다. 합계 계산에 넘침 위험이 있습니다.",
+    "findings": [
+      {
+        "file": "backend/src/main/java/com/example/report/AuditReportBuilder.java",
+        "line": 33,
+        "severity": "major",
+        "category": "correctness",
+        "message": "합계를 int로 더하면 값이 클 때 넘칩니다. 설계 문서는 합계를 long으로 계산하도록 정했습니다.",
+        "suggestion": "long sum = 0;",
+        "basis": {
+          "type": "spec",
+          "ref": "docs/specs/report/design.md"
+        }
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 9800,
+    "outputTokens": 410,
+    "cacheWriteTokens": 7200,
+    "cacheReadTokens": 0
+  }
+}

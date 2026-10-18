@@ -1,0 +1,26 @@
+{
+  "stopReason": "end_turn",
+  "text": {
+    "summary": "청구 리포트 빌더입니다. 반복되는 메서드가 많습니다.",
+    "findings": [
+      {
+        "file": "backend/src/main/java/com/example/report/BillingReportBuilder.java",
+        "line": 7,
+        "severity": "minor",
+        "category": "design",
+        "message": "total0부터 total47까지 같은 모양의 메서드가 반복됩니다. 값 하나를 인자로 받는 메서드 하나로 합칠 수 있습니다.",
+        "suggestion": null,
+        "basis": {
+          "type": "general",
+          "ref": null
+        }
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 9800,
+    "outputTokens": 380,
+    "cacheWriteTokens": 0,
+    "cacheReadTokens": 7200
+  }
+}

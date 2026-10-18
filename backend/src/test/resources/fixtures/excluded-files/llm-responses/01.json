@@ -1,0 +1,26 @@
+{
+  "stopReason": "end_turn",
+  "text": {
+    "summary": "가격 표시를 소수 둘째 자리로 바꾼 변경입니다. 지역별 표시 요구가 있는지 확인이 필요합니다.",
+    "findings": [
+      {
+        "file": "web/src/lib/format.ts",
+        "line": 11,
+        "severity": "minor",
+        "category": "correctness",
+        "message": "toFixed는 문자열을 돌려주므로 천 단위 구분이 없습니다. 지역별 표시가 필요하면 Intl.NumberFormat을 쓰세요.",
+        "suggestion": null,
+        "basis": {
+          "type": "general",
+          "ref": null
+        }
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 2100,
+    "outputTokens": 190,
+    "cacheWriteTokens": 1600,
+    "cacheReadTokens": 0
+  }
+}

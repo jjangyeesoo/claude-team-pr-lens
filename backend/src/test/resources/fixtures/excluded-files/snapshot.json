@@ -1,0 +1,62 @@
+{
+  "repo": {
+    "owner": "example-org",
+    "name": "sample-service"
+  },
+  "number": 103,
+  "title": "chore: 가격 표시를 소수 둘째 자리까지 바꾼다",
+  "body": "lock 파일과 생성 파일이 함께 바뀌었습니다.\n",
+  "baseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "headSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "reportedChangedFiles": 6,
+  "files": [
+    {
+      "path": "web/package-lock.json",
+      "previousPath": null,
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,3 +1,3 @@\n {\n-  \"version\": \"1.0.0\",\n+  \"version\": \"1.0.1\",\n   \"lockfileVersion\": 3"
+    },
+    {
+      "path": "docs/generated/api-schema.json",
+      "previousPath": null,
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,1 @@\n+{ \"title\": \"example schema\" }"
+    },
+    {
+      "path": "docs/images/flow.png",
+      "previousPath": null,
+      "status": "added",
+      "additions": 0,
+      "deletions": 0,
+      "patch": null
+    },
+    {
+      "path": "docs/data/large-export.dat",
+      "previousPath": null,
+      "status": "added",
+      "additions": 0,
+      "deletions": 0,
+      "patch": null
+    },
+    {
+      "path": "config/secrets/dev.yml",
+      "previousPath": null,
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,1 @@\n+placeholder: true"
+    },
+    {
+      "path": "web/src/lib/format.ts",
+      "previousPath": null,
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -10,3 +10,3 @@\n export function formatPrice(value: number): string {\n-  return value.toString();\n+  return value.toFixed(2);\n }"
+    }
+  ]
+}
