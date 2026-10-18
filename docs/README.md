@@ -19,6 +19,7 @@
 ## 임시 문서
 
 - [spec-review/](spec-review/README.md): 스펙 검토 결과 중 아직 쓰는 것입니다(01 Claude Code 활용, 05 외부 사실, 06 P3 요구사항). P1·P2 검토(02, 03, 04)는 스펙에 반영하고 지웠습니다. P3 스펙을 고친 뒤 폴더째 지웁니다. P1 스펙이 출처로 가리키는 05번의 내용은 지우기 전에 P1 설계 문서로 옮기거나 출처 표기를 고칩니다.
+- [guide/task-flow-plan.md](guide/task-flow-plan.md): 단계를 에이전트로 나눈 `/task-flow`의 구현 전 계획입니다. 구현하면 지우거나 `task-workflow.md`의 절로 옮깁니다.
 
 ## 문서를 고칠 때
 
