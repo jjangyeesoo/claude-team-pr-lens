@@ -1,4 +1,4 @@
-# Spike: `/task`와 `/task-flow` 비교 (2026-10-18 계획, 결과 미기록)
+# Spike: `/task`와 `/task-flow` 비교 (1차 P1 7.1 2026-10-18, 2차 P1 8.1~8.5 준비)
 
 `/task-flow`로 `/task`를 대체할지([task-flow-plan.md](../guide/task-flow-plan.md) "다음 PR"의 "대체") 정하기 위해, 같은 작업을 두 방식으로 한 번씩 진행하고 정확성, 컨텍스트 효율, 사람 부담을 비교합니다. 이 문서는 절차와 기록 양식이고, 결과는 실행한 뒤 아래 표에 채웁니다.
 
@@ -360,3 +360,50 @@ git diff origin/main...<B 브랜치> -- backend > Y.diff
 B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로 냈습니다. A의 브랜치와 worktree는 지웠습니다.
 - B를 고른 이유: A의 약점은 정확성과 안전에 관한 것이었습니다(큰 `x-ratelimit-reset` 값과 null `type`에서 `PrLensException`이 아닌 예외, contents 경로의 `..`가 그대로 요청 URL로 나감). B의 약점은 크기(429줄)와 7.6 준비(요청 제한 시간 주입 없음)로, PR 설명의 이유와 `tasks.md` 7.6의 미정 줄로 다룰 수 있습니다.
 - A가 나았던 점: 400줄 안, 요청 제한 시간 주입(7.6의 "짧게 주입한 타임아웃"), 실제 `HttpServer`를 거치는 테스트.
+
+### 1차 뒤 고친 것
+- 종료 검증 빈틈: implementer가 보고 도구 없이 끝나면 매니저가 `--verify`로 대신 검증합니다([#38](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/38)).
+- 측정 중 드러난 `main`의 Windows 전용 테스트 실패(`ConfigLoaderTest`, `--config`가 폴더일 때 원인 문구)를 고쳤습니다([#36](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/36)). 고치지 않았으면 2차에서 두 쪽의 Stop hook이 같은 이유로 막혔을 것입니다.
+
+## 2차 비교 (P1 8.1~8.5, 준비)
+1차는 "필수 충족, 효과 미달"이었으므로 결정 기준 표대로 더 큰 경계에서 한 번 더 비교합니다. 1차와 같은 A/B 설계(같은 작업을 두 방식으로)와 같은 지표·결정 기준을 씁니다.
+
+### 대상: P1 8.1~8.5 (PR 경계 하나)
+- 하위 작업 5개: 구현 3개(8.1 `RepoTreeIndex`, 8.2 `CLAUDE.md` 수집, 8.4 `FrontmatterParser`와 rule 선택)와 속성 테스트 2개(8.3 Property 13, 8.5 Property 14·7). `/task-flow`에서는 슬라이스가 여러 개 나오고, `/task`에서는 메인 세션이 다섯 작업을 모두 진행하므로 1차에서 보지 못한 메인 컨텍스트 차이가 드러나는지 봅니다.
+- 시작 가능 확인(2026-10-18): 진행 중인 `-p1-8.` 브랜치 없음. 선행 작업(2.x 공유 타입, 6.1 `GlobMatcher`, 7.1 `GitHubClient`)은 `main`에 있음. Notes "막는 작업" 표에 8.1~8.5는 없음. 실행 당일 다시 확인합니다.
+- 인수 기준: 8.1 `4.1, 4.9` / 8.2 `4.1~4.7, 4.9, 4.10` / 8.3 Validates `4.4~4.7` / 8.4 `5.1~5.6, 5.9~5.11, 22.4` / 8.5 Validates `5.4~5.6, 22.4`
+- 판단 비교에 쓸 본문 항목: 8.1의 `truncated` 대체 경로(설계 G-9), 8.4의 무효 glob 처리(G-4), 주의(6 리뷰: `GlobMatcher.validate`로 먼저 거르기), 미정(7.2~7.5 리뷰: `copied` 파일의 `previousPath`를 rule 매칭에서 볼지)
+
+### 1차와 달리 지킬 것
+- **B는 `/task-flow`만 실행합니다.** 1차의 B는 `/task`를 먼저 실행해 그 skill 본문도 컨텍스트에 들어갔습니다.
+- **PR 준비 직전 시각을 적습니다.** 1차는 두 쪽 다 같은 세션에서 PR 준비까지 해 메인 최대 컨텍스트에 PR 준비 몫이 섞였습니다. 2차도 PR 준비까지 해도 되지만, "pr-ready 진행해줘"를 보내기 직전 시각(아래 "측정 시점")을 적어 `session_usage.py --to`로 그 앞까지만 따로 셉니다.
+- 시작 커밋, 모델, effort, 권한 모드, 사람의 답은 1차와 같이 맞추고 "답변 기록"에 적습니다.
+
+### 절차
+1. 실행 당일, 저장소 루트에서
+   ```
+   git switch main && git pull --ff-only
+   git worktree add ../prlen-a origin/main --detach
+   git worktree add ../prlen-b origin/main --detach
+   ```
+2. 두 터미널에서 각 폴더로 가 `claude`를 새로 실행합니다. A는 `/task pr-lens-p1-cli 8.1`, B는 `/task-flow pr-lens-p1-cli 8.1`. 브랜치 이름에 `-a`, `-b`를 붙입니다.
+   - A는 하위 작업마다 `/task pr-lens-p1-cli 8.2`처럼 이어 가거나 상위 번호로 한 번에 합니다. 어느 쪽으로 했는지 적습니다.
+3. 두 쪽 모두 PR 준비 직전 시각을 적고, 원하면 PR 준비까지 진행해 push합니다.
+4. 측정은 1차의 "지표"와 "측정 방법"(교차 테스트, 이름을 가린 독립 리뷰, 판단 차이)을 그대로 씁니다. 1차처럼 매니저 세션에 "2차 측정해줘"라고 하면 됩니다.
+5. 하나를 골라 PR로 내고, 다른 쪽 브랜치와 worktree를 지웁니다.
+
+### 측정 시점
+| | A `/task` | B `/task-flow` |
+|---|---|---|
+| 시작 커밋 | | |
+| 시작 시각(UTC) | | |
+| PR 준비 직전 시각(UTC) | | |
+| 끝난 시각(UTC) | | |
+
+### 답변 기록 (2차)
+| 질문 (요약) | 누가 물었나 (A/B) | 답 |
+|---|---|---|
+| | | |
+
+### 결과 (2차)
+(실행한 뒤 채웁니다. 표 형식은 1차의 "지표"와 "결정 기준에 대어 본 결과"를 따릅니다)
