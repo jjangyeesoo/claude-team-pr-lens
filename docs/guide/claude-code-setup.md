@@ -7,8 +7,8 @@
 | 항목 | 방식 | 위치 |
 |---|---|---|
 | `.env`, `.env.*`, `application-local.*`, `application-secret.*`, `secrets/` 읽기·수정 금지 (모든 깊이). allow된 명령에 `--output`, `--init-script`, `-I`, `--config`, `-c`를 붙이는 것도 금지 | **강제** (permissions deny) | `.claude/settings.json` |
-| 위 파일 + gradle wrapper, `package-lock.json`, `node_modules/`, `.next/`, `.git/` 수정 금지. Windows 별칭 경로(`파일:스트림`, `ENV~1` 같은 8.3 이름, `gradlew.`처럼 끝에 점·공백을 붙인 이름)도 차단 | **강제** (PreToolUse hook, 2차 방어선) | `ProtectFiles.java` |
-| 코드 변경 후 포맷과 테스트 통과 (바뀐 스택만) | **강제** (Stop hook, 실패 시 한 번 되돌려 보냄) | `VerifyOnStop.java` |
+| 위 파일 + gradle wrapper, `package-lock.json`, `node_modules/`, `.next/`, `.git/`, `build/claude-verify/`(검증 기록과 implementer 표시) 수정 금지. Windows 별칭 경로(`파일:스트림`, `ENV~1` 같은 8.3 이름, `gradlew.`처럼 끝에 점·공백을 붙인 이름)도 차단 | **강제** (PreToolUse hook, 2차 방어선) | `ProtectFiles.java` |
+| 코드 변경 후 포맷과 테스트 통과 (바뀐 스택만) | **강제** (Stop hook, 실패 시 한 번 되돌려 보냄. `/task-flow`의 implementer가 일하는 동안은 implementer가 끝날 때 검증, 아래 "구현 중 검증") | `VerifyOnStop.java` |
 | 모든 `build.gradle.kts`, `settings.gradle.kts`, `libs.versions.toml`, `package.json` 수정, `.claude/` 아래 파일 수정(settings, hooks, rules, skills, agents), `npm install`, `git push` | **확인 요청** (permissions ask) | `.claude/settings.json` |
 | 줄 끝 LF 통일 (`* text=auto eol=lf`) | **강제** (git) | `.gitattributes` |
 | 패키지 의존 규칙 (ADR 0003) | **강제 예정** (ArchUnit 테스트, P1 작업 1.2에서 추가). 그 전에는 권고 | `backend/CLAUDE.md`, P1 설계 문서 |
@@ -58,6 +58,31 @@
 - **주의: 포맷터(`spotlessApply`, `prettier --write`)는 응답이 끝난 뒤 파일을 다시 포맷합니다.** Claude가 읽은 내용과 줄바꿈·들여쓰기가 달라질 수 있습니다. 기능에는 영향이 없습니다.
 - git 저장소가 아니면 아무것도 하지 않습니다. 스택 폴더가 없으면 그 스택은 건너뜁니다(backend만 쓰는 저장소에서도 그대로 동작).
 
+### 구현 중 검증 (`/task-flow`)
+`/task-flow`는 구현을 백그라운드 서브에이전트 `implementer`에게 맡깁니다. implementer는 실패 테스트만 담은 `test:` 커밋을 먼저 만들므로 일하는 도중의 트리는 빨갛고, 그동안 매니저(메인 세션)의 턴이 먼저 끝납니다. 이때 메인 Stop이 검증하면 매니저를 막고, 매니저가 implementer와 같은 파일을 고치려 듭니다. 그래서 검증 시점을 implementer가 끝날 때로 옮깁니다. 검증 명령과 판정은 위와 같습니다.
+
+- **implementer 종료 검증**: `settings.json`의 PreToolUse hook(matcher `SubagentHandback`)이 `VerifyOnStop.java handback`을 돌립니다. 서브에이전트는 보고 도구 `SubagentHandback`을 불러야 끝나는데, SubagentStop hook은 그 보고 **뒤에** 와서 exit 2로 붙잡을 수 없기 때문입니다(2026-10-18 이 저장소에서 시험으로 확인. SubagentStop 입력에는 `last_assistant_message`도 없었음). 입력의 `agent_type`이 `implementer`가 아니면 아무것도 하지 않습니다.
+  - 보고가 `BLOCKED:`로 시작하면(질문하려고 멈춤) 검증하지 않고 표시 파일을 `blocked`로 둡니다
+  - 실패하거나, 통과했어도 `git status --porcelain`이 비어 있지 않으면(포맷터가 고친 파일, 커밋하지 않은 체크박스) exit 2로 보고를 막아 implementer가 고치고 커밋하게 합니다. 같은 implementer가 두 번째로 막히면 놓아주고, 실패였으면 표시를 `failed`로 둡니다. PreToolUse 입력에는 `stop_hook_active`가 없어 횟수를 표시 파일에 셉니다
+  - 기록이 없어도 기준선만 잡지 않고 검증합니다(implementer는 커밋하고 끝나 트리가 늘 깨끗하므로). 이 브랜치가 건드리지 않은 스택은 `pass-nothing-to-verify`입니다
+  - 결과(스택별 `pass`·`pass-nothing-to-verify`·`fail`·`unavailable`·`blocked`, 내용 해시, `clean`, `agent_id`)를 `build/claude-verify/implementer-result.json`에 남깁니다. 매니저는 `java .claude/hooks/VerifyOnStop.java --check <agentId>`로 이 파일이 그 implementer의 통과 기록이고 지금 내용과 같은지 확인합니다
+- **메인 Stop이 건너뛰는 경우** (건너뛸 때마다 `systemMessage`로 알림)
+  - hook 입력의 `background_tasks`에 `agent_type: implementer`, `status: running`인 작업이 있음. harness가 주는 값이라 파일로 꾸밀 수 없습니다. implementer를 멈추면 목록에서 빠지므로 다음 Stop부터 다시 검증합니다(멈출 때 SubagentStop은 오지 않았음)
+  - 표시 파일 `build/claude-verify/implementer-marker.json`이 `blocked`·`failed`이고, 같은 세션(`session_id`)에서 쓰였고, 12시간이 지나지 않음. implementer는 끝났지만 트리가 빨간 채 사용자의 답을 기다리는 경우입니다. 표시는 통과하면 지워집니다
+- **매니저 명령** (allow에 없어 실행할 때마다 확인 요청이 뜸)
+  - `--mark <agentId> [blocked|failed]`: `/clear`나 새 세션 뒤 빨간 트리로 질문을 기다릴 때 표시를 다시 씁니다. 세션 ID를 모르므로 세션 확인 없이 유효합니다(출처 `mark`)
+  - `--unmark`: 작업을 중단할 때 표시를 지웁니다
+  - `--check <agentId>`: 위의 결과 확인
+- **우회로와 대책.** 표시 파일은 일반 파일이라 Bash로 만들면 메인 Stop 검증을 끌 수 있습니다(이 변경은 hook 완화이며, 도입 PR에서 이유를 설명하고 승인받았습니다). 대책은 아래와 같고, 셸로 만드는 것 자체는 막지 못합니다.
+  - 형식(`agent_id`, `at`)이 맞지 않거나 `status`가 `blocked`·`failed`가 아닌 표시, 다른 세션의 표시, 12시간이 지난 표시는 무시하고 검증합니다
+  - 실행 중 판정은 표시가 아니라 `background_tasks`로 합니다
+  - `ProtectFiles`가 Edit·Write로 `build/claude-verify/`를 고치지 못하게 막습니다
+  - 건너뛸 때마다 안내가 보입니다. implementer를 띄우지 않았는데 이 안내가 나오면 표시 파일을 확인하세요
+- **한계**
+  - `SubagentHandback`은 harness 내부 도구 이름이라 Claude Code 버전에 따라 바뀔 수 있습니다. 이름이 바뀌면 종료 검증이 조용히 돌지 않지만, 결과 파일이 없거나 이전 implementer의 것이므로 매니저의 `--check`가 "결과 없음"으로 멈춥니다
+  - `claude --continue`로 이어 가면 `session_id`가 그대로입니다(시험으로 확인). 그래서 세션 확인이 막는 것은 새 세션뿐입니다
+  - 백그라운드 서브에이전트의 권한 프롬프트가 메인 세션에 뜨는지는 `auto` 모드에서 시험해 확인하지 못했습니다
+
 ## 다른 프로젝트에 적용하기: 공통 코어와 스택별 오버레이
 
 이 절은 스타터에서 온 설명입니다. 이 저장소의 Claude Code 설정을 다른 프로젝트에 가져갈 때 참고합니다.
@@ -69,6 +94,7 @@
 | `.claude/skills/spec`, `pr-ready`, `adr` | 공통 코어 | 그대로 복사. `pr-ready`의 스택별 검증 명령만 수정 |
 | `.claude/agents/reviewer.md` | 공통 코어 (+스택 항목) | backend/web 규칙 항목을 프로젝트 구조에 맞게 수정. frontmatter의 `model: opus`는 리뷰 품질이 세션 모델에 좌우되지 않도록 둔 것이다(별칭이라 최신 Opus를 따른다). 팀 사정에 맞게 조정 |
 | `.claude/agents/context-reviewer.md`, `.claude/rules/context/editing.md` | 공통 코어 | 그대로 복사. 서로 맞물린 파일 목록과 승인 규칙이 있는 문서 경로만 프로젝트에 맞게 수정. `model: opus`는 `reviewer`와 같은 이유로 둔 것이다 |
+| `.claude/skills/task-flow`, `.claude/agents/planner.md`, `implementer.md` | 공통 코어 (+스택 항목) | implementer의 포맷 명령(`spotlessApply`, `npm run format`)과 테스트 실행 명령, 매니저의 테스트 파일 판정 패턴(`*/src/test/*`, `*.test.ts`)을 스택에 맞게 수정. 종료 검증은 `settings.json`의 PreToolUse(`SubagentHandback`) 항목과 함께 가져갈 것 |
 | `docs/specs/_template.md`, `docs/adr/`, PR 템플릿 | 공통 코어 | 그대로 복사 (ADR 내용만 새로 작성) |
 | `.claude/hooks/ProtectFiles.java` | 공통 코어 | 보호 패턴(`protectedReason`)만 수정 |
 | `.claude/hooks/VerifyOnStop.java` | 코어 로직 + 스택 설정 | `STACKS` 목록만 수정 (폴더, 명령, 실행 전 조건, 실패 판정 문자열). Maven이면 `mvnw`, Python이면 `uv run pytest` 등 |
@@ -85,7 +111,7 @@
 | `.gitattributes` | 공통 코어 | `* text=auto eol=lf` 유지. 빼면 Windows(`core.autocrlf=true`)에서 포맷터가 LF로 바꾼 파일이 전부 "수정됨"으로 보이고 CI의 `format:check`가 실패함. 기존 저장소에 넣을 때는 `git add --renormalize .` 커밋을 따로 만들 것 |
 | `gradlew` 실행 권한 | **스택별** | 복사 후 `git update-index --chmod=+x backend/gradlew` 확인 (hook은 `sh gradlew`로 실행해 권한이 없어도 동작) |
 
-기본 브랜치 이름: `reviewer`, `context-reviewer` 에이전트와 `/pr-ready`는 `main`을 기준으로 diff를 봅니다. 다른 이름이면 세 파일을 수정하세요.
+기본 브랜치 이름: `reviewer`, `context-reviewer` 에이전트와 `/pr-ready`, `/task-flow`는 `origin/main`(원격이 없으면 `main`)을 기준으로 diff를 보고, `VerifyOnStop.java`의 `changedOnBranch`도 같습니다. 다른 이름이면 이 파일들을 수정하세요.
 
 ### Next.js 관련 메모
 - **`web/AGENTS.md`는 Next.js가 관리합니다.** `create-next-app`이 `AGENTS.md`와 `@AGENTS.md`만 담긴 `CLAUDE.md`를 만들고, `next dev`가 이 블록을 다시 써 넣습니다. 팀 지시는 `web/CLAUDE.md`의 `@AGENTS.md` 아래에 적고, `AGENTS.md`는 고치지 않습니다(Prettier에서도 제외).

@@ -83,6 +83,14 @@ planner: <agentId> · implementer: <agentId>
 | 슬라이스 사이 | 다음 슬라이스의 계획이 바뀜 | implementer 보고의 `다음 슬라이스 영향:`이 `없음`이 아님(D10. G2와 같은 사람 확인이며 `--auto`에서도 멈춤) |
 
 ### 구현 중 검증
+> **구현하면서 바뀜 (2026-10-18, 체크리스트 0 결과).** SubagentStop은 서브에이전트의 보고(`SubagentHandback`) 뒤에 와서 exit 2로 붙잡을 수 없었습니다. 그래서 아래를 바꿨고, 구현된 동작의 원본은 `docs/guide/claude-code-setup.md` "구현 중 검증"입니다.
+> - 종료 검증은 PreToolUse(matcher `SubagentHandback`)에서 합니다. `BLOCKED:` 판별은 보고 원문(`tool_input.message`)으로, 재시도 횟수는 표시 파일에 셉니다. SubagentStart·SubagentStop hook은 쓰지 않습니다
+> - 실행 중 판정은 표시 파일이 아니라 메인 Stop 입력의 `background_tasks`(실행 중인 implementer)로 합니다. 표시 파일은 `blocked`·`failed`(끝났지만 트리가 빨감)에만 씁니다. 그래서 "실재 확인"과, 멈춘 implementer의 표시가 12시간 남는 문제가 없어졌습니다
+> - 매니저의 결과 확인은 `VerifyOnStop.java --check <agentId>`로 합니다(agent_id, 스택 결과, 내용 해시, 끝날 때 깨끗했는지)
+> - handback 모드는 기록이 없을 때 `baseline`을 쓰지 않고 검증합니다(이 브랜치가 건드리지 않은 스택은 `pass-nothing-to-verify`)
+>
+> 아래는 처음 계획입니다.
+
 검증을 메인의 Stop에서 implementer의 SubagentStop으로 옮깁니다. 검증 명령과 판정은 지금의 `VerifyOnStop.java`를 그대로 씁니다.
 
 hook은 모두 `settings.json`에 둡니다(SubagentStart·SubagentStop, matcher `implementer`). 에이전트 frontmatter의 `hooks`로도 걸 수 있지만, 설정을 한 파일에 모으고 판정 로직도 `VerifyOnStop.java` 한 곳에 두기 위해서입니다.
@@ -210,24 +218,26 @@ planner는 implementer가 먼저 쓸 실패 테스트를 슬라이스 절마다 
 ### 0. 사전 확인 (hook을 바꾸기 전)
 hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전체가 성립하지 않으므로, `VerifyOnStop.java`를 고치기 전에 입력을 파일로 남기기만 하는 시험용 hook으로 먼저 봅니다.
 
-| 확인 | 근거 | 막히면 |
-|---|---|---|
-| [ ] 이 폴더의 워크스페이스 신뢰를 수락했음 | 문서 | 수락 뒤 다시 확인 |
-| [ ] SubagentStart·SubagentStop이 matcher `implementer`로 걸리고 입력에 `agent_id`, `session_id`, `transcript_path`가 옴 | 문서 | 멈춤 |
-| [ ] SubagentStart 입력의 `session_id`가 같은 세션 메인 Stop 입력의 `session_id`와 같음("세션 확인"의 전제. 다르면 표시가 늘 무효가 되어 메인 Stop이 구현 도중을 검증함) | 미확인 | 멈춤(또는 "세션 확인"을 뺌) |
-| [ ] SubagentStop 입력에 `stop_hook_active`, `last_assistant_message`, `agent_transcript_path`가 옴 | 문서 | `BLOCKED` 건너뛰기나 재시도 상한을 다른 방법으로 |
-| [ ] SubagentStop에서 exit 2면 implementer가 멈추지 않고 실패 내용을 받아 계속 고침 | 문서 | 멈춤 |
-| [ ] 두 번째 차단에서 `stop_hook_active`가 true로 옴(Stop과 같은 의미) | 미확인 | 재시도 횟수를 표시 파일에 직접 셈 |
-| [ ] SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝남 | 미확인 | 표시를 매니저가 호출 직전에 `--mark`로 씀 |
-| [ ] `SendMessage`로 재개할 때 SubagentStart가 다시 발생함 | 미확인 | `--mark` 절차("구현 중 검증" 5번) |
-| [ ] 백그라운드 서브에이전트가 끝날 때 settings의 Stop은 돌지 않음 | 미확인(문서상 간접적으로 아님) | 돈다면 그때도 표시를 보고 건너뛰는지 확인 |
-| [ ] Stop의 `systemMessage`가 사용자에게 보임 | 미확인(지금 `VerifyOnStop`도 씀) | 건너뛸 때 안내 방식을 바꿈 |
-| [ ] SubagentStart의 `transcript_path`로 만든 서브에이전트 transcript 경로가 SubagentStop의 `agent_transcript_path`와 같음 | 미확인 | "실재 확인" 검사를 뺌 |
-| [ ] `claude --resume`·`--continue`로 이어 간 뒤 `session_id`가 바뀜 | 미확인 | 바뀌지 않으면 "세션 확인"이 막는 것은 새 세션뿐임. SessionStart hook 등 대안을 그때 정함 |
-| [ ] frontmatter `background: true`인 planner·implementer가 백그라운드로 돌고, 끝나면 완료 알림으로 매니저가 이어 감 | 문서, 이 세션(검토 에이전트) | 사용자가 `/task-flow`를 다시 불러 재개하는 흐름으로 |
-| [ ] 백그라운드 서브에이전트의 Write·Edit·`git add`·`git commit` 권한 프롬프트가 메인 세션에 에이전트 이름과 함께 뜨고 거기서 처리됨 | 문서 | 멈춤 |
-| [ ] `ProtectFiles`가 서브에이전트의 Edit·Write에도 걸림 | 문서 | 편집 보호를 우회로 대책에서 뺌 |
-| [ ] 사용자가 백그라운드 implementer를 멈췄을 때 SubagentStop이 옴 | 미확인 | 오지 않으면 같은 세션에서 12시간 동안 검증이 꺼지므로, 매니저가 중단을 알아챘을 때 표시를 지우는 절차를 더함 |
+2026-10-18에 입력을 파일로 남기는 시험 hook(`settings.local.json`)과 시험용 implementer로 확인했습니다. 결과 열이 실제로 본 것입니다.
+
+| 확인 | 결과 |
+|---|---|
+| [x] 이 폴더의 워크스페이스 신뢰를 수락했음 | hook이 돎 |
+| [x] SubagentStart·SubagentStop이 matcher `implementer`로 걸리고 입력에 `agent_id`, `session_id`, `transcript_path`가 옴 | 옴 (`agent_type`도 옴) |
+| [x] SubagentStart 입력의 `session_id`가 같은 세션 메인 Stop 입력의 `session_id`와 같음 | 같음 |
+| [x] SubagentStop 입력에 `stop_hook_active`, `last_assistant_message`, `agent_transcript_path`가 옴 | `last_assistant_message`는 보고 도구로 끝날 때 **없음**. 나머지는 옴 |
+| [x] SubagentStop에서 exit 2면 implementer가 계속 고침 | **안 됨**: 보고(`SubagentHandback`) 뒤에 와서 무시됨. PreToolUse(`SubagentHandback`)의 exit 2는 보고를 막고 계속 일하게 함 → 설계 변경("구현 중 검증" 머리말) |
+| [x] 두 번째 차단에서 `stop_hook_active`가 true로 옴 | SubagentStop에서는 true. PreToolUse 입력에는 이 필드가 없어 횟수를 표시 파일에 셈 |
+| [x] SubagentStart가 implementer의 첫 도구 호출보다 먼저 끝남 | 먼저 끝남 (새 설계에서는 쓰지 않음) |
+| [x] `SendMessage`로 재개할 때 SubagentStart가 다시 발생함 | 발생함 |
+| [x] 백그라운드 서브에이전트가 끝날 때 settings의 Stop은 돌지 않음 | 돌지 않음. 대신 메인 Stop 입력의 `background_tasks`에 실행 중인 implementer가 보임 → 실행 중 판정에 씀 |
+| [x] Stop의 `systemMessage`가 사용자에게 보임 | 보임 (사용자 확인) |
+| [x] 서브에이전트 transcript 경로를 만든 값이 `agent_transcript_path`와 같음 | 같음 (새 설계에서는 쓰지 않음) |
+| [x] `claude --continue`로 이어 간 뒤 `session_id`가 바뀜 | **바뀌지 않음**. 세션 확인이 막는 것은 새 세션뿐. `/clear` 뒤는 체크리스트 3에서 확인 |
+| [x] frontmatter `background: true`가 백그라운드로 돌고 완료 알림으로 이어 감 | 됨 |
+| [ ] 백그라운드 서브에이전트의 권한 프롬프트가 메인 세션에 뜸 | `auto` 모드라 프롬프트 없이 허용되어 확인하지 못함 |
+| [x] `ProtectFiles`가 서브에이전트의 Edit·Write에도 걸림 | 걸림 |
+| [x] 백그라운드 implementer를 멈췄을 때 SubagentStop이 옴 | **오지 않음** (`TaskStop`으로 확인). 새 설계에서는 `background_tasks`에서 빠지므로 영향 없음 |
 
 ### 1. 목록
 | 확인 | 막히면 |

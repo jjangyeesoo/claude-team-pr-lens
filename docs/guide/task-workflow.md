@@ -8,6 +8,7 @@
 |---|---|
 | 브랜치, PR 단위, 승인 규칙 | [PLAYBOOK](../product/PLAYBOOK.md) 2장 "승인 규칙 요약", 6장 "작업 규칙" |
 | `/task`, `/pr-ready`가 하는 일 | [`.claude/skills/task/SKILL.md`](../../.claude/skills/task/SKILL.md), [`.claude/skills/pr-ready/SKILL.md`](../../.claude/skills/pr-ready/SKILL.md) |
+| `/task-flow`와 그 에이전트가 하는 일 | [`.claude/skills/task-flow/SKILL.md`](../../.claude/skills/task-flow/SKILL.md), [`planner`](../../.claude/agents/planner.md), [`implementer`](../../.claude/agents/implementer.md) |
 | Stop hook과 권한 규칙 | [claude-code-setup.md](claude-code-setup.md) |
 
 ## 한눈에 보기
@@ -115,7 +116,7 @@ push를 계획보다 먼저 하는 것은, 계획을 검토하는 동안 다른 
 1. 변경 범위를 확인합니다. 브랜치가 PR 경계 하나에 해당하는지, `src/main` 변경이 400줄 이하인지 봅니다.
 2. 바뀐 스택을 검증하고 결과를 증거로 남깁니다.
 3. reviewer 에이전트가 diff를 스펙과 팀 규칙에 대조해 리뷰합니다. 이 에이전트는 구현 대화의 맥락을 모르는 상태로 코드와 스펙만 봅니다. `.claude/`나 `CLAUDE.md`를 고친 변경은 `context-reviewer` 에이전트가 리뷰합니다(지침끼리 맞물리는지, 기존 규칙이나 hook과 충돌하는지). 설정과 그 문서만 바뀐 브랜치는 `context-reviewer`만 실행하고, `backend/`나 `web/`도 함께 바뀌었으면 둘 다 실행합니다(`.claude/hooks/`의 Java 파일이 바뀌어도 `reviewer`를 함께 실행합니다).
-4. 리뷰 결과를 "반드시 수정", "선택", "뒤 작업에 넘길 것"으로 나눠 보여 주고, "반드시 수정"만 고친 뒤 테스트를 다시 실행합니다.
+4. 리뷰 결과를 "반드시 수정", "선택", "뒤 작업에 넘길 것"으로 나눠 보여 줍니다. "반드시 수정"과 "선택"은 ID가 붙은 표로 나옵니다. "반드시 수정"은 고치고, "선택"은 추천·수정안·이유를 보고 고칠 ID를 고르면 그것만 고칩니다(고르지 않으면 고치지 않음). 고친 뒤 테스트를 다시 실행합니다. `/task-flow`로 진행한 브랜치는 리뷰 파일의 SHA가 `HEAD`와 같으면 리뷰를 다시 돌리지 않고 그 결과를 씁니다.
 5. "뒤 작업에 넘길 것"(reviewer가 보고한 것과 메모 파일에 적힌 것)이 있으면 스펙 문서 수정안(대상 작업 본문에 넣을 `주의(… 리뷰)`, `미정(여기서 정함)` 줄)을 보여 주고, 승인한 항목만 반영합니다. 메모 파일의 항목은 최종 코드와 대조해 여전히 유효하고 뒤 작업이 스펙만 읽고 구현하면 틀리게 되는 것만 넣고, 넣을 항목이 없더라도 5번을 마칠 때 메모 파일을 지웁니다. PR 설명은 뒤 작업을 하는 세션이 읽지 못하므로 `/task`가 읽는 `tasks.md`에 남깁니다.
 6. [PR 템플릿](../../.github/pull_request_template.md) 형식으로 PR 설명 초안을 출력합니다.
 
@@ -134,6 +135,26 @@ PR이 열리면 CI가 `backend`, `web` 두 job을 실행합니다. 둘 다 필�
 사람이 리뷰하고 승인합니다. 누가 승인하는지는 PR 종류에 따라 다르고, 표는 [PLAYBOOK](../product/PLAYBOOK.md)의 "승인 규칙 요약"에 있습니다.
 
 머지되면 `origin/main`의 `tasks.md` 체크박스가 바뀌고, 그때부터 다른 사람의 `/task <스펙>` 목록에 완료로 보입니다.
+
+## `/task-flow`: 단계를 에이전트로 나눈 진행 (시험 중)
+`/task`와 같은 일을 단계별 에이전트에게 맡깁니다. 메인 세션은 매니저로서 상태와 사람 확인만 하고, 계획은 `planner`(opus), 구현은 `implementer`(지금 세션의 모델), 리뷰는 `reviewer`·`context-reviewer`(opus)가 합니다. 안정되면 `/task`를 대체합니다. 그때까지 두 skill은 함께 고칩니다.
+
+| 단계 | 누가 | 사람이 하는 일 |
+|---|---|---|
+| G1 브랜치 | 매니저 | 제안한 브랜치 이름 확인. 확인하면 만들고 push한 뒤 계획 파일 골격을 만든다 |
+| 계획 | planner | — |
+| G2 계획 승인 | 매니저 | 슬라이스, 테스트 목록, 주의·미정 대응, 질문을 보고 승인하거나 고쳐 달라고 한다 |
+| 구현 (슬라이스마다) | implementer | 막히면(`BLOCKED`) 질문에 답한다. 슬라이스가 다음 슬라이스의 계획을 바꾸면 다시 승인한다 |
+| 리뷰 | reviewer·context-reviewer | 고칠 "선택" ID를 고른다 |
+| 수정과 확인 리뷰 | implementer, 리뷰어 | 확인 리뷰 뒤에도 "반드시 수정"이 남으면 고칠지 그대로 둘지 정한다 |
+| G3 최종 보고 | 매니저 | 보고를 읽고 `/pr-ready`를 실행한다 |
+
+`/task`와 다른 점:
+- 받은 번호가 속한 **PR 경계 전체**를 한 번에 다룹니다. 계획, 리뷰, G2·G3는 경계 단위이고, 구현은 planner가 나눈 슬라이스(구현 작업 하나와 그것을 검증하는 `*` 작업)마다 새 implementer가 합니다.
+- implementer가 커밋합니다. 슬라이스마다 실패 테스트(와 스텁)만 담은 `test:` 커밋이 먼저 오고, G3가 그 뒤 테스트가 약해졌는지 봅니다. PR은 squash 머지하므로 이 커밋은 `main`에 남지 않습니다.
+- 진행 상태는 gitignore된 계획 파일(`docs/specs/<스펙>/handoff/<번호>-plan.md`)의 상태 줄에 남습니다. `/clear`나 새 세션 뒤 같은 명령을 다시 실행하면 이어 갑니다. 계획·리뷰 파일은 그 PC에만 있으므로 다른 PC에서는 이어받지 못합니다. `/pr-ready`가 이 파일들을 지웁니다.
+- implementer가 일하는 동안 메인 Stop hook은 검증을 건너뛰고 그렇다고 알립니다. 검증은 implementer가 끝날 때 합니다([claude-code-setup.md](claude-code-setup.md) "구현 중 검증").
+- Checkpoint 작업은 `/task`로 합니다.
 
 ## 자주 헷갈리는 것
 

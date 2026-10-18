@@ -38,8 +38,8 @@ web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:
 
 첫 세션에서 확인할 것:
 1. `/context`에 루트 `CLAUDE.md`가 로드되어 있는지. `backend/`나 `web/` 파일을 읽게 한 뒤 다시 보면 그 폴더의 `CLAUDE.md`와 해당 rules가 추가로 로드됩니다
-2. `/hooks`에 `PreToolUse`(ProtectFiles)와 `Stop`(VerifyOnStop)이 보이는지
-3. `/`를 입력하면 `/task`, `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`는 평면 패키지 기준으로 고쳤고 P2부터 씁니다. `/new-page`는 아직 메모 샘플 기준이라 P3 전에 고쳐야 합니다)
+2. `/hooks`에 `PreToolUse`(ProtectFiles, `SubagentHandback`의 VerifyOnStop)와 `Stop`(VerifyOnStop)이 보이는지
+3. `/`를 입력하면 `/task`, `/task-flow`, `/spec`, `/pr-ready`, `/adr`, `/new-endpoint`, `/new-page`가 나오는지 (`/new-endpoint`는 평면 패키지 기준으로 고쳤고 P2부터 씁니다. `/new-page`는 아직 메모 샘플 기준이라 P3 전에 고쳐야 합니다)
 
 ## 구성
 
@@ -56,7 +56,7 @@ web/
 ├── settings.json                권한(allow/ask/deny)과 hooks (팀 공유)
 ├── hooks/
 │   ├── ProtectFiles.java        PreToolUse: .env, 비밀 설정, gradle wrapper, lock 파일, 산출물 수정 차단
-│   └── VerifyOnStop.java        Stop: 바뀐 스택만 포맷 + 검증, 실패하면 계속 고치게 함
+│   └── VerifyOnStop.java        Stop: 바뀐 스택만 포맷 + 검증, 실패하면 계속 고치게 함. /task-flow의 implementer는 끝날 때 검증
 ├── rules/
 │   ├── backend/testing.md       backend/** 를 다룰 때 로드 (JUnit 6, jqwik, ArchUnit, 픽스처)
 │   ├── backend/api-design.md    REST API 규칙 (paths가 메모 샘플의 api 패키지 기준. P2 전에 수정)
@@ -64,12 +64,15 @@ web/
 │   └── context/editing.md       .claude/ 와 CLAUDE.md 를 고칠 때 읽는 규칙 (브랜치, 맞물린 파일, 권한 변경). 루트 CLAUDE.md 가 가리킴
 ├── skills/
 │   ├── task/                    /task <스펙> [번호]: 작업 하나 구현(브랜치, 계획 승인, 실패 테스트, 구현). 번호가 없으면 시작 가능한 작업 목록
+│   ├── task-flow/               /task-flow <스펙> [번호]: PR 경계 하나를 planner·implementer·리뷰어에게 단계별로 맡겨 진행 (시험 중, /task 대체 예정)
 │   ├── spec/                    /spec <스펙> [문서]: 스펙 폴더의 다음 문서(요구사항 → 설계 → 작업 목록)를 /task가 읽는 형식으로 작성
 │   ├── new-endpoint/            /new-endpoint <API>: 컨벤션대로 TDD 방식 엔드포인트 추가
 │   ├── new-page/                /new-page <화면>: 컨벤션대로 backend 데이터를 보여 주는 페이지 추가
 │   ├── pr-ready/                /pr-ready: PR 단위·크기 확인, 바뀐 스택 검증, 리뷰, PR 설명 초안
 │   └── adr/                     /adr <제목>: 아키텍처 결정 기록
 └── agents/
+    ├── planner.md               /task-flow의 계획 담당 (opus, 백그라운드). 슬라이스, 테스트 목록, 주의·미정 대응을 계획 파일에 씀
+    ├── implementer.md           /task-flow의 구현 담당 (세션 모델, 백그라운드). 슬라이스마다 test: 커밋 먼저, 구현, 커밋
     ├── reviewer.md              새 컨텍스트에서 diff를 스펙 작업과 패키지 규칙(ADR 0003) 기준으로 리뷰하는 서브에이전트
     └── context-reviewer.md      .claude/ 와 CLAUDE.md 변경을 리뷰하는 서브에이전트 (맞물림, 기존 규칙·hook과의 충돌)
 docs/
