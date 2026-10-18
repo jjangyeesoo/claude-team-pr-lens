@@ -446,7 +446,7 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 ### T3 CLI 출력 (요구사항 15, 16, 18, 22)
 
-**ReviewCommand (picocli, ADR 0004)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 자동 오류 처리는 끄고(`setParameterExceptionHandler`), 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다. Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동).
+**ReviewCommand (picocli, ADR 0004)**: `review <url> [--format markdown|json] [--config <path>]`. picocli의 `execute()`는 오류 처리기가 던진 예외를 삼키므로 쓰지 않고, `parseArgs`가 던지는 `ParameterException`을 `UsageException`으로 바꿔 던져 모든 오류를 `CliPipeline`의 종료 코드 결정으로 보냅니다(작업 18.1). Spring 컨텍스트는 띄우지 않고 `CliPipeline`이 객체를 직접 조립합니다(시작 시간 단축, 웹 서버 미기동).
 
 **MarkdownFormatter**: 순수 함수 `String format(ReviewResult, ReviewContext)`. 구역 순서는 `[불완전 경고] → 요약 → 심각도별 지적 수 → 파일별 지적 → 라인 밖 지적 → 제외 파일 → 사용된 컨텍스트 파일 (N) → 토큰 사용량과 추정 비용`입니다. 요약 전용 모드면 요약 구역에 "PR을 나누세요" 안내와 Changed_Line_Count, 3×Size_Limit를 넣습니다(`ReviewStats`에서 읽음). 강등된 Finding 수는 심각도별 구역 아래 한 줄로 표시합니다. "제외 파일" 구역은 `excludedFileDetails`의 경로와 사유를 함께 씁니다(요구사항 15.14). 줄바꿈은 `\n` 고정입니다.
 
@@ -619,6 +619,7 @@ cost:
 - `effort` 허용 값은 `low`, `medium`, `high`, `xhigh`, `max`입니다. 분할 모드의 모든 Chunk는 같은 모델과 effort로 요청합니다. 요청 사이에 effort를 바꾸면 프롬프트 캐시가 깨집니다.
 - `ConfigLoader`는 YAML을 트리로 읽은 뒤 허용 키 목록과 대조해 **모든 문제를 모아** 한 번에 보고합니다. 키 이름이 `token`, `githubToken`, `apiKey`, `anthropicApiKey`(대소문자·`_`/`-` 무시)와 같으면 값을 읽지 않고 환경변수 안내 오류를 냅니다.
 - `ConfigPrinter`는 모든 항목을 위 순서로 빠짐없이 쓰고, 문자열은 항상 큰따옴표로 감쌉니다. `**/x`처럼 `*`로 시작하는 값은 따옴표 없이 쓰면 YAML alias로 해석되므로 round-trip(요구사항 18.11)에 필요합니다.
+- 구현 형식(작업 16.1, 16.2): `new ConfigLoader(workingDir, homeDir).load(Path explicit)`(explicit이 null이면 기본 위치)와 `parse(String yaml)`로 읽고, `ConfigPrinter.print(Configuration)`로 씁니다. YAML은 snakeyaml의 노드 트리로 읽어 숫자를 원문 문자열에서 `BigDecimal`로 만듭니다. 값이 없는 섹션(`exclude:`)은 빈 섹션으로 받고, 숫자나 `true`처럼 읽히는 문자열 값은 큰따옴표가 필요합니다. 문제는 `ConfigException.problems()`의 `Problem(item, message)` 목록이며 항목 이름은 `llm.effort`, `exclude.add[1]`, `cost.pricing.<모델>.input`처럼 점으로 잇고, 항목이 아닌 문제는 `syntax`, `encoding`, `--config`, `file`입니다. 문자열 값은 오류 메시지에 싣지 않고(예외로 `exclude.add`·`exclude.remove`의 잘못된 패턴은 원문을 함께 보여 주며, 비밀값은 18.2의 마스커가 가립니다), 비밀 항목은 `token`·`githubToken` → `GITHUB_TOKEN`, `apiKey`·`anthropicApiKey` → `ANTHROPIC_API_KEY`로 안내합니다. 소수 다섯째 자리 이하가 있는 비용 상한은 반올림하고 범위는 반올림 전 값으로 검사합니다. `ConfigPrinter`의 비용 상한은 소수 둘째 자리 이상(`0.50`), 단가는 평문(`20`)으로 씁니다.
 
 
 ## Correctness Properties

@@ -354,21 +354,21 @@
   - [x]* 15.2 Property 19(JSON round-trip), Property 20(모르는 필드 무시), Property 21(역직렬화 오류 경로) 테스트
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.9, 10.10, 10.11, 11.7, 12.9, 16.4**
 
-- [ ] 16. 설정 파일
-  - [ ] 16.1 `ConfigLoader`, `ConfigException` 구현
+- [x] 16. 설정 파일
+  - [x] 16.1 `ConfigLoader`, `ConfigException` 구현
     - `--config` 경로만 읽고 없으면 대체 없이 오류, 옵션이 없으면 `./.prlens.yml` → `~/.prlens.yml` 첫 파일, 없으면 기본값
     - UTF-8로 읽고 허용 키와 대조, 범위 검증(요구사항 18.6, effort 허용 값 포함), 모든 문제를 모아 한 번에 보고
     - `cost.pricing`은 모델 이름 단위로 기본 단가표에 병합, 지정한 모델은 네 단가 필수(설계 G-10)
     - 비밀 키 이름(`token`, `githubToken`, `apiKey`, `anthropicApiKey`, 대소문자·`_`/`-` 무시)은 값을 읽지 않고 환경변수 안내
     - `exclude.add`/`exclude.remove` 패턴을 `GlobMatcher`로 검증
     - 주의(선머지 리뷰): `Configuration`은 값 범위를 검증하지 않고, `maxCostUsdPerReview`를 `setScale(4, HALF_UP)`으로 맞춥니다. 범위 검사(0.01~100.00)는 `Configuration`을 만들기 전 원본 값에 합니다. 만든 뒤에 하면 `0.00996`이 `0.0100`으로 반올림돼 통과합니다. `GlobMatcher.validate`는 `GlobSyntaxException(pattern, reason)`을 던지고, 이 타입은 2.3에서 만들어 두었습니다(던지는 조건은 6.1). `pricing` 맵은 null 키·값을 거부합니다
-    - 미정(여기서 정함): 설정 파일의 `0.123456`처럼 소수 다섯째 자리 이하가 있는 비용 상한을 오류로 거부할지 `0.1235`로 반올림할지
+    - 결정(16.1): 소수 다섯째 자리 이하가 있는 비용 상한(`0.123456`)은 `0.1235`로 반올림합니다(HALF_UP). `Configuration`이 이미 이렇게 맞추고 요구사항 18.6은 범위 안의 값을 유효하다고 하므로 거부하지 않습니다. 범위 검사(0.01~100.00)는 반올림 전 원본 값에 하므로 `0.00996`은 거부합니다
     - _Requirements: 3.11, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 19.1, 22.2, 22.3_
-  - [ ] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
+  - [x] 16.2 `ConfigPrinter` 구현 (모든 항목을 고정 순서로, 문자열은 항상 큰따옴표)
     - 주의(선머지 리뷰): `maxCostUsdPerReview`는 scale 4라 그대로 쓰면 `0.5000`으로 나옵니다. 단가(`ModelPricing`)는 `stripTrailingZeros`를 거쳐 `20.00`이 `2E+1`이 되므로 `toPlainString()`으로 씁니다. `pricing`은 모델 이름의 자연 순서로 순회됩니다
     - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries`는 `model`뿐 아니라 `pricing`의 키에도 `true`, `123`, `null`, `model: v1`, `"quoted"`, `a\b`를 냅니다. `pricing`의 키도 큰따옴표로 감싸고 `"`와 `\`를 이스케이프해야 16.3의 round-trip이 성립합니다
     - _Requirements: 18.10_
-  - [ ]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
+  - [x]* 16.3 Property 37(설정 round-trip과 부분 지정), Property 38(설정 검증 오류 수집) 테스트
     - 주의(2.4~2.6 리뷰): `ConfigurationArbitraries.configurations()`는 요구사항 18.6 범위 안의 값만 내므로 Property 38의 범위 밖 값은 따로 만듭니다. `pricing`에는 기본 단가 모델이 항상 있고(G-10 병합 전제) 그 단가는 기본값과 다를 수 있으므로, "기본 모델 단가를 적지 않으면 기본값 유지"는 부분 지정 쪽이나 예시 테스트로 확인합니다. 비용 상한은 소수 넷째 자리까지만 나와 다섯째 자리 이하 처리는 검증되지 않습니다. 패턴 중복은 한 목록 안에서만 없고, 같은 패턴이 추가 목록과 해제 목록에 함께 나올 수 있습니다
     - **Validates: Requirements 18.5, 18.6, 18.7, 18.10, 18.11**
 
@@ -388,17 +388,18 @@
 
 - [ ] 18. CLI 명령과 파이프라인
   - PR 경계: 18.1~18.2 / 18.3~18.6 / 18.7
-  - [ ] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
-    - 주의(3 리뷰): picocli가 직접 쓰는 출력(사용법, 버전)은 `CommandLine.setOut`/`setErr`에 UTF-8 `PrintWriter`(설치한 `System.out`/`System.err` 위)를 넘깁니다. 기본 writer가 콘솔 코드 페이지로 인코딩하면 `MaskingPrintStream`에서 한글이 대체 문자로 바뀝니다. picocli 기본 writer의 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
+  - [x] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
+    - 결정(18.1): picocli가 직접 쓰는 출력(사용법)은 `setOut`/`setErr`에 UTF-8 `PrintWriter`를 명시해 넘깁니다. 기본 writer의 문자 집합은 확인하지 않고 명시로 피했습니다. 인자 오류는 `execute()`가 처리기의 예외를 삼키므로 `parseArgs`를 직접 불러 `UsageException`으로 바꿉니다
     - _Requirements: 15.1, 15.7, 15.12, 22.1_
-  - [ ] 18.2 `CliPipeline.preflight` 구현
+  - [x] 18.2 `CliPipeline.preflight` 구현
     - 순서: 환경변수 값을 읽어 `SecretMasker`와 UTF-8 `MaskingPrintStream` 설치(빈 값은 제외) → 인자(URL, `--format`) → 설정 → 환경변수 검사(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, 둘 다 없으면 한 메시지). 마스커를 가장 먼저 설치해 인자·설정 오류 메시지도 마스킹합니다
     - 어느 단계든 실패하면 외부 API 호출 없이 종료 코드 2
     - CLI용 `logback.xml` 추가(대상 `System.err`, 기본 수준 WARN). Spring 컨텍스트 없이 실행하면 Logback 기본 설정이 로그를 stdout에 써서 결과 출력에 섞임(요구사항 15.7, 15.8)
     - 주의(3 리뷰): `MaskingPrintStream`은 `\n`으로 끝나지 않은 나머지를 들고 있고, `flush()`는 그 끝이 비밀값의 앞부분과 같으면(한 글자도 해당. `ghp_…`이면 `g`, `sk-ant-…`이면 `s`) 그 부분을 내보내지 않습니다. JVM은 바꿔 끼운 스트림을 종료할 때 flush하지 않으므로, 모든 출력을 `\n`으로 끝내고 프로세스를 끝내기 전에(정상·오류 경로 모두) 두 스트림을 flush합니다
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 `FileDescriptor.out`/`err`를 직접 열므로 `close()`하면 프로세스의 실제 표준 스트림이 닫힙니다. `close()`는 `PrLensMain`의 `System.exit` 직전에만 하고, 테스트가 같은 JVM에서 부르는 경로(`CliPipeline`, 조립 함수)에서는 닫지 않고 `\n`으로 끝낸 뒤 flush합니다. 실제로 닫히는지는 직접 실행해 확인하지 않았으므로 18.6의 하위 프로세스 테스트에서 확인합니다 (스펙을 읽고 추론한 항목)
-    - 주의(3 리뷰): `SecretMasker`는 값을 다듬지 않고 받은 문자열 그대로 찾습니다. 환경변수 값 끝에 공백이나 `\r`이 있는데(cmd의 `set GITHUB_TOKEN=abc & ...`) 요청에는 다듬은 값을 쓰면 오류 메시지에 나온 토큰이 가려지지 않습니다. 마스커에 넣는 값과 자격 증명에 쓰는 값을 같은 문자열로 하거나 둘 다 등록합니다
-    - 주의(3 리뷰): `MaskingPrintStream`은 받은 바이트를 UTF-8로 풀어 다시 쓰므로 UTF-8이 아닌 바이트는 대체 문자가 됩니다. Java 17의 Windows 기본 문자 집합은 UTF-8이 아니므로 `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시합니다. Logback encoder의 기본 문자 집합은 확인하지 않았으므로 여기서 확인합니다 (스펙을 읽고 추론한 항목)
+    - 결정(18.2): 마스커에는 환경변수 원본과 `strip()`한 값을 둘 다 등록하고, 요청에는 다듬은 값을 씁니다(`CliPipeline.secretMasker`)
+    - 결정(18.2): `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시했습니다. Logback encoder의 기본 문자 집합은 확인하지 않고 명시로 피했습니다. 설정이 stderr, WARN, UTF-8인지는 `LogbackConfigTest`가 읽어 확인합니다
+    - 주의(16 리뷰): `ConfigLoader`는 사용자 홈을 스스로 찾지 않습니다. `new ConfigLoader(Path.of("").toAbsolutePath(), Path.of(System.getProperty("user.home")))`처럼 현재 작업 폴더와 홈을 넘깁니다. `ConfigException.getMessage()`는 문제 전체를 여러 줄로 담고 잘못된 제외 패턴 원문을 포함하므로, 마스커를 설치한 뒤 그대로 stderr에 씁니다
     - _Requirements: 1.9, 1.10, 3.11, 15.12, 18.7, 19.1, 19.2, 19.3, 19.4, 22.3_
   - [ ] 18.3 파이프라인 조립 구현
     - Spring 컨텍스트 없이 `HttpGitHubClient`, `PrFetcher`, `ContextCollector`, `RetryingLlmClient(AnthropicLlmClient)`, `ReviewEngine`을 직접 조립
@@ -411,6 +412,7 @@
     - 주의(17 리뷰): `MarkdownFormatter.format`의 결과는 이미 `\n` 하나로 끝납니다. Markdown 출력에는 `\n`을 더 붙이지 않고, `--format json`일 때만 `ResultCodec.write` 결과에 `\n`을 붙입니다. 무조건 덧붙이면 stdout이 `\n\n`으로 끝나 20.2의 골든 비교가 어긋납니다
     - 주의(7.1 리뷰): 3인자 `HttpGitHubClient` 생성자는 빈 `SecretMasker`를 쓰고 디버그 로그가 꺼져 있습니다. 디버그 모드에서 HTTP 로그를 내려면 18.2에서 만든 같은 `SecretMasker`와 stderr로 가는 `debugLog`를 `Options`에 넣어 4인자 생성자로 조립합니다 (스펙을 읽고 추론한 항목)
     - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
+    - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - _Requirements: 15.7, 15.8, 17.2_
   - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -420,10 +422,13 @@
     - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
     - 주의(17 리뷰): `ExitCodeResolver.resolve(ReviewResult)`는 정적 메서드이고 0, 1, 3만 돌려줍니다. 결과를 만들지 못한 경우의 종료 코드 2는 이 매핑이 정합니다
     - 주의(7.1 리뷰): `x-ratelimit-reset`까지 60초를 넘으면 `github.RateLimitResetException`이 옵니다. `RetryAfterTooLongException`의 하위 타입이고 해제 시각(UTC ISO-8601)은 `getMessage()`와 `resetAt()`에만 있습니다. 상위 타입으로 잡아 `api()`·`seconds()`로 메시지를 새로 만들면 요구사항 21.10의 시각이 빠지므로 `getMessage()`를 그대로 씁니다
+    - 주의(18.1~18.2 리뷰): `PrLensMain.main`은 `finally`에서 `out`·`err`를 `close()`한 뒤 `System.exit`을 부르므로, `PrLensMain.run`을 빠져나간 예외는 메시지 없이 JVM 기본 종료 코드 1로 끝납니다(닫힌 stderr에 쓰여 사라짐). `run`의 `catch`에서 모든 예외(`RuntimeException`, picocli `ExecutionException` 포함)를 잡아 매핑하고, 지금 `run`이 직접 2로 바꾸는 `UsageException`·`ConfigException`·`MissingSecretException`도 그 매핑으로 옮깁니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 실제 `FileDescriptor`를 열어 단위 테스트가 없고, 둘이 서로 바뀌어도 실패하는 테스트가 없습니다. 하위 프로세스로 실행해 결과는 stdout, 오류는 stderr에 BOM 없는 UTF-8로 나오는지, `\n` 없이 `s`로 끝나는 출력이 끝까지 나오는지, `PrLensMain`이 `System.exit` 직전에 스트림을 닫아도 출력이 잘리지 않는지 한 번 확인합니다
+    - 주의(16 리뷰): 설정 사례에서 문자열 값은 큰따옴표로 감쌉니다. 따옴표 없는 `model: 5.5`나 `effort: yes`는 `llm.model`/`llm.effort` 오류가 됩니다. 단가표에 값 없이 적은 모델(`"m":`)은 네 단가 누락 오류입니다
+    - 주의(18.1~18.2 리뷰): Linux에서 `PrLensMain.main`을 하위 프로세스로 실행하면 스트림을 닫은 뒤 `System.exit`을 불러도 stderr 오류 메시지가 끝까지 나오는 것을 리뷰 중 직접 확인했습니다(stdout 결과 출력과 macOS·Windows는 확인하지 않음). 통합 테스트에 인자 없는 `prlens` 사례(종료 코드 2, stderr에 사용법)를 넣습니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
   - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요

@@ -103,6 +103,8 @@
     - 허용 목록은 대소문자 무시로 중복을 제거하고 처음 나온 표기를 유지, 1,000개 상한
     - 비밀 항목 키(`webhooksecret`, `privatekey`, `password`, `dburl` 등, `db`·`database` 구역)는 값을 읽지 않고 대신 쓸 환경변수를 안내
     - P1 `Configuration`은 수정하지 않음. `ConfigLoader`의 반환형이 `LoadedConfiguration`으로 바뀌므로 P1 호출부(`CliPipeline`)와 P1 Property 37 테스트를 함께 고침
+    - 주의(P1 16 리뷰): P1 `ConfigLoader`는 최상위 허용 키(`exclude`, `review`, `llm`, `retry`, `cost`)와 비밀 키 판정(`secretVariable`의 switch)을 `Reading` 안에 고정해 두었습니다. P2 구역(`repositories`, `jobs`, `publish`, `server`)과 P2 비밀 키(`webhooksecret`, `privatekey`, `password`, `dburl` 등)는 이 두 곳을 넓혀야 "알 수 없는 항목" 오류가 나지 않고 비밀 항목도 걸러집니다
+    - 주의(P1 16 리뷰): snakeyaml(YAML 1.1 resolver)은 따옴표 없는 `yes`, `no`, `on`, `off`도 `Tag.BOOL`로 읽습니다. P1처럼 노드 태그만 보고 불리언을 판정하면 설계의 "`true`/`false` 리터럴만"과 어긋나므로, 태그가 `BOOL`이고 원문이 `true`나 `false`일 때만 받습니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 3.5, 3.6, 3.7, 13.4, 18.3, 19.1, 19.2, 19.4_
   - [ ] 3.2 `ConfigPrinter`에 P2 항목 출력 추가 (P1 항목 뒤, 문자열은 큰따옴표)
     - _Requirements: 19.6_
