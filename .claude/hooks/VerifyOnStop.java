@@ -251,10 +251,14 @@ public class VerifyOnStop {
           readLog(run.log, run.stack.nativeOutput() ? nativeCharset() : StandardCharsets.UTF_8);
       if (exitCode == 0) {
         String after = contentHash(root, stateDir, run.stack);
-        if (after != null) {
-          state.setProperty("lastPass." + run.stack.name(), after);
-          hashes.put(run.stack.name(), after);
+        if (after == null) { // 포맷 후 내용을 모르면 포맷 전 해시로 --check가 틀리게 판정하므로 남기지 않는다
+          hashes.remove(run.stack.name());
+          notices.add(run.stack.name() + ": 검증은 통과했지만 실행 후 내용 해시를 계산하지 못했습니다");
+          results.put(run.stack.name(), "unavailable");
+          continue;
         }
+        state.setProperty("lastPass." + run.stack.name(), after);
+        hashes.put(run.stack.name(), after);
         results.put(run.stack.name(), "pass");
       } else if (isCodeFailure(run.stack, exitCode, output)) {
         failures.add(failureReport(run, output));
@@ -752,7 +756,7 @@ public class VerifyOnStop {
       try {
         Object v = new Json(text).value();
         return v instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
-      } catch (RuntimeException e) {
+      } catch (RuntimeException | StackOverflowError e) { // 깊게 중첩된 입력도 파싱 실패로 본다
         return Map.of();
       }
     }

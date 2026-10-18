@@ -152,8 +152,9 @@ PR이 열리면 CI가 `backend`, `web` 두 job을 실행합니다. 둘 다 필�
 `/task`와 다른 점:
 - 받은 번호가 속한 **PR 경계 전체**를 한 번에 다룹니다. 계획, 리뷰, G2·G3는 경계 단위이고, 구현은 planner가 나눈 슬라이스(구현 작업 하나와 그것을 검증하는 `*` 작업)마다 새 implementer가 합니다.
 - implementer가 커밋합니다. 슬라이스마다 실패 테스트(와 스텁)만 담은 `test:` 커밋이 먼저 오고, G3가 그 뒤 테스트가 약해졌는지 봅니다. PR은 squash 머지하므로 이 커밋은 `main`에 남지 않습니다.
-- 진행 상태는 gitignore된 계획 파일(`docs/specs/<스펙>/handoff/<번호>-plan.md`)의 상태 줄에 남습니다. `/clear`나 새 세션 뒤 같은 명령을 다시 실행하면 이어 갑니다. 계획·리뷰 파일은 그 PC에만 있으므로 다른 PC에서는 이어받지 못합니다. `/pr-ready`가 이 파일들을 지웁니다.
-- implementer가 일하는 동안 메인 Stop hook은 검증을 건너뛰고 그렇다고 알립니다. 검증은 implementer가 끝날 때 합니다([claude-code-setup.md](claude-code-setup.md) "구현 중 검증").
+- 진행 상태는 gitignore된 계획 파일(`docs/specs/<스펙>/handoff/<번호>-plan.md`)의 상태 줄에 남습니다. `/clear`나 새 세션 뒤 같은 명령을 다시 실행하면 이어 갑니다(체크아웃한 브랜치가 상태 줄의 브랜치와 다르면 멈춥니다). 계획·리뷰 파일은 그 PC에만 있으므로 다른 PC에서는 이어받지 못합니다. `/pr-ready`가 이 파일들을 지웁니다.
+- implementer가 일하는 동안 메인 Stop hook은 검증을 건너뛰고 그렇다고 알립니다. 검증은 implementer가 끝날 때 합니다([claude-code-setup.md](claude-code-setup.md) "구현 중 검증"). 매니저 턴 끝에 메인 Stop 검증이 실패하면 매니저는 고치지 않고 알린 뒤, 새 implementer로 다시 할지 묻습니다.
+- 백그라운드 implementer의 `git add`·`git commit`은 `settings.json` allow에 없습니다. `auto` 모드에서만 시험했으므로, 다른 권한 모드에서 이 권한이 어떻게 처리되는지는 아직 확인하지 않았습니다.
 - Checkpoint 작업은 `/task`로 합니다.
 
 ## 자주 헷갈리는 것
