@@ -88,8 +88,11 @@ public final class ConfigLoader {
     return Configuration.defaults();
   }
 
-  /** 읽지 못한 원인을 사용자가 알아볼 수 있는 말로 바꾼다 (요구사항 18.9). */
-  private static String cause(IOException e, Path file) {
+  /**
+   * 읽지 못한 원인을 사용자가 알아볼 수 있는 말로 바꾼다 (요구사항 18.9). Windows의 예외 모양을 OS와 무관하게 시험하려고 package-private으로
+   * 둔다.
+   */
+  static String cause(IOException e, Path file) {
     if (e instanceof NoSuchFileException) {
       return "파일이 없습니다";
     }

@@ -9,6 +9,7 @@ import com.prlens.model.ModelPricing;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -386,6 +387,16 @@ class ConfigLoaderTest {
               assertThat(e.problems().get(0).item()).isEqualTo("--config");
               assertThat(e.getMessage()).contains("폴더");
             });
+  }
+
+  // 18.9: Windows는 폴더를 읽으면 AccessDeniedException을 던진다. CI(Linux)에서도 판정 순서를 고정하려고 그 예외를 흉내 낸다
+  @Test
+  void directoryCauseWinsOverAccessDenied() throws IOException {
+    assertThat(ConfigLoader.cause(new AccessDeniedException(work.toString()), work)).contains("폴더");
+
+    Path file = Files.writeString(work.resolve("x.yml"), "");
+    assertThat(ConfigLoader.cause(new AccessDeniedException(file.toString()), file))
+        .contains("읽기 권한");
   }
 
   // 3.11
