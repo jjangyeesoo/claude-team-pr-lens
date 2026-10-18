@@ -65,7 +65,7 @@ planner: <agentId> · implementer: <agentId>
 | G3 | `src/main` 변경이 400줄을 넘음 | `git diff --numstat origin/main...HEAD -- '*/src/main/*'`의 추가와 삭제 합계. 계획 단계의 예상치가 아니라 구현 뒤 실제 값으로 판단 |
 | G3 | 실패 테스트 커밋이 없음 | 테스트 목록이 "없음"이 아닌데 상태 줄이 `실패 테스트: 없음`이거나, 그 SHA가 `git log origin/main..HEAD`에 없음 |
 | G3 | 실패 테스트 커밋 뒤에 assertion이 줄었음 | `git diff <실패 테스트 SHA>..HEAD -- '*/src/test/*' '*.test.ts' '*.test.tsx'`에서 지운 줄(`-`)이 `assert`, `verify(`, `expect(`를 포함함. 이름 바꾸기나 옮기기도 걸리는 어림 검사이므로, 걸리면 그 줄과 implementer가 보고한 이유를 G3에 보여 주고 멈춤 |
-| G3 | 재리뷰를 한 번 한 뒤에도 "반드시 수정"이 남음 | `-review.md`의 마지막 리뷰에 "반드시 수정" 항목이 있음 |
+| G3 | 재리뷰를 한 번 한 뒤에도 "반드시 수정"이 남음 | `-review.md`의 마지막 리뷰 "반드시 수정" 표에 `M` 행이 있음(앞 리뷰의 ID가 `남음`이거나 새 ID) |
 | G3 | implementer가 `BLOCKED`로 끝났거나, 종료 검증이 실패함 | implementer 마지막 메시지의 `BLOCKED:` 접두어, `build/claude-verify/implementer-result.json`의 결과가 통과가 아니거나, 그 `agent_id`가 상태 줄의 `implementer`와 다름(결과 없음) |
 
 ### 구현 중 검증
@@ -133,7 +133,7 @@ planner는 implementer가 먼저 쓸 실패 테스트를 정합니다(D9). 테�
    - G1: 브랜치 이름을 제안하고 멈춥니다. 확인받으면 `origin/main`에서 만들고 push한 뒤, 상태 줄만 있는 계획 파일 골격을 만듭니다(D8)
    - planner 호출(스펙, 작업 번호, 브랜치, 계획 파일 경로 전달) → agentId를 상태 줄에 적음 → 계획 파일 요약과 "질문" 절 출력 → G2에서 멈춤. 질문의 답과 수정 요청은 D1대로 planner에게 보냅니다
    - implementer 호출(계획 파일 경로 전달, D3) → 반환된 agentId를 상태 줄 `implementer:`에 적음(새 implementer를 띄우거나 `SendMessage`로 재개할 때마다 갱신. G3가 결과 파일과 이 값을 비교함) → 완료 알림이 올 때까지 턴을 끝내고 기다립니다. 그동안 사용자가 말을 걸어도 매니저는 구현 대상 파일을 고치거나 검증 명령을 돌리지 않습니다 → `BLOCKED` 보고가 오면 사용자에게 묻고 `SendMessage`로 답을 전달(필요하면 그 직전에 시작 표시, "구현 중 검증" 5번) → 완료 뒤 `implementer-result.json`으로 검증 결과를 확인 → 보고된 `test:` 커밋을 확인해 상태 줄 `실패 테스트:`에 적음
-   - `git fetch origin` 뒤 reviewer 호출(스펙 폴더, 작업 번호, 브랜치, 계획 파일 경로, 실패 테스트 SHA) → `-review.md` 저장 → "반드시 수정"을 implementer에게 → 재리뷰 1회 → SHA 갱신. 재리뷰 뒤에도 "반드시 수정"이 남으면 더 돌리지 않고 G3에서 사용자에게 알립니다
+   - `git fetch origin` 뒤 reviewer 호출(스펙 폴더, 작업 번호, 브랜치, 계획 파일 경로, 실패 테스트 SHA) → `-review.md` 저장 → 첫 리뷰에 "선택" 행이 있으면 표를 보여 주고 고칠 ID를 묻습니다(없으면 묻지 않음) → "반드시 수정" 전부와 사용자가 고른 "선택" ID를 implementer에게 → 재리뷰 1회 → SHA 갱신. 재리뷰 뒤에도 "반드시 수정"이 남으면 더 돌리지 않고 G3에서 사용자에게 알립니다
    - G3: 지금 `/task` 8번의 보고 항목, 리뷰 요약, 게이트 조건 결과를 보고합니다. PR 생성은 하지 않고 `/pr-ready`를 안내합니다
 2. `.claude/agents/planner.md` (`model: opus`, `background: true`, tools: Read, Grep, Glob, Bash, Write, Edit): 필요한 부분만 읽기(지금 `/task` 3.4번), "주의"·"미정"과 기존 메모 확인, 계획 항목(지금 3.5번), 계획 파일 형식(D2, "주의·미정 대응", "테스트 목록", "요구사항 변경", "질문" 절은 항상 두고 없으면 "없음"), 수정 요청 처리(수정 이력에 추가). planner도 사용자에게 물을 수 없으므로, 결정 대기 항목이나 요구사항을 바꿔야 하는 판단처럼 물어야 할 것은 "질문" 절에 적고 멈춥니다(매니저가 G2에서 묻습니다). 매니저가 만든 골격 파일의 상태 줄 아래에 본문만 쓰고, 상태 줄(D8)과 계획 파일 밖의 파일은 건드리지 않습니다
 3. `.claude/agents/implementer.md` (`model: inherit`, `background: true`): 실패 테스트 먼저(지금 3.6번. 계획 파일의 "테스트 목록"대로 쓰고, 그 테스트만 돌려 "기대 실패"대로 실패하는지 확인한 뒤, 구현 코드 없이 테스트만 담아 `test:` 커밋을 먼저 합니다. 이 커밋 뒤 테스트를 바꾸면 바꾼 것과 이유를 보고에 적습니다. D9), 구현과 멈출 조건(지금 3.7번. 묻는 대신 마지막 메시지를 `BLOCKED: <이유와 질문>`으로 시작하고 멈춥니다. 종료 검증이 이 접두어로 건너뛰기를 판단합니다), 메모 규칙, 마무리(지금 3.8번의 체크박스, "주의"·"미정" 정리), Conventional Commits 커밋, 보고 형식(`test:` 커밋 SHA, 테스트 목록과 달라진 점, `test:` 커밋 뒤 테스트 변경과 이유를 포함). 전체 검증은 직접 돌리지 않고 종료 검증에 맡기며, 종료 검증이 실패를 돌려주면 고칩니다("구현 중 검증")
@@ -141,9 +141,28 @@ planner는 implementer가 먼저 쓸 실패 테스트를 정합니다(D9). 테�
 ## 고칠 파일
 - `.gitignore`: `docs/specs/*/handoff/*-plan.md`, `docs/specs/*/handoff/*-review.md` (D2)
 - `.claude/agents/reviewer.md` 1번: 브랜치가 주어지면 `git diff origin/main...<브랜치>`, 없으면 `origin/main...HEAD`(`origin`이 없으면 로컬 `main`). fetch는 부르는 쪽이 이미 했다고 봅니다(D3, D4). 계획 파일과 실패 테스트 SHA가 주어지면 "테스트 목록"과 실제 테스트를 대조하고, `git diff <SHA>..<브랜치>`의 테스트 변경에 이유가 있는지 봅니다. 주어지지 않으면(`/pr-ready`, 기존 `/task`) 이 확인은 건너뜁니다(D9). frontmatter는 바꾸지 않습니다
+  - 4번 보고 형식: "반드시 수정"과 "선택"을 ID가 붙은 표로 규격화합니다. 사용자가 "S1, S3 고쳐"처럼 ID로 고르고, 매니저가 implementer에게 ID로 넘기고, 재리뷰가 "M1 해결됨"처럼 답하고, G3가 M행 수를 기계로 셀 수 있게 하기 위해서입니다. "뒤 작업에 넘길 것"은 이미 규격화되어 있고 `/pr-ready` 5번이 그 형식을 읽으므로 그대로 둡니다
+    ```
+    ### 반드시 수정
+    | ID | 파일:줄 | 문제 | 수정안 |
+    |---|---|---|---|
+    | M1 | GitHubClient.java:42 | 404를 빈 트리로 처리해 R3.2 위반 | `GitHubApiException` 던지기 (아래 M1) |
+
+    ### 선택
+    | ID | 파일:줄 | 문제 | 추천 | 수정안 | 이유 |
+    |---|---|---|---|---|---|
+    | S1 | TreeResult.java:12 | 필드명 `trunc`가 모호함 | 고침 | `truncated`로 | 이 diff 안, 동작 변화 없음 |
+    | S2 | RetryExecutor.java:30 | 지수 백오프 상한 없음 | 두기 | — | 이 작업 범위 밖 |
+    ```
+    - ID는 `M1`, `S1`처럼 그룹 머리글자와 번호. 재리뷰에서는 앞 리뷰의 ID마다 `해결됨`·`남음`을 적고, 새로 찾은 항목은 다음 번호를 씁니다
+    - "추천"은 `고침`·`두기` 가운데 하나. `고침`은 이 diff가 바꾼 파일 안에서 끝나고 동작이 바뀌지 않는 작은 수정일 때만 줍니다. 기준이 없으면 모두 `고침`이 되기 쉽기 때문입니다
+    - 셀에는 한 줄 요약만 쓰고, 코드나 여러 줄 문구는 표 아래 `#### M1` 같은 절에 씁니다
+    - 항목이 없으면 표 대신 `없음` 한 줄을 적습니다(파싱 실패와 구분)
+- `.claude/agents/context-reviewer.md` 4번: reviewer와 같은 표 형식("반드시 수정", "선택" 두 그룹). "그대로 넣을 수 있는 수정 문구"는 대개 길므로 표 아래 `#### M1` 절에 씁니다. reviewer와 형식이 갈라지지 않게 두 파일을 함께 고칩니다
 - `.claude/skills/pr-ready/SKILL.md`
   - 1번: 변경 범위 확인을 `git fetch origin` 뒤 `git diff origin/main...HEAD --stat`로. 이 fetch가 3번 reviewer의 비교 기준도 맞춥니다 (D4)
   - 3번: `-review.md` 재사용 조건(D5)
+  - 4번: "반드시 수정"은 지금처럼 고칩니다. "선택"은 표를 보여 주고 고칠 ID를 묻습니다. 답이 없거나 고르지 않으면 고치지 않습니다. 다음 PR의 `--auto`에서도 "선택"은 자동으로 고치지 않습니다(범위가 넓어지므로). `docs/guide/task-workflow.md:118`의 같은 설명도 함께 고칩니다
   - 5번: 메모 읽기 대상은 이 브랜치가 커밋한 `<번호>.md`뿐이므로(`git diff --diff-filter=A`) `-plan.md`와 `-review.md`는 이미 빠집니다
   - 새 단계(5번과 6번 사이): 이 브랜치 작업 번호의 `-plan.md`와 `-review.md`를 로컬에서 지웁니다. 5번은 넘길 것이 있을 때만 실행되므로, 삭제는 5번 안이 아니라 **항상 실행하는** 별도 단계로 둡니다
 - `.claude/settings.json`: SubagentStart, SubagentStop hook(matcher `implementer`)을 더합니다("구현 중 검증")
@@ -211,6 +230,7 @@ hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전�
 | 리뷰 | [ ] 매니저가 `git fetch origin` 뒤 reviewer를 부르고, reviewer가 `origin/main...<브랜치>`를 봄 |
 | | [ ] reviewer가 테스트 목록과 실제 테스트의 대조, `test:` 커밋 뒤 테스트 변경을 리뷰에 적음 |
 | | [ ] `-review.md`에 리뷰한 커밋 SHA가 남고, "반드시 수정"이 implementer에게 가고 재리뷰는 1회만 |
+| | [ ] 리뷰가 ID가 붙은 표로 나오고, "선택"에 추천·수정안·이유가 있음. 고른 "선택" ID만 implementer에게 가고, 재리뷰가 ID마다 `해결됨`·`남음`을 적음 |
 | G3 | [ ] `/task` 8번의 보고 항목, 리뷰 요약, 게이트 조건 결과, 결과 파일 기반 검증 증거가 나옴 |
 | | [ ] 상태 줄이 `PR 준비`로 바뀜 |
 
@@ -228,6 +248,7 @@ hook 동작부터 확인합니다. 아래가 안 되면 "구현 중 검증" 전�
 | [ ] `-plan.md`와 `-review.md`가 스펙 반영 대상에서 빠지고, 넘길 것이 없을 때도 지워짐 |
 | [ ] 그 뒤 `/task-flow`를 다시 실행하면 "계획 파일은 없고 브랜치가 있음"으로 알리고 멈춤 |
 | [ ] 회귀: `-review.md`가 없는 브랜치(기존 `/task`로 만든 것)에서 `/pr-ready`가 지금처럼 reviewer를 돌림 |
+| [ ] `/pr-ready` 4번이 "선택" 표를 보여 주고 고칠 ID를 묻고, 고르지 않으면 "반드시 수정"만 고침. `context-reviewer` 결과도 같은 표로 나옴 |
 | [ ] 회귀: 기존 `/task`가 지금처럼 동작함(`VerifyOnStop` 변경 뒤 implementer 없이 메인 Stop이 평소대로 검증) |
 
 ### 5. 우회로 대책
