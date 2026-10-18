@@ -93,11 +93,12 @@ public final class ConfigLoader {
     if (e instanceof NoSuchFileException) {
       return "파일이 없습니다";
     }
-    if (e instanceof AccessDeniedException) {
-      return "읽기 권한이 없습니다";
-    }
+    // 폴더를 먼저 본다. Windows는 폴더를 읽으려 하면 AccessDeniedException을 던진다
     if (Files.isDirectory(file)) {
       return "파일이 아니라 폴더입니다";
+    }
+    if (e instanceof AccessDeniedException) {
+      return "읽기 권한이 없습니다";
     }
     return e.getClass().getSimpleName();
   }
