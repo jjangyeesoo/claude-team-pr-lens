@@ -164,15 +164,15 @@
     - _Requirements: 1.3, 1.4, 1.9_
   - [x]* 7.3 Property 1: PR URL 파싱 round-trip과 거부 테스트
     - **Validates: Requirements 1.3, 1.4, 1.9**
-  - [ ] 7.4 `PrFetcher` 구현 (`fetch(RepoRef, int)`, 경고는 `WarningSink`로)
+  - [x] 7.4 `PrFetcher` 구현 (`fetch(RepoRef, int)`, 경고는 `WarningSink`로)
     - 메타데이터 조회, 파일 목록 `per_page=100` 페이지 조회(누적 수 == `changed_files` 또는 빈 페이지/next 없음에서 중단), 같은 `filename` 버림
     - 상태 매핑: `copied` → `ADDED`, `unchanged` → `MODIFIED`(설계 G-6), 이름 변경은 이전 경로 기록
     - patch 없음 → `Absent`, `DiffParseException` → `Unparseable` + 경고
     - 주의(선머지 리뷰): `FilePage.Entry`는 GitHub 값 그대로(`status` 문자열, `patch`는 없으면 null)이고 다음 페이지 여부는 `FilePage.hasNext`입니다. `ChangedFile`은 경로 정규화를 강제하지 않으므로 `filename`을 `RepoPaths.normalize`에 거쳐 담습니다. `PullRequestMeta.body`는 null일 수 있고 `PullRequestSnapshot` 생성자가 `""`로 바꿉니다
-    - 미정(여기서 정함): `DiffParser.parse`는 `""`과 `"\n"`에 빈 목록을 돌려주고 null이면 NPE를 던집니다. `patch == null`만 `Absent`로 보내면 빈 문자열 patch는 Hunk 없는 `Parsed`가 되어 필터를 통과합니다(G-2의 줄 수 0인 대상 파일). `""`도 `Absent`로 볼지 정합니다
+    - 결정(7.4): `patch == null`만 `Absent`이고 `""`·`"\n"`은 `DiffParser.parse`를 거쳐 Hunk 없는 `Parsed`가 됩니다(경고 없음). `Absent`는 DiffFilter에서 사유 `binary_or_too_large`가 되는데 빈 patch는 바이너리도 큰 파일도 아니어서 사유가 틀리고, 줄 수 0인 대상 파일은 G-2(단일 모드 1회 호출)가 이미 처리하기 때문입니다
     - 주의(5 리뷰): `DiffParseException`을 `PatchContent.Unparseable`로 옮길 때는 `kind().name().toLowerCase(Locale.ROOT)`, `lineNo()`(1부터, 줄바꿈 정규화 뒤 기준), `hunkIndex()`(0부터)를 넘깁니다. `name()`이나 `toString()`을 그대로 넘겨도 컴파일되므로 주의합니다
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
-  - [ ]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
+  - [x]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
   - [ ]* 7.6 GitHub 가짜 서버 통합 테스트
     - 401/403/404 메시지, rate limit 응답 세 종류(`retry-after`, remaining 0 + reset, secondary)의 분류와 대기 시간, 60초 초과 시 즉시 종료, 짧게 주입한 타임아웃, `Authorization` 헤더, base/head ref 선택, 트리 `truncated` 대체 경로
