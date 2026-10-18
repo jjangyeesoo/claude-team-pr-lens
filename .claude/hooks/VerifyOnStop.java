@@ -27,6 +27,10 @@
 //   결과는 implementer-result.json에 남긴다. 이 모드는 기록이 없어도 기준선만 잡지 않고 검증한다.
 // - --mark <agentId> [blocked|failed], --unmark: 매니저가 /clear 뒤 표시를 다시 쓰거나 지운다 (stdin을 읽지 않음)
 // - --check <agentId>: 결과 파일이 그 implementer의 통과 기록이고 지금 내용과 같은지 확인한다 (G3, 슬라이스 사이)
+// - --verify <agentId>: implementer가 SubagentHandback 없이 일반 응답으로 끝나 handback 검증이 돌지 않았을 때, 매니저가
+//   한 번 불러 같은 검증을 하고 결과 파일을 쓴 뒤 --check와 같이 판정한다. 그 implementer의 결과가 지금 내용 그대로면
+//   검증하지 않는다. 막을 대상이 없으므로 실패하면 표시를 failed로 두어 메인 Stop이 빨간 트리를 검증하지 않게 하고
+//   (매니저가 고치지 않고 사용자에게 묻도록), 통과하면 handback처럼 표시를 지운다
 //
 // JDK 17+와 git만 있으면 OS와 무관하게 동작한다 (web 검증에는 Node/npm이 추가로 필요).
 
@@ -133,6 +137,10 @@ public class VerifyOnStop {
       }
       case "--check" -> {
         System.exit(check(root, stateDir, args.length > 1 ? args[1] : ""));
+        return;
+      }
+      case "--verify" -> {
+        System.exit(verifyAfterHandbackMissed(root, stateDir, args.length > 1 ? args[1] : ""));
         return;
       }
       default -> {}
@@ -511,6 +519,71 @@ public class VerifyOnStop {
     }
     OUT.println("결과 없음: " + String.join("; ", problems));
     return 1;
+  }
+
+  /** 결과 파일에 BLOCKED로 끝나 검증하지 않은 스택이 있는가. */
+  static boolean anyBlocked(Map<String, Object> r) {
+    Map<?, ?> stacks = r.get("stacks") instanceof Map<?, ?> m ? m : Map.of();
+    for (Object v : stacks.values()) {
+      if (v instanceof Map<?, ?> s && "blocked".equals(s.get("result"))) return true;
+    }
+    return false;
+  }
+
+  /** 결과 파일의 스택별 내용 해시가 모두 지금 내용과 같은가 (그 뒤 아무것도 바뀌지 않았는가). */
+  static boolean hashesMatchNow(Path root, Path stateDir, Map<String, Object> r) throws Exception {
+    Map<?, ?> stacks = r.get("stacks") instanceof Map<?, ?> m ? m : Map.of();
+    for (Stack stack : STACKS) {
+      if (!Files.isDirectory(root.resolve(stack.dir()))) continue;
+      if (!(stacks.get(stack.name()) instanceof Map<?, ?> s)) return false;
+      String now = contentHash(root, stateDir, stack);
+      if (now == null || !now.equals(s.get("hash"))) return false;
+    }
+    return true;
+  }
+
+  /**
+   * --verify: implementer가 SubagentHandback을 부르지 않고 끝나 handback 검증이 돌지 않았을 때의 대체 검증. 그
+   * implementer의 결과가 지금 내용 그대로면(handback이 이미 돎) 검증하지 않고 --check만 한다. 같은 implementer를 재개한
+   * 뒤의 보고처럼 결과가 있어도 내용이 바뀌었으면 다시 검증한다. 판정은 --check와 같다 (0이면 ok).
+   */
+  static int verifyAfterHandbackMissed(Path root, Path stateDir, String agentId) throws Exception {
+    if (!agentId.matches(AGENT_ID)) {
+      ERR.println("사용법: java VerifyOnStop.java --verify <agentId>");
+      return 1;
+    }
+    if (git(root, Map.of(), "rev-parse", "--git-dir") == null) {
+      OUT.println("결과 없음: git 저장소가 아닙니다");
+      return 1;
+    }
+    Map<String, Object> existing;
+    try {
+      existing = Json.objectOrEmpty(Files.readString(stateDir.resolve(RESULT)));
+    } catch (IOException e) {
+      existing = Map.of();
+    }
+    // handback이 지금 내용을 이미 검증했으면 다시 돌리지 않는다. BLOCKED 결과는 검증한 것이 아니므로 제외한다
+    // (재개한 implementer가 아무것도 바꾸지 않고 끝나도 검증하고, 통과하면 blocked 표시를 지운다)
+    if (agentId.equals(existing.get("agent_id"))
+        && !anyBlocked(existing)
+        && hashesMatchNow(root, stateDir, existing)) {
+      return check(root, stateDir, agentId);
+    }
+
+    Path stateFile = stateDir.resolve("state.properties");
+    Properties state = loadState(stateFile);
+    Files.createDirectories(stateDir);
+    Outcome outcome = verify(root, stateDir, state, false);
+    saveState(stateFile, state);
+    writeResult(stateDir, agentId, "verify", outcome.results(), outcome.hashes(), isClean(root));
+    if (!outcome.failures().isEmpty()) {
+      writeMarker(stateDir, agentId, "", "failed", 0, "mark"); // 메인 Stop이 빨간 트리를 검증하지 않게
+      OUT.println(String.join("\n\n", outcome.failures()));
+    } else {
+      Files.deleteIfExists(stateDir.resolve(MARKER)); // handback과 같이: 통과하면 트리는 초록이다
+    }
+    for (String notice : outcome.notices()) OUT.println(notice);
+    return check(root, stateDir, agentId);
   }
 
   /** 이 브랜치가 origin/main(없으면 main)과 갈라진 뒤 그 스택을 바꿨는가. 기준을 찾지 못하면 바꾼 것으로 본다. */

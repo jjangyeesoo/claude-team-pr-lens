@@ -73,13 +73,14 @@
   - `--mark <agentId> [blocked|failed]`: `/clear`나 새 세션 뒤 빨간 트리로 질문을 기다릴 때 표시를 다시 씁니다. 세션 ID를 모르므로 세션 확인 없이 유효합니다(출처 `mark`)
   - `--unmark`: 작업을 중단할 때 표시를 지웁니다
   - `--check <agentId>`: 위의 결과 확인
+  - `--verify <agentId>`: implementer가 `SubagentHandback` 도구를 부르지 않고 일반 응답으로 끝나 종료 검증이 돌지 않았을 때(2026-10-18 비교 시험에서 한 번 생김) 같은 검증을 한 번 하고 결과 파일을 쓴 뒤 `--check`와 같이 판정합니다. 매니저는 BLOCKED가 아닌 완료 보고에서 `--check`가 `ok`가 아니면 부릅니다. 그 implementer의 결과가 지금 내용 그대로면(hook이 이미 돎) 검증하지 않고 `--check`만 하고, 같은 implementer를 재개한 뒤처럼 내용이 바뀌었으면 다시 검증합니다. 막을 대상이 없으므로 실패하면 표시를 `failed`로 두어 메인 Stop이 빨간 트리를 검증하지 않게 하고(세션 ID를 모르므로 `--mark`와 같이 출처 `mark`라 다른 세션에서도 유효), 통과하면 handback처럼 표시를 지웁니다. 완료 알림 뒤에만 부릅니다(실행 중이면 같은 폴더에서 검증이 두 번 돕니다)
 - **우회로와 대책.** 표시 파일은 일반 파일이라 Bash로 만들면 메인 Stop 검증을 끌 수 있습니다(이 변경은 hook 완화이며, 도입 PR(`chore/task-flow-skill`)에서 이유를 설명하고 컨텍스트 담당의 승인을 받습니다). 대책은 아래와 같고, 셸로 만드는 것 자체는 막지 못합니다.
   - 형식(`agent_id`, `at`)이 맞지 않거나 `status`가 `blocked`·`failed`가 아닌 표시, 다른 세션의 표시, 12시간이 지난 표시는 무시하고 검증합니다
   - 실행 중 판정은 표시가 아니라 `background_tasks`로 합니다
   - `ProtectFiles`가 Edit·Write로 `build/claude-verify/`를 고치지 못하게 막습니다
   - 건너뛸 때마다 안내가 보입니다. implementer를 띄우지 않았는데 이 안내가 나오면 표시 파일을 확인하세요
 - **한계**
-  - `SubagentHandback`은 harness 내부 도구 이름이라 Claude Code 버전에 따라 바뀔 수 있습니다. 이름이 바뀌면 종료 검증이 조용히 돌지 않지만, 결과 파일이 없거나 이전 implementer의 것이므로 매니저의 `--check`가 "결과 없음"으로 멈춥니다
+  - `SubagentHandback`은 harness 내부 도구 이름이라 Claude Code 버전에 따라 바뀔 수 있습니다. 이름이 바뀌거나 implementer가 이 도구 없이 끝나면 종료 검증이 조용히 돌지 않지만, 결과 파일이 없거나 이전 implementer의 것이므로 매니저의 `--check`가 "결과 없음"으로 알고 `--verify`로 대신 검증합니다. 그 implementer를 붙잡아 고치게 하지는 못합니다
   - `claude --continue`로 이어 가면 `session_id`가 그대로입니다(시험으로 확인). 그래서 세션 확인이 막는 것은 새 세션뿐입니다
   - 백그라운드 서브에이전트의 권한 프롬프트가 메인 세션에 뜨는지는 `auto` 모드에서 시험해 확인하지 못했습니다
 
