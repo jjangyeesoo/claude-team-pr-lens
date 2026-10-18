@@ -27,6 +27,9 @@
 //   결과는 implementer-result.json에 남긴다. 이 모드는 기록이 없어도 기준선만 잡지 않고 검증한다.
 // - --mark <agentId> [blocked|failed], --unmark: 매니저가 /clear 뒤 표시를 다시 쓰거나 지운다 (stdin을 읽지 않음)
 // - --check <agentId>: 결과 파일이 그 implementer의 통과 기록이고 지금 내용과 같은지 확인한다 (G3, 슬라이스 사이)
+// - --verify <agentId>: implementer가 SubagentHandback 없이 일반 응답으로 끝나 handback 검증이 돌지 않았을 때, 매니저가
+//   한 번 불러 같은 검증을 하고 결과 파일을 쓴 뒤 --check와 같이 판정한다. 막을 대상이 없으므로 실패하면 표시를
+//   failed로 두어 메인 Stop이 빨간 트리를 검증하지 않게 한다 (매니저가 고치지 않고 사용자에게 묻도록)
 //
 // JDK 17+와 git만 있으면 OS와 무관하게 동작한다 (web 검증에는 Node/npm이 추가로 필요).
 
@@ -133,6 +136,10 @@ public class VerifyOnStop {
       }
       case "--check" -> {
         System.exit(check(root, stateDir, args.length > 1 ? args[1] : ""));
+        return;
+      }
+      case "--verify" -> {
+        System.exit(verifyAfterHandbackMissed(root, stateDir, args.length > 1 ? args[1] : ""));
         return;
       }
       default -> {}
@@ -511,6 +518,48 @@ public class VerifyOnStop {
     }
     OUT.println("결과 없음: " + String.join("; ", problems));
     return 1;
+  }
+
+  /**
+   * --verify: implementer가 SubagentHandback을 부르지 않고 끝나 handback 검증이 돌지 않았을 때의 대체 검증. 이미 그
+   * implementer의 결과 파일이 있으면 검증하지 않고 --check만 한다. 판정은 --check와 같다 (0이면 ok).
+   */
+  static int verifyAfterHandbackMissed(Path root, Path stateDir, String agentId) throws Exception {
+    if (!agentId.matches(AGENT_ID)) {
+      ERR.println("사용법: java VerifyOnStop.java --verify <agentId>");
+      return 1;
+    }
+    if (git(root, Map.of(), "rev-parse", "--git-dir") == null) {
+      OUT.println("결과 없음: git 저장소가 아닙니다");
+      return 1;
+    }
+    Map<String, Object> existing;
+    try {
+      existing = Json.objectOrEmpty(Files.readString(stateDir.resolve(RESULT)));
+    } catch (IOException e) {
+      existing = Map.of();
+    }
+    if (agentId.equals(existing.get("agent_id"))) return check(root, stateDir, agentId); // handback이 이미 돎
+    Map<String, Object> marker = readMarker(stateDir);
+    if (marker != null
+        && agentId.equals(marker.get("agent_id"))
+        && "blocked".equals(marker.get("status"))) {
+      OUT.println("결과 없음: 이 implementer는 BLOCKED로 끝났습니다. 질문에 답해 재개합니다");
+      return 1;
+    }
+
+    Path stateFile = stateDir.resolve("state.properties");
+    Properties state = loadState(stateFile);
+    Files.createDirectories(stateDir);
+    Outcome outcome = verify(root, stateDir, state, false);
+    saveState(stateFile, state);
+    writeResult(stateDir, agentId, "verify", outcome.results(), outcome.hashes(), isClean(root));
+    if (!outcome.failures().isEmpty()) {
+      writeMarker(stateDir, agentId, "", "failed", 0, "mark"); // 메인 Stop이 빨간 트리를 검증하지 않게
+      OUT.println(String.join("\n\n", outcome.failures()));
+    }
+    for (String notice : outcome.notices()) OUT.println(notice);
+    return check(root, stateDir, agentId);
   }
 
   /** 이 브랜치가 origin/main(없으면 main)과 갈라진 뒤 그 스택을 바꿨는가. 기준을 찾지 못하면 바꾼 것으로 본다. */

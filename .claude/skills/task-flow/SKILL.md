@@ -14,7 +14,7 @@ argument-hint: "<스펙 이름> [작업 번호]"
 - 계획 파일: `docs/specs/<스펙>/handoff/<번호>-plan.md`. `<번호>`는 브랜치 이름의 번호(PR 경계의 첫 하위 작업 번호)다. 리뷰 파일: 같은 폴더의 `<번호>-review.md`(reviewer), `<번호>-context-review.md`(context-reviewer). 셋 다 gitignore되어 커밋되지 않고, `/pr-ready`가 지운다. 메모 파일 `<번호>.md`는 implementer가 커밋한다.
 - 리뷰 ID: 파일에는 리뷰어가 쓴 ID(`M1`, `S1`)를 그대로 두고, 그 밖(상태 줄, implementer 전달, 보고)에서는 파일로 머리글자를 붙인다. `-review.md`는 `R-`, `-context-review.md`는 `C-`(예: `R-M1`, `C-S2`).
 - 리뷰 파일은 덮어쓰지 않고 리뷰마다 `## 리뷰 N (SHA <리뷰한 브랜치 끝 SHA>, 첫|확인)` 절 아래에 리뷰어 보고를 그대로 이어 쓴다. 리뷰 횟수는 절 수다.
-- 검증 확인: `java -Dfile.encoding=UTF-8 .claude/hooks/VerifyOnStop.java --check <implementer agentId>`. 출력이 `ok:`이고 exit 0이면 통과다. 아니면 "결과 없음"으로 보고 이유를 보여 준다(종료 검증 결과 파일 `build/claude-verify/implementer-result.json`이 그 implementer의 것이 아니거나, 스택 결과가 `pass`·`pass-nothing-to-verify`가 아니거나, implementer가 끝난 뒤 내용이 바뀌었거나, 끝날 때 트리가 깨끗하지 않았음). 이 명령과 아래 `--mark`·`--unmark`는 저장소 루트에서 실행한다(`cd "$(git rev-parse --show-toplevel)"`). 다른 폴더에서 실행하면 그 폴더의 `build/claude-verify/`를 본다.
+- 검증 확인: `java -Dfile.encoding=UTF-8 .claude/hooks/VerifyOnStop.java --check <implementer agentId>`. 출력이 `ok:`이고 exit 0이면 통과다. 아니면 "결과 없음"으로 보고 이유를 보여 준다(종료 검증 결과 파일 `build/claude-verify/implementer-result.json`이 그 implementer의 것이 아니거나, 스택 결과가 `pass`·`pass-nothing-to-verify`가 아니거나, implementer가 끝난 뒤 내용이 바뀌었거나, 끝날 때 트리가 깨끗하지 않았음). 대체 검증: `--verify <agentId>`. implementer가 `SubagentHandback` 도구를 부르지 않고 일반 응답으로 끝나면 종료 검증 hook이 돌지 않아 결과 파일이 없거나 이전 implementer의 것이다. 이때 한 번 돌려 같은 검증을 하고 `--check`와 같이 판정한다(실패하면 `failed` 표시를 남김). 이 명령과 `--check`, 아래 `--mark`·`--unmark`는 저장소 루트에서 실행한다(`cd "$(git rev-parse --show-toplevel)"`). 다른 폴더에서 실행하면 그 폴더의 `build/claude-verify/`를 본다.
 
 ### 상태 줄
 계획 파일 맨 위, 빈 줄 전까지다. **너만 고친다.** 상태가 바뀔 때마다 고친다.
@@ -71,8 +71,8 @@ planner: 없음 · implementer: 없음
 슬라이스를 계획 순서대로 하나씩 한다.
 1. 상태 줄을 `상태: 구현 중`, `슬라이스: N/전체 (<하위 작업>)`로 고친다.
 2. 새 implementer를 부른다. 넘기는 것: 계획 파일 경로, "`## 공통`과 `## 슬라이스 N (…)` 절만 읽는다", 브랜치. 반환된 agentId를 상태 줄 `implementer:`에 적는다. 턴을 끝내고 완료 알림을 기다린다. implementer가 도는 동안 메인 Stop hook은 검증을 건너뛰고 그렇다고 알린다(정상).
-3. 보고가 `BLOCKED:`로 시작하면 그 질문을 사용자에게 묻는다. 답을 `SendMessage`로 그 implementer에게 보내고(재개하면 메인 Stop 입력의 `background_tasks`로 실행 중으로 보이고, 남은 `blocked` 표시는 다음 보고 때 hook이 정리한다) 상태 줄 `implementer:`를 확인한 뒤 2번처럼 기다린다. 답을 기다리는 동안 트리는 빨간 채이고, 메인 Stop은 `blocked` 표시를 보고 검증을 건너뛴다.
-4. 완료 보고가 오면 검증 확인(`--check <agentId>`)을 돌린다. 통과가 아니면 다음 슬라이스로 넘어가지 않고 이유를 보여 주고 사용자에게 묻는다(게이트 "슬라이스 사이"). 고를 수 있는 것: 새 implementer로 같은 슬라이스를 다시 하기(상태 "구현 중"의 재개와 같음), 그대로 다음으로 가기(G3에서 멈춤), 중단(`--unmark`). 종료 검증이 두 번 실패해 풀려났으면 `failed` 표시가 남아, 다시 하지 않는 동안 메인 Stop이 검증을 건너뛴다는 것도 알린다(사용자가 메인에서 직접 고치려면 `--unmark` 뒤에).
+3. 보고가 `BLOCKED:`로 시작하면 그 질문을 사용자에게 묻는다. 답을 `SendMessage`로 그 implementer에게 보내고(재개하면 메인 Stop 입력의 `background_tasks`로 실행 중으로 보이고, 남은 `blocked` 표시는 다음 보고 때 hook이 정리한다) 상태 줄 `implementer:`를 확인한 뒤 2번처럼 기다린다. 답을 기다리는 동안 트리는 빨간 채이고, 메인 Stop은 `blocked` 표시를 보고 검증을 건너뛴다. `--check`가 결과 파일이 없거나 `agent_id`가 다르다고 하면 hook이 돌지 않은 것이므로(`SubagentHandback` 없이 끝남), 턴을 끝내기 전에 `--mark <agentId> blocked`로 표시를 쓴다.
+4. 완료 보고가 오면 검증 확인(`--check <agentId>`)을 돌린다. 결과 파일이 없거나 `agent_id`가 다르다는 이유뿐이면 종료 검증이 돌지 않은 것이므로, 새 implementer를 띄우지 않고 `--verify <agentId>`를 한 번 돌려 그 출력을 검증 확인으로 쓴다(implementer가 끝난 뒤라 매니저가 돌린다. 그 implementer의 다음 보고부터는 hook이 돈다). 통과가 아니면 다음 슬라이스로 넘어가지 않고 이유를 보여 주고 사용자에게 묻는다(게이트 "슬라이스 사이"). 고를 수 있는 것: 새 implementer로 같은 슬라이스를 다시 하기(상태 "구현 중"의 재개와 같음), 그대로 다음으로 가기(G3에서 멈춤), 중단(`--unmark`). 종료 검증이 두 번 실패해 풀려났으면 `failed` 표시가 남아, 다시 하지 않는 동안 메인 Stop이 검증을 건너뛴다는 것도 알린다(사용자가 메인에서 직접 고치려면 `--unmark` 뒤에).
 5. 실패 테스트 커밋을 확인해 상태 줄 `실패 테스트:`에 적는다. 이 슬라이스의 커밋은 `git log --reverse --format="%H %s" origin/main..HEAD`에서 상태 줄에 이미 적힌 앞 슬라이스 커밋들 다음의 커밋이다.
    - 테스트 목록이 있는 슬라이스: 보고된 SHA가 이 슬라이스의 첫 커밋이고, 제목이 `test:`로 시작하고, `git diff --name-only <SHA>^ <SHA>`의 파일이 테스트(`*/src/test/*`, `*.test.ts`, `*.test.tsx`)이거나 그 슬라이스 "테스트 목록"의 `스텁` 열에 있는 것뿐이면 SHA를 적는다. 아니면 적지 않고(`없음`) G3에서 멈출 것이라고 알린다.
    - `실패 테스트: 해당 없음`인 슬라이스: `해당 없음(<첫 커밋 SHA>)`. 테스트 목록이 `없음`이면 `없음`.
@@ -95,7 +95,7 @@ planner: 없음 · implementer: 없음
 ## 8. 수정과 확인 리뷰
 1. 상태 줄을 `상태: 수정 중`으로 고친다. 넘길 ID는 리뷰 파일마다 마지막 절 "반드시 수정"의 ID에서 `남긴 반드시 수정`에 있는 것을 뺀 것이다. 그 리뷰 파일에 아직 확인 리뷰 절이 없으면(첫 수정) `고칠 선택` 가운데 그 파일 머리글자의 ID도 넘긴다. 두 번째 수정부터는 `고칠 선택`을 넘기지 않는다(확인 리뷰에서 이미 판정됨). `고칠 선택` 값은 `/pr-ready`가 쓰므로 지우지 않는다. 모두 머리글자를 붙여 넘긴다.
 2. implementer를 수정 모드로 부른다. 같은 세션이면 마지막 슬라이스의 implementer에게 `SendMessage`, 아니면 새 implementer. 넘기는 것: 계획 파일 경로, 리뷰 파일 경로, 고칠 ID 목록, "수정 모드, 경계 전체". 상태 줄 `implementer:`를 고치고 기다린다. `BLOCKED:`면 6번 3과 같이 한다.
-3. 완료 보고가 오면 검증 확인(`--check`)을 돌린다. 통과가 아니면 6번 4와 같이 이유를 보여 주고 묻는다.
+3. 완료 보고가 오면 검증 확인(`--check`, 종료 검증이 돌지 않았으면 `--verify`)을 6번 4와 같이 돌린다. 통과가 아니면 6번 4와 같이 이유를 보여 주고 묻는다.
 4. 상태 줄을 `상태: 리뷰 중`으로 고치고 `git fetch origin` 뒤, **첫 리뷰를 돌린 리뷰어 모두에게** 확인 리뷰를 부른다(지적이 없던 쪽도. 수정이 그 영역을 건드렸을 수 있고, 리뷰 파일 SHA를 `HEAD`에 맞춰야 `/pr-ready`가 재사용하므로). 확인 리뷰 모드로 넘기는 것:
    - 그 리뷰어의 리뷰 파일 경로(앞 리뷰의 ID, 판정, 리뷰한 SHA)
    - 그 리뷰 파일의 마지막 절이 첫 리뷰일 때만: `고칠 선택` 가운데 그 리뷰어 머리글자의 ID를 머리글자를 떼어서(`R-S1` → reviewer에 `S1`)
