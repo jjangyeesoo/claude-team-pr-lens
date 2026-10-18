@@ -60,7 +60,7 @@ flowchart TD
     P --> G2{"G2: 사람이 승인하는가"}
     G2 -- "질문 답, 수정 요청" --> P
     G2 -- "승인" --> S["implementer: 슬라이스 N<br/>test: 커밋 → 구현 커밋"]
-    S --> V{"종료 검증 (--check)"}
+    S --> V{"종료 검증 (--check, 아니면 --verify)"}
     V -- "통과 아님" --> Q1["이유를 보여 주고 물음<br/>다시 하기, 그대로 가기, 중단"]
     V -- "통과" --> N{"다음 슬라이스 영향"}
     N -- "있음" --> R2["planner가 다음 슬라이스 절을 고침<br/>사람이 재승인"]
@@ -131,7 +131,7 @@ planner도 사람에게 직접 묻지 못하므로, 물을 것(결정 대기를 
 implementer가 보고하는 순간 종료 검증이 돕니다("구현 중 검증"). 실패하거나 커밋하지 않은 변경이 남으면 보고를 막아 implementer가 고치게 하고, 두 번째로 막히면 놓아줍니다.
 
 보고가 오면 매니저가 다음을 확인합니다.
-- **종료 검증 결과**: `java -Dfile.encoding=UTF-8 .claude/hooks/VerifyOnStop.java --check <implementer>`가 `ok:`인지. implementer가 보고 도구 없이 일반 응답으로 끝나 종료 검증이 돌지 않았으면(결과 파일이 없음) 매니저가 `--verify <implementer>`로 같은 검증을 한 번 대신 합니다. 통과가 아니면 다음 슬라이스로 넘어가지 않고 이유를 보여 준 뒤 묻습니다(새 implementer로 다시 하기, 그대로 가기(G3에서 멈춤), 중단).
+- **종료 검증 결과**: `java -Dfile.encoding=UTF-8 .claude/hooks/VerifyOnStop.java --check <implementer>`가 `ok:`인지. `ok:`가 아니면 매니저가 `--verify <implementer>`를 한 번 돌립니다. implementer가 보고 도구 없이 일반 응답으로 끝나 종료 검증이 돌지 않았으면 같은 검증을 대신 하고, 돌았으면 검증 없이 같은 판정을 냅니다. 통과가 아니면 다음 슬라이스로 넘어가지 않고 이유를 보여 준 뒤 묻습니다(새 implementer로 다시 하기, 그대로 가기(G3에서 멈춤), 중단).
 - **실패 테스트 커밋**: 보고된 SHA가 이 슬라이스의 첫 커밋이고, 제목이 `test:`로 시작하고, 테스트와 스텁 파일만 담았는지. 맞으면 상태 줄 `실패 테스트:`에 적고, 아니면 `없음`으로 두고 G3에서 멈출 것이라고 알립니다.
 - **다음 슬라이스 영향**: `있음`이면 planner가 다음 슬라이스 절만 고치고, 사람이 다시 승인합니다.
 
@@ -242,7 +242,7 @@ G1(브랜치 이름), G2(계획 승인), G3(최종 보고)의 세 게이트와, 
 첫 리뷰 1회, 고칠 것이 있으면 확인 리뷰 1회가 기본입니다. 확인 리뷰 뒤에도 "반드시 수정"이 남아 사람이 고치라고 하면 한 번 더 돌고, 리뷰어마다 최대 3회입니다. `/pr-ready`는 그 결과를 재사용하므로 PR을 열 때 리뷰를 다시 돌리지 않습니다.
 
 ### "결과 없음"이 나온다
-`--check`가 `ok:`가 아니면 매니저가 "결과 없음"과 이유를 보여 줍니다. 이유는 다음 가운데 하나입니다: 결과 파일이 그 implementer의 것이 아님, 스택 결과가 `pass`·`pass-nothing-to-verify`가 아님(`fail`, 도구 미설치로 `unavailable` 등), implementer가 끝난 뒤 내용이 바뀜, 끝날 때 트리가 깨끗하지 않았음. web 스택이 `unavailable`이면 `web/`에서 `npm ci`를 먼저 합니다. 결과 파일이 없다는 이유뿐이면 implementer가 보고 도구 없이 끝난 것이라, 매니저가 새 implementer를 띄우지 않고 `--verify`로 대신 검증합니다.
+`--check`가 `ok:`가 아니면 매니저가 "결과 없음"과 이유를 보여 줍니다. 이유는 다음 가운데 하나입니다: 결과 파일이 그 implementer의 것이 아님, 스택 결과가 `pass`·`pass-nothing-to-verify`가 아님(`fail`, 도구 미설치로 `unavailable` 등), implementer가 끝난 뒤 내용이 바뀜, 끝날 때 트리가 깨끗하지 않았음. web 스택이 `unavailable`이면 `web/`에서 `npm ci`를 먼저 합니다. 매니저는 새 implementer를 띄우기 전에 `--verify`를 한 번 돌립니다. implementer가 보고 도구 없이 끝나 종료 검증이 돌지 않은 경우(결과 파일이 없거나 이전 implementer 것)는 이것으로 풀리고, 그 출력도 `ok:`가 아니면 위 이유가 실제 문제입니다.
 
 ### 권한 모드
 implementer의 `git add`·`git commit`은 `settings.json` allow에 없습니다. `auto` 모드에서만 시험했으므로, 다른 권한 모드에서 백그라운드 에이전트의 권한 요청이 어떻게 처리되는지는 아직 확인하지 않았습니다.
