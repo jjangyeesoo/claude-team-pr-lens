@@ -30,7 +30,7 @@ class FixtureSecretScanTest {
 
   private static final List<Format> TOKEN_FORMATS =
       List.of(
-          new Format("github-token", "\\bgh[pousr]_[A-Za-z0-9]{36}\\b", "ghp_" + "a".repeat(36)),
+          new Format("github-token", "\\bgh[pousr]_[A-Za-z0-9]{36,}", "ghp_" + "a".repeat(36)),
           new Format(
               "github-fine-grained-token",
               "\\bgithub_pat_[A-Za-z0-9_]{22,}",
@@ -45,10 +45,13 @@ class FixtureSecretScanTest {
               "slack-token",
               "\\bxox[baprs]-[A-Za-z0-9-]{10,}",
               "xoxb-" + "1".repeat(12) + "-" + "a".repeat(12)),
-          new Format("google-api-key", "\\bAIza[0-9A-Za-z_-]{35}\\b", "AIza" + "a".repeat(35)),
+          new Format(
+              "google-api-key",
+              "\\bAIza[0-9A-Za-z_-]{35}(?![0-9A-Za-z_-])",
+              "AIza" + "a".repeat(35)),
           new Format(
               "private-key-block",
-              "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+              "-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----",
               "-----BEGIN " + "RSA PRIVATE KEY" + "-----"),
           new Format(
               "jwt",
@@ -91,6 +94,30 @@ class FixtureSecretScanTest {
   }
 
   @Test
+  void scannerDetectsTokenRightAfterJsonEscape() {
+    List<Format> all = new ArrayList<>(TOKEN_FORMATS);
+    all.add(EMAIL);
+    for (Format format : all) {
+      String jsonText = "{\"body\": \"설명\\n" + format.sample() + "\\t끝\"}";
+
+      assertThat(containsSecret(jsonText, format)).as(format.name()).isTrue();
+    }
+  }
+
+  @Test
+  void scannerDetectsLongerAndEdgeVariants() {
+    String longGithub = "\"" + "ghs_" + "a".repeat(40) + "\"";
+    String googleEndingWithDash = "\"" + "AIza" + "a".repeat(34) + "-" + "\"";
+    String pgpBlock = "-----BEGIN " + "PGP PRIVATE KEY BLOCK" + "-----";
+
+    assertThat(containsSecret(longGithub, format("github-token"))).as("긴 GitHub 토큰").isTrue();
+    assertThat(containsSecret(googleEndingWithDash, format("google-api-key")))
+        .as("-로 끝나는 Google 키")
+        .isTrue();
+    assertThat(containsSecret(pgpBlock, format("private-key-block"))).as("PGP 개인키").isTrue();
+  }
+
+  @Test
   void scannerIgnoresFakeShaAndInjectionMarkers() {
     String normalData =
         String.join(
@@ -116,12 +143,25 @@ class FixtureSecretScanTest {
     for (Path file : fixtureFiles()) {
       String text = read(file);
       for (Format format : formats) {
-        if (format.pattern().matcher(text).find()) {
+        if (containsSecret(text, format)) {
           hits.add(file + ": " + format.name());
         }
       }
     }
     return hits;
+  }
+
+  /**
+   * JSON 이스케이프({@code \n}, {@code \t}, {@code \r}) 바로 뒤에 오는 토큰은 {@code \b}가 성립하지 않아 원문만으로는 놓친다. 그래서
+   * 이스케이프를 푼 텍스트도 함께 훑는다.
+   */
+  private static Format format(String name) {
+    return TOKEN_FORMATS.stream().filter(f -> f.name().equals(name)).findFirst().orElseThrow();
+  }
+
+  private static boolean containsSecret(String text, Format format) {
+    String unescaped = text.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r");
+    return format.pattern().matcher(text).find() || format.pattern().matcher(unescaped).find();
   }
 
   private static List<Path> fixtureFiles() {
