@@ -4,3 +4,6 @@
 *.cmd text eol=crlf
 *.jar binary
 *.ico binary
+
+# 골든 픽스처는 줄 끝을 바꾸지 않는다 (stdout 바이트 비교, 요구사항 22.8)
+backend/src/test/resources/fixtures/** -text

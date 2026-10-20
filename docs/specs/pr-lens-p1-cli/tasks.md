@@ -293,6 +293,8 @@
     - **Validates: Requirements 20.2**
   - [ ] 11.8 `ResultMerger` 구현
     - findings Chunk 순서 연결, Chunk가 둘 이상이면 summary에 `[n/N] 파일 목록` 머리줄, 토큰·비용 합(하나라도 `null`이면 `null`), Incomplete_Reason 첫 등장 순 중복 제거, `ChunkIssue` 기록(`schema_violation`이면 원본 앞 2,000자 포함, 단일·요약 전용 모드는 `chunkIndex` 1), `excludedFiles`와 `excludedFileDetails` 중복 제거
+    - 주의(20.1 리뷰): 골든 픽스처 `split-three-chunks`의 summary는 Chunk마다 `[n/N] <경로>` 머리줄 다음 줄에 요약을 두고 Chunk 사이를 빈 줄 하나(`\n\n`)로 잇고 끝 줄바꿈은 없습니다. 파일이 여럿인 Chunk의 경로 구분자는 픽스처가 정하지 않았습니다. 이 형식은 스펙 추론이므로 다른 형식을 고르면 그 픽스처의 `expected-result.json`과 `expected.md`를 함께 고칩니다
+    - 주의(20.1 리뷰): 분할 모드 `estimatedCostUsd`는 Chunk별로 `setScale(4, HALF_UP)`한 비용의 합입니다(픽스처는 0.0834 + 0.0482 + 0.0478 = 0.1794). 합친 토큰으로 다시 계산하면 0.1795가 되어 어긋납니다
     - _Requirements: 13.5, 13.6, 13.7, 16.5, 20.10_
   - [ ]* 11.9 Property 29: 청크 결과 병합 테스트
     - **Validates: Requirements 13.5, 13.6, 13.7, 16.5, 20.10**
@@ -453,7 +455,7 @@
 
 - [ ] 20. 골든 픽스처와 전체 파이프라인 테스트
   - PR 경계: 20.1 / 20.2~20.3 (20.4는 실행 기록이라 코드 PR이 아님)
-  - [ ] 20.1 테스트 픽스처 작성 (`src/test/resources/fixtures/<name>/`) (수요일부터 시작 가능. 공유 타입과 `ResultCodec`만 있으면 됨)
+  - [x] 20.1 테스트 픽스처 작성 (`src/test/resources/fixtures/<name>/`) (수요일부터 시작 가능. 공유 타입과 `ResultCodec`만 있으면 됨)
     - 실제 PR diff 샘플 3~5개: 단일 모드, 분할 모드, 제외 파일 포함
     - 인젝션 픽스처 4개: diff 추가 줄, PR 제목, PR 본문, diff 안 닫는 Delimiter_Tag. 기대 결과에 인젝션 위치 `security` Finding과 심어 둔 `blocker` Finding
     - 픽스처마다 `snapshot.json`, `context.json`, `llm-responses/*.json`, `expected-result.json`, `expected.md`. 비밀정보·개인정보는 가짜 값
@@ -466,8 +468,10 @@
     - `PrFetcher`와 `ContextCollector`는 이 테스트를 거치지 않음(각자의 테스트 7.x, 8.x로 검증)
     - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
     - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다
+    - 주의(20.1 리뷰): 인젝션 픽스처 4개는 `blocker` Finding이 있어 기대 종료 코드가 1이고, `single-basic`, `split-three-chunks`, `excluded-files`는 `complete`이면서 `blocker`가 없어 0입니다. 제목·본문 인젝션의 `security` Finding은 `line`이 null인 `summary_only`(`line_missing`)입니다. `llm-responses/NN.json`은 파일 이름 순서가 Chunk 호출 순서이고 `text`가 객체면 `FixtureLoader`가 압축 JSON 문자열로 바꿉니다. `FixtureLoader`는 리소스를 `Path`로 열어서 jar 안에서는 동작하지 않습니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
   - [ ] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
+    - 주의(20.1 리뷰): 픽스처에는 40자 hex 모양의 가짜 SHA(`aaaa…`, `bbbb…`), `config/secrets/dev.yml` 경로 문자열(내용 `placeholder: true`), 인젝션 표식 `[prlens-injection]`이 정상 데이터로 들어 있습니다. 토큰 정규식이 이것들을 오탐하지 않아야 합니다(40자 hex 전체를 비밀정보로 보지 않음)
     - _Requirements: 17.12_
   - [ ] 20.4 M1 데모 리허설 (목요일. 실제 API, 사람이 실행)
     - 대상: 고정 픽스처 PR #15. 심어 둔 지적과 판정 기준은 [spike 2026-10-14](../../spikes/2026-10-14-fixture-pr.md)의 "심어 둔 지적"

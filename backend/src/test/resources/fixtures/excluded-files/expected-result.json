@@ -1,0 +1,70 @@
+{
+  "schemaVersion" : 1,
+  "status" : "complete",
+  "incompleteReasons" : [ ],
+  "incompleteDetails" : {
+    "chunks" : [ ],
+    "fileCountGap" : null
+  },
+  "stats" : {
+    "mode" : "single",
+    "changedLineCount" : 2,
+    "sizeLimit" : 400,
+    "chunkCount" : 1
+  },
+  "summary" : "가격 표시를 소수 둘째 자리로 바꾼 변경입니다. 지역별 표시 요구가 있는지 확인이 필요합니다.",
+  "findings" : [
+    {
+      "file" : "web/src/lib/format.ts",
+      "line" : 11,
+      "severity" : "minor",
+      "category" : "correctness",
+      "message" : "toFixed는 문자열을 돌려주므로 천 단위 구분이 없습니다. 지역별 표시가 필요하면 Intl.NumberFormat을 쓰세요.",
+      "suggestion" : null,
+      "basis" : {
+        "type" : "general",
+        "ref" : null
+      },
+      "demotion" : null,
+      "verdict" : "inline_eligible",
+      "summaryOnlyReason" : null
+    }
+  ],
+  "excludedFiles" : [
+    "web/package-lock.json",
+    "docs/generated/api-schema.json",
+    "docs/images/flow.png",
+    "docs/data/large-export.dat",
+    "config/secrets/dev.yml"
+  ],
+  "excludedFileDetails" : [
+    {
+      "path" : "web/package-lock.json",
+      "reason" : "**/package-lock.json"
+    },
+    {
+      "path" : "docs/generated/api-schema.json",
+      "reason" : "**/generated/**"
+    },
+    {
+      "path" : "docs/images/flow.png",
+      "reason" : "**/*.png"
+    },
+    {
+      "path" : "docs/data/large-export.dat",
+      "reason" : "binary_or_too_large"
+    },
+    {
+      "path" : "config/secrets/dev.yml",
+      "reason" : "**/secrets/**"
+    }
+  ],
+  "usage" : {
+    "inputTokens" : 2100,
+    "outputTokens" : 190,
+    "cacheWriteTokens" : 1600,
+    "cacheReadTokens" : 0,
+    "model" : "claude-opus-5-5",
+    "estimatedCostUsd" : 0.0202
+  }
+}

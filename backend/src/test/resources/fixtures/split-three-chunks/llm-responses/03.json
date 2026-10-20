@@ -1,0 +1,26 @@
+{
+  "stopReason": "end_turn",
+  "text": {
+    "summary": "사용량 리포트 빌더입니다. 큰 문제는 없습니다.",
+    "findings": [
+      {
+        "file": "backend/src/main/java/com/example/report/UsageReportBuilder.java",
+        "line": 5,
+        "severity": "nit",
+        "category": "convention",
+        "message": "클래스에 설명 주석이 없습니다.",
+        "suggestion": null,
+        "basis": {
+          "type": "rule",
+          "ref": ".claude/rules/backend/java-style.md"
+        }
+      }
+    ]
+  },
+  "usage": {
+    "inputTokens": 9800,
+    "outputTokens": 360,
+    "cacheWriteTokens": 0,
+    "cacheReadTokens": 7200
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "repo": {
+    "owner": "example-org",
+    "name": "sample-service"
+  },
+  "number": 101,
+  "title": "feat: 주문 합계 계산을 추가한다",
+  "body": "주문을 만들 때 항목 가격으로 합계를 계산합니다.\n",
+  "baseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "headSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "reportedChangedFiles": 2,
+  "files": [
+    {
+      "path": "backend/src/main/java/com/example/order/OrderService.java",
+      "previousPath": null,
+      "status": "modified",
+      "additions": 6,
+      "deletions": 2,
+      "patch": "@@ -38,7 +38,11 @@ public class OrderService {\n   public Order place(OrderRequest request) {\n     Objects.requireNonNull(request, \"request\");\n-    Order order = new Order(request.customerId(), request.items());\n-    return repository.save(order);\n+    BigDecimal total = BigDecimal.ZERO;\n+    for (OrderItem item : request.items()) {\n+      total = total.add(item.price().multiply(BigDecimal.valueOf(item.quantity())));\n+    }\n+    Order order = new Order(request.customerId(), request.items(), total);\n+    return repository.save(order);\n   }\n \n   public Optional<Order> find(long id) {"
+    },
+    {
+      "path": "backend/src/test/java/com/example/order/OrderServiceTest.java",
+      "previousPath": null,
+      "status": "added",
+      "additions": 17,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,17 @@\n+package com.example.order;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import java.math.BigDecimal;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+\n+class OrderServiceTest {\n+\n+  @Test\n+  void placeSumsItemPrices() {\n+    OrderService service = new OrderService(new FakeOrderRepository());\n+    Order order = service.place(new OrderRequest(1L, List.of(new OrderItem(new BigDecimal(\"10\"), 2))));\n+    assertThat(order.total()).isEqualByComparingTo(\"20\");\n+  }\n+}"
+    }
+  ]
+}
