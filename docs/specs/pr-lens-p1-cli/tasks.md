@@ -470,7 +470,7 @@
     - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다
     - 주의(20.1 리뷰): 인젝션 픽스처 4개는 `blocker` Finding이 있어 기대 종료 코드가 1이고, `single-basic`, `split-three-chunks`, `excluded-files`는 `complete`이면서 `blocker`가 없어 0입니다. 제목·본문 인젝션의 `security` Finding은 `line`이 null인 `summary_only`(`line_missing`)입니다. `llm-responses/NN.json`은 파일 이름 순서가 Chunk 호출 순서이고 `text`가 객체면 `FixtureLoader`가 압축 JSON 문자열로 바꿉니다. `FixtureLoader`는 리소스를 `Path`로 열어서 jar 안에서는 동작하지 않습니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
-  - [ ] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
+  - [x] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - 주의(20.1 리뷰): 픽스처에는 40자 hex 모양의 가짜 SHA(`aaaa…`, `bbbb…`), `config/secrets/dev.yml` 경로 문자열(내용 `placeholder: true`), 인젝션 표식 `[prlens-injection]`이 정상 데이터로 들어 있습니다. 토큰 정규식이 이것들을 오탐하지 않아야 합니다(40자 hex 전체를 비밀정보로 보지 않음)
     - _Requirements: 17.12_
   - [ ] 20.4 M1 데모 리허설 (목요일. 실제 API, 사람이 실행)
