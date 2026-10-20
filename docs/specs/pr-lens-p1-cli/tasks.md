@@ -480,7 +480,7 @@
     - 결과를 PR이나 `docs/spikes/`에 기록
     - _Requirements: 9.7, 14.7_
 
-- [ ] 21. CI 매트릭스 구성
+- [x] 21. CI 매트릭스 구성
   - GitHub Actions에 `ubuntu-latest`, `windows-latest`, `macos-latest` × Java 17로 `./gradlew test` 실행, 실제 API 호출 없음, 세 OS 모두 통과해야 통과
   - 1.1이 머지되면 바로 만듭니다. OS별 문제(줄바꿈, 인코딩, 경로)가 금요일 전에 드러나야 합니다
   - _Requirements: 22.7, 22.8_
