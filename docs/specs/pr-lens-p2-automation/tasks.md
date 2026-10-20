@@ -61,6 +61,7 @@
     - jqwik 속성에도 제외가 먹는지 확인: jqwik은 Jupiter의 `@Tag`가 아니라 자체 `@Tag`(`net.jqwik.api.Tag`)를 볼 수 있음. 속성 하나로 실행해 보고, 필요하면 Docker가 필요한 속성에 두 애너테이션을 모두 붙이는 규칙을 `testing.md`에 적음
     - CI: Linux 러너에서만 `check`, Windows·macOS는 `test`. 현재 `ci.yml`은 ubuntu 단일 job이므로, P1 작업 21의 OS 매트릭스가 아직 없으면 그 job의 명령만 `check`로 바꿈. `review`·`llm` 패키지 diff 경고 단계 추가(`actions/checkout`에 `fetch-depth: 0`. 기본 얕은 복제에서는 `origin/main...HEAD`를 계산할 수 없음). `check`가 15분 제한 안에 드는지 확인
     - PR 템플릿(`.github/pull_request_template.md`)에 "`review`·`llm` 패키지 diff 없음" 체크 항목과 Docker 테스트 결과(CI 링크) 칸 추가
+    - 주의(P1 21 리뷰): `ci.yml`에는 이미 OS 매트릭스 job `backend-os`(ubuntu·windows·macos)와 판정 job `backend`가 있습니다. 위의 "ubuntu 단일 job"과 "15분 제한"은 사실이 아닙니다. Linux에서만 `check`로 바꾸려면 `backend-os`의 `./gradlew test` step을 `runner.os == 'Linux'`일 때만 `check`로 두고 다른 OS는 `test`로 둡니다. 시간 제한은 `timeout-minutes: 25`입니다. 판정 job에는 checkout이 없으므로 diff 경고 step(`fetch-depth: 0`)은 `backend-os`의 Linux 조합이나 별도 job에 두고, 머지를 막아야 하면 판정 job의 `needs`에 더합니다
     - _Requirements: 16.2, 16.4_
 
 - [ ] 2. 공유 타입과 경계 인터페이스 정의
