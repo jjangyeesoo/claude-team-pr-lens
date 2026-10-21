@@ -209,24 +209,25 @@
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
   - [x]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
-  - [ ] 8.6 `ImportResolver` 구현
+  - [x] 8.6 `ImportResolver` 구현
     - 펜스 블록(닫히지 않으면 파일 끝까지)과 인라인 코드 건너뛰기, `(^|\s)@(\S+)` 인식
     - 선언 파일 폴더 기준 해석과 `.`/`..` 정규화, `~/`·`/`·드라이브 문자·루트 위 `..` 거부 + 경고
     - BFS `(path, depth, declaredBy)`, 깊이 1~4만 가져오고 5 이상은 경고, 이미 담긴 경로는 건너뜀, 404·폴더는 경고
     - `claude_md`와 `import` 출처에서만 import 탐색
-    - 주의(선머지 리뷰): 절대 경로 거부 판정을 `RepoPaths.normalize`보다 먼저 합니다. `normalize`는 앞의 `/`를 지우므로 먼저 부르면 `/etc/x`가 `etc/x`로 받아들여집니다. `normalize`는 `.`·`..` 구간을 해석하지 않으므로 "선언 폴더 + import 경로"를 합친 뒤 구간 단위 해석과 중간의 `./`·`//` 정리는 여기서 합니다(그래야 "이미 담긴 경로" 비교가 맞음). `@\foo`처럼 역슬래시로 시작하는 경로를 절대 경로로 볼지는 미정입니다
-    - 주의(8.1~8.5 리뷰): `BaseFileReader.read`는 트리상 없음·폴더와 응답 `NotFound`·`IsDirectory`를 모두 경고 없이 `Optional.empty()`로 돌려주므로 "404·폴더는 경고"를 그 결과로 구분할 수 없습니다. 둘을 나눠 돌려주는 메서드를 더하거나 `getFile`을 직접 부르고, 1MB 초과 경고 코드는 `context_file_too_large`로 맞추세요
+    - 결정(8.6): 절대 경로 거부(`/`, `~/`, 드라이브 문자)를 구간 해석보다 먼저 하고 `RepoPaths.normalize`는 부르지 않습니다. "선언 폴더 + import 경로"를 구간 단위로 직접 해석합니다(`.`·빈 구간 버림, `..`은 앞 구간 제거, 지울 구간이 없으면 루트 밖). `@\foo`는 `\`를 `/`로 바꾼 뒤 판정하므로 루트 밖으로 거부하고 `a\b.md`는 `a/b.md`입니다(Windows에서 `\foo`가 드라이브 루트 기준 절대 경로이고 `normalize`가 `\`를 구분자로 보는 것과 맞춤). 해석 결과가 빈 문자열(`@.`, `@a/..`)이면 루트 폴더라 요청 없이 `import_is_directory`로 경고합니다
+    - 결정(8.6): `BaseFileReader.fetch`가 `Found`·`Missing`·`Directory`·`TooLarge`를 나눠 돌려주고 `read`는 `Found`일 때만 내용을 돌려줍니다. 1MB 초과는 `fetch`의 `context_file_too_large` 경고 하나만 내고 import 경고는 더 내지 않습니다(G-12 제안값). 경고 코드는 `import_outside_repo`, `import_depth_exceeded`, `import_not_found`, `import_is_directory`이고 메시지에 선언 파일과 원문 경로를 넣습니다
+    - 결정(8.6): BFS 판정 순서는 루트 밖 → 이미 담긴 경로(`collected` 포함, 경고 없음) → 깊이 5 이상 경고 → 이전에 실패한 경로(요청 없이 같은 경고) → 조회입니다. 같은 경로는 한 번만 요청하고, 한 파일 안의 같은 해석 경로는 첫 선언만 처리합니다. 인라인 코드는 한 줄 안에서만 짝짓고(줄을 넘는 스팬 없음) 펜스는 ``` 만 다룹니다(`~~~` 제외)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
-  - [ ]* 8.7 Property 15: import 도달 가능성 불변 테스트
+  - [x]* 8.7 Property 15: import 도달 가능성 불변 테스트
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
-  - [ ]* 8.8 Property 16: import 인식 메타모픽 테스트
+  - [x]* 8.8 Property 16: import 인식 메타모픽 테스트
     - **Validates: Requirements 6.4, 6.10**
   - [ ] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
     - 상대 경로·같은 저장소 URL 두 정규식을 본문 순서로 병합, 앵커·쿼리 제거, 다른 저장소(대소문자 무시)·`..`·`docs/specs/` 밖은 경고 후 건너뜀
     - 중복 제거, 최대 20개(초과 개수 경고)
     - 조회: base → 404일 때만 head(`Revision.HEAD`), 둘 다 없거나 폴더면 경고
     - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다. 허용할지 구간을 정리할지는 미정입니다
-    - 주의(8.1~8.5 리뷰): `BaseFileReader.read`는 404와 폴더를 구분하지 않으므로 "404일 때만 head로 다시 조회, 폴더면 경고"에는 둘을 나눠 돌려주는 메서드나 `getFile` 직접 호출이 필요합니다. `RepoTreeIndex`는 base 트리만 담으므로 head 조회는 이 색인과 `BaseFileReader`를 거치지 말고 `getFile(repo, path, headSha)`로 하세요(색인으로 거르면 base에 없는 파일이 요청 없이 `ABSENT`가 됩니다)
+    - 주의(8.1~8.5 리뷰): base 조회는 `BaseFileReader.fetch`를 씁니다. `Missing`은 트리상 없음(요청 없음)과 404를 함께 뜻하므로 둘 다 head 재조회 대상이고, `Directory`는 폴더 경고 대상입니다. `TooLarge`는 `fetch`가 이미 `context_file_too_large` 경고를 냈으므로 head로 다시 조회하거나 경고를 또 내지 않습니다. `RepoTreeIndex`는 base 트리만 담으므로 head 조회는 이 색인과 `BaseFileReader`를 거치지 말고 `getFile(repo, path, headSha)`로 하세요(색인으로 거르면 base에 없는 파일이 요청 없이 `ABSENT`가 됩니다)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
   - [ ]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
@@ -236,6 +237,7 @@
     - 경고는 생성자로 받은 `WarningSink`에 `Warning(code, message)`로 전달. 순수 함수가 돌려준 경고도 여기로 넘김
     - 주의(선머지 리뷰): `ReviewContext`와 `ContextFile`은 경로 정규화를 강제하지 않고, `ReviewContext`의 중복 검사는 문자열 그대로 비교합니다(`./a`와 `a`를 다른 경로로 봄). 누적기에 넣기 전에 `RepoPaths.normalize`를 거쳐야 요구사항 4.8이 성립합니다. 불변화는 `new ReviewContext(files)`로 합니다(`of` 팩터리는 없음)
     - 주의(8.1~8.5 리뷰): `RepoTreeIndex.load(github, repo, baseSha)`를 한 번만 부르고 같은 색인을 `BaseFileReader`와 `RuleCollector`에 넘깁니다. `ClaudeMdCollector.collect`와 `RuleCollector.collect`에는 `DiffFilter.apply(...).targets()`만 넘깁니다. `RuleCollector`(선택 경고, `rules_skipped_tree_truncated`)와 `BaseFileReader`(`context_file_too_large`)는 경고를 생성자의 `WarningSink`로 이미 보내므로 조립 쪽에서 다시 넘기지 않습니다. `getTree` 예외는 `load`가 그대로 던집니다(요구사항 4.11)
+    - 주의(8.6~8.8 리뷰): `ImportResolver.resolve(collected)`에는 `claude_md`뿐 아니라 이미 모은 `rule` 파일도 모두 넘깁니다. `resolve`는 `collected`의 경로만 문자열 그대로 비교해 건너뛰므로 rule을 빼면 rule 파일을 가리키는 import가 `IMPORT`로 다시 조회되고 그 안의 `@path`까지 따라가 요구사항 6.2·6.7을 어깁니다. 경로는 넘기기 전에 정규화합니다. 돌려받는 것은 새 `IMPORT`(`Revision.BASE`) 파일뿐이고 `import_*`·`context_file_too_large` 경고는 생성자의 `WarningSink`로 이미 나갔으므로 다시 넘기지 않습니다. `BaseFileReader`는 `claude_md`·rule 수집과 같은 인스턴스(같은 트리 색인)를 씁니다
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
   - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
