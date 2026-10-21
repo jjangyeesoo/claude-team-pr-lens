@@ -193,11 +193,11 @@
   - PR 경계: 8.1~8.5 / 8.6~8.8 / 8.9~8.12
   - [x] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
     - _Requirements: 4.1, 4.9_
-  - [ ] 8.2 `CLAUDE.md` 수집 구현
+  - [x] 8.2 `CLAUDE.md` 수집 구현
     - 루트 `CLAUDE.md`, `.claude/CLAUDE.md`(대소문자 정확히 일치), 대상 파일(이름 변경이면 두 경로) 상위 폴더를 가까운 순으로, 루트 제외, 중복 없음, 제외 파일 경로 미사용
     - 모두 base SHA 기준, 404는 경고 없이 건너뜀
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 4.10_
-  - [ ]* 8.3 Property 13: 상위 폴더 CLAUDE.md 후보 테스트
+  - [x]* 8.3 Property 13: 상위 폴더 CLAUDE.md 후보 테스트
     - **Validates: Requirements 4.4, 4.5, 4.6, 4.7**
   - [ ] 8.4 `FrontmatterParser`와 rule 선택 구현
     - 첫 줄 `---`일 때만 다음 `---`까지 안전 YAML 로더로 해석, `paths` 문자열 → 한 개짜리 목록, CRLF 정규화
