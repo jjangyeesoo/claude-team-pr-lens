@@ -251,7 +251,7 @@
 
 ### T1 리뷰 엔진 (B)
 
-- [ ] 10. 응답 해석과 Finding 검증
+- [x] 10. 응답 해석과 Finding 검증
   - [x] 10.1 `ReviewJsonSchema` 작성 (설계의 JSON 스키마, 모든 속성 `required`, null 허용 3개, `minimum`·`minLength` 없음) 과 스냅샷 테스트
     - _Requirements: 9.1, 9.2, 9.3_
   - [x] 10.2 `ResponseParser` 구현
@@ -263,16 +263,16 @@
     - _Requirements: 9.4, 9.5, 9.6, 16.1, 16.2, 20.1_
   - [x]* 10.3 Property 30(정상 응답 변환), Property 31(스키마 위반), Property 32(max_tokens 절단 복구) 테스트
     - **Validates: Requirements 9.4, 9.5, 9.6, 16.2, 20.1**
-  - [ ] 10.4 `FindingValidator` 구현
+  - [x] 10.4 `FindingValidator` 구현
     - basis: `rule`/`spec`이고 `ref`가 공백이거나 컨텍스트 경로에 없으면 `general`로 강등 + `Demotion`
     - 라인: 전체 대상 파일의 `head 경로 → LineRanges` 맵으로 `not_target_file` → `line_missing` → `out_of_range` → `INLINE_ELIGIBLE`
     - `basis`, `demotion`, 판정 필드 외에는 변경하지 않음
-    - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
-    - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
-    - 주의(15 리뷰): `ResultCodec.read`는 `inline_eligible`인데 `line`이 null인 Finding을 거부하지만 `write`는 막지 않습니다. 판정이 이 조합을 만들면 `--format json` 출력이 다시 읽히지 않고 20.2에서야 드러납니다
+    - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작) (확인함: 구현은 `isBlank` 검사 뒤에 `normalize`를 부릅니다)
+    - 결정(10.4): 응답의 `file`은 비교할 때만 `unescape`하고 `Finding.file`에는 응답 그대로 둡니다(G-13 제안값, 요구사항 12.7·11.10의 "다른 필드 불변"). `message`·`suggestion`은 건드리지 않습니다
+    - 주의(15 리뷰): 확인함. `line`이 null이면 항상 `line_missing`이라 `inline_eligible`과 null `line`의 조합은 만들어지지 않습니다(`FindingValidatorTest.nullLineIsLineMissing`)
     - 미정(여기서 정함 필요, 8.9~8.12 리뷰): `ReviewContext`의 경로에는 `Revision.HEAD` 스펙도 들어 있습니다. 컨텍스트 경로 비교를 전체 경로로 하면 `team_context` 밖(head 스펙 영역)의 파일을 가리키는 `spec` basis도 통과합니다. 11.5의 출력 규칙은 "`basis.ref`는 `team_context` 머리줄의 `path`"이므로, 비교 대상을 `Revision.BASE` 파일로 한정할지 정해야 합니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
-  - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
+  - [x]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
 
 - [ ] 11. 청크 계획, 프롬프트, 비용, 병합
