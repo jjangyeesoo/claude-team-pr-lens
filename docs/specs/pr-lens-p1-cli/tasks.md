@@ -191,23 +191,23 @@
 
 - [ ] 8. 컨텍스트 수집
   - PR 경계: 8.1~8.5 / 8.6~8.8 / 8.9~8.12
-  - [ ] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
+  - [x] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
     - _Requirements: 4.1, 4.9_
-  - [ ] 8.2 `CLAUDE.md` 수집 구현
+  - [x] 8.2 `CLAUDE.md` 수집 구현
     - 루트 `CLAUDE.md`, `.claude/CLAUDE.md`(대소문자 정확히 일치), 대상 파일(이름 변경이면 두 경로) 상위 폴더를 가까운 순으로, 루트 제외, 중복 없음, 제외 파일 경로 미사용
     - 모두 base SHA 기준, 404는 경고 없이 건너뜀
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 4.10_
-  - [ ]* 8.3 Property 13: 상위 폴더 CLAUDE.md 후보 테스트
+  - [x]* 8.3 Property 13: 상위 폴더 CLAUDE.md 후보 테스트
     - **Validates: Requirements 4.4, 4.5, 4.6, 4.7**
-  - [ ] 8.4 `FrontmatterParser`와 rule 선택 구현
+  - [x] 8.4 `FrontmatterParser`와 rule 선택 구현
     - 첫 줄 `---`일 때만 다음 `---`까지 안전 YAML 로더로 해석, `paths` 문자열 → 한 개짜리 목록, CRLF 정규화
     - 오류 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`는 포함 + 경고
     - `.claude/rules/**` 중 소문자 `.md`, `paths` 없으면 포함, 있으면 대상 파일(이름 변경이면 이전 경로 또는 새 경로)과 일치할 때만 포함
     - 무효 glob 패턴은 그 패턴만 무시하고 경고, 모두 무효면 포함 + 경고(설계 G-4)
     - 주의(6 리뷰): `GlobMatcher.matches`는 무효 패턴이면 unchecked `GlobSyntaxException`을 던집니다. rule `paths`는 먼저 패턴마다 `GlobMatcher.validate`로 무효 패턴을 걸러 패턴당 경고 1건을 내고, 남은 패턴으로만 `matches`를 부르세요. 파일마다 `matches`를 try/catch하면 같은 경고가 대상 파일 수만큼 반복됩니다
-    - 미정(7.2~7.5 리뷰): `copied`인 파일은 `FileStatus.ADDED`로 오지만 `previousPath`에 복사 원본 경로가 들어 있습니다(`PrFetcher`는 상태와 관계없이 `previousFilename`이 있으면 담음). `DiffFilter`는 상태를 보지 않고 `previousPath != null`이면 이전 경로로도 패턴을 맞춥니다. rule `paths`를 맞출 때 `status == RENAMED`일 때만 이전 경로를 볼지, `DiffFilter`처럼 `previousPath`가 있으면 볼지 정합니다
+    - 결정(8.4): rule `paths`는 대상 파일의 새 경로와, `status == RENAMED`일 때만 이전 경로로 맞춥니다. `copied`(`ADDED` + `previousPath`)의 복사 원본은 PR이 바꾸지 않은 파일이라 쓰지 않습니다(요구사항 5.4와 Property 14가 "이름 변경"만 말함. 8.2의 CLAUDE.md 탐색도 같음). 제외 판정에 `previousPath`를 보는 `DiffFilter`와 다릅니다
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
-  - [ ]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
+  - [x]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
   - [ ] 8.6 `ImportResolver` 구현
     - 펜스 블록(닫히지 않으면 파일 끝까지)과 인라인 코드 건너뛰기, `(^|\s)@(\S+)` 인식
@@ -215,6 +215,7 @@
     - BFS `(path, depth, declaredBy)`, 깊이 1~4만 가져오고 5 이상은 경고, 이미 담긴 경로는 건너뜀, 404·폴더는 경고
     - `claude_md`와 `import` 출처에서만 import 탐색
     - 주의(선머지 리뷰): 절대 경로 거부 판정을 `RepoPaths.normalize`보다 먼저 합니다. `normalize`는 앞의 `/`를 지우므로 먼저 부르면 `/etc/x`가 `etc/x`로 받아들여집니다. `normalize`는 `.`·`..` 구간을 해석하지 않으므로 "선언 폴더 + import 경로"를 합친 뒤 구간 단위 해석과 중간의 `./`·`//` 정리는 여기서 합니다(그래야 "이미 담긴 경로" 비교가 맞음). `@\foo`처럼 역슬래시로 시작하는 경로를 절대 경로로 볼지는 미정입니다
+    - 주의(8.1~8.5 리뷰): `BaseFileReader.read`는 트리상 없음·폴더와 응답 `NotFound`·`IsDirectory`를 모두 경고 없이 `Optional.empty()`로 돌려주므로 "404·폴더는 경고"를 그 결과로 구분할 수 없습니다. 둘을 나눠 돌려주는 메서드를 더하거나 `getFile`을 직접 부르고, 1MB 초과 경고 코드는 `context_file_too_large`로 맞추세요
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
   - [ ]* 8.7 Property 15: import 도달 가능성 불변 테스트
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
@@ -225,6 +226,7 @@
     - 중복 제거, 최대 20개(초과 개수 경고)
     - 조회: base → 404일 때만 head(`Revision.HEAD`), 둘 다 없거나 폴더면 경고
     - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다. 허용할지 구간을 정리할지는 미정입니다
+    - 주의(8.1~8.5 리뷰): `BaseFileReader.read`는 404와 폴더를 구분하지 않으므로 "404일 때만 head로 다시 조회, 폴더면 경고"에는 둘을 나눠 돌려주는 메서드나 `getFile` 직접 호출이 필요합니다. `RepoTreeIndex`는 base 트리만 담으므로 head 조회는 이 색인과 `BaseFileReader`를 거치지 말고 `getFile(repo, path, headSha)`로 하세요(색인으로 거르면 base에 없는 파일이 요청 없이 `ABSENT`가 됩니다)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
   - [ ]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
@@ -233,6 +235,7 @@
     - 404 외 오류(401, 403, 재시도 소진)는 예외로 전파
     - 경고는 생성자로 받은 `WarningSink`에 `Warning(code, message)`로 전달. 순수 함수가 돌려준 경고도 여기로 넘김
     - 주의(선머지 리뷰): `ReviewContext`와 `ContextFile`은 경로 정규화를 강제하지 않고, `ReviewContext`의 중복 검사는 문자열 그대로 비교합니다(`./a`와 `a`를 다른 경로로 봄). 누적기에 넣기 전에 `RepoPaths.normalize`를 거쳐야 요구사항 4.8이 성립합니다. 불변화는 `new ReviewContext(files)`로 합니다(`of` 팩터리는 없음)
+    - 주의(8.1~8.5 리뷰): `RepoTreeIndex.load(github, repo, baseSha)`를 한 번만 부르고 같은 색인을 `BaseFileReader`와 `RuleCollector`에 넘깁니다. `ClaudeMdCollector.collect`와 `RuleCollector.collect`에는 `DiffFilter.apply(...).targets()`만 넘깁니다. `RuleCollector`(선택 경고, `rules_skipped_tree_truncated`)와 `BaseFileReader`(`context_file_too_large`)는 경고를 생성자의 `WarningSink`로 이미 보내므로 조립 쪽에서 다시 넘기지 않습니다. `getTree` 예외는 `load`가 그대로 던집니다(요구사항 4.11)
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
   - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
