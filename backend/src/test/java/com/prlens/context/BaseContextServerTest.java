@@ -1,13 +1,21 @@
 package com.prlens.context;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
+import com.prlens.github.GitHubApiException;
 import com.prlens.github.HttpGitHubClient;
 import com.prlens.github.PatCredentials;
+import com.prlens.model.ChangedFile;
+import com.prlens.model.Configuration;
 import com.prlens.model.ContextFile;
+import com.prlens.model.FileStatus;
+import com.prlens.model.PatchContent;
 import com.prlens.model.PullRequestSnapshot;
 import com.prlens.model.RepoRef;
+import com.prlens.model.ReviewContext;
+import com.prlens.model.Revision;
 import com.prlens.pullrequest.PrFetcher;
 import com.prlens.support.RetryExecutor;
 import com.prlens.support.RetryPolicy;
@@ -221,5 +229,70 @@ class BaseContextServerTest {
             "/repos/o/r/contents/backend/src/CLAUDE.md?ref=base111")
         .noneMatch(path -> path.contains("/contents/.claude/rules"));
     assertThat(warnings).extracting(Warning::code).containsExactly("rules_skipped_tree_truncated");
+  }
+
+  private ReviewContext collectContext(String body) {
+    PullRequestSnapshot snapshot =
+        new PullRequestSnapshot(
+            REPO,
+            5,
+            "t",
+            body,
+            "base111",
+            "head222",
+            1,
+            List.of(
+                new ChangedFile(
+                    "backend/A.java",
+                    null,
+                    FileStatus.MODIFIED,
+                    1,
+                    1,
+                    new PatchContent.Parsed(List.of()))));
+    return new ContextCollector(client(), warnings::add)
+        .collect(snapshot, Configuration.defaults());
+  }
+
+  @Test
+  void contextCollectorReadsAtBaseShaAndFallsBackToHeadOnlyForSpec() {
+    server
+        .respond("/repos/o/r/git/trees/base111?recursive=1", 200, tree(false, blob("CLAUDE.md")))
+        .respond("/repos/o/r/contents/CLAUDE.md?ref=base111", 200, contents("root base"))
+        .respond("/repos/o/r/contents/docs/specs/new.md?ref=head222", 200, contents("head spec"));
+
+    ReviewContext context = collectContext("docs/specs/new.md");
+
+    assertThat(contentsAndTreeRequests())
+        .filteredOn(path -> !path.contains("docs/specs/new.md"))
+        .isNotEmpty()
+        .allSatisfy(path -> assertThat(path).contains("base111").doesNotContain("head222"));
+    assertThat(contentsAndTreeRequests())
+        .contains("/repos/o/r/contents/docs/specs/new.md?ref=head222");
+    assertThat(context.files())
+        .anySatisfy(
+            file -> {
+              assertThat(file.path()).isEqualTo("docs/specs/new.md");
+              assertThat(file.revision()).isEqualTo(Revision.HEAD);
+            });
+  }
+
+  @Test
+  void contextCollectorPropagatesForbiddenFromContents() {
+    server
+        .respond("/repos/o/r/git/trees/base111?recursive=1", 200, tree(false, blob("CLAUDE.md")))
+        .respond("/repos/o/r/contents/CLAUDE.md?ref=base111", 403, "{\"message\":\"forbidden\"}");
+
+    assertThatThrownBy(() -> collectContext(""))
+        .isInstanceOfSatisfying(
+            GitHubApiException.class, e -> assertThat(e.status()).isEqualTo(403));
+  }
+
+  @Test
+  void contextCollectorPropagatesUnauthorizedFromTree() {
+    server.respond("/repos/o/r/git/trees/base111?recursive=1", 401, "{\"message\":\"bad\"}");
+
+    assertThatThrownBy(() -> collectContext(""))
+        .isInstanceOfSatisfying(
+            GitHubApiException.class, e -> assertThat(e.status()).isEqualTo(401));
   }
 }

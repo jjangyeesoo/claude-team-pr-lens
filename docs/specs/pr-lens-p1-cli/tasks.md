@@ -224,16 +224,17 @@
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
   - [x]* 8.8 Property 16: import 인식 메타모픽 테스트
     - **Validates: Requirements 6.4, 6.10**
-  - [ ] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
+  - [x] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
     - 상대 경로·같은 저장소 URL 두 정규식을 본문 순서로 병합, 앵커·쿼리 제거, 다른 저장소(대소문자 무시)·`..`·`docs/specs/` 밖은 경고 후 건너뜀
     - 중복 제거, 최대 20개(초과 개수 경고)
     - 조회: base → 404일 때만 head(`Revision.HEAD`), 둘 다 없거나 폴더면 경고
-    - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다. 허용할지 구간을 정리할지는 미정입니다
+    - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다.
+    - 결정(8.9): 빈 구간과 `.` 구간을 버려 `docs/specs/a.md`로 정리하고 같은 경로로 중복 제거합니다(8.6 `ImportResolver`와 같은 방식)
     - 주의(8.1~8.5 리뷰): base 조회는 `BaseFileReader.fetch`를 씁니다. `Missing`은 트리상 없음(요청 없음)과 404를 함께 뜻하므로 둘 다 head 재조회 대상이고, `Directory`는 폴더 경고 대상입니다. `TooLarge`는 `fetch`가 이미 `context_file_too_large` 경고를 냈으므로 head로 다시 조회하거나 경고를 또 내지 않습니다. `RepoTreeIndex`는 base 트리만 담으므로 head 조회는 이 색인과 `BaseFileReader`를 거치지 말고 `getFile(repo, path, headSha)`로 하세요(색인으로 거르면 base에 없는 파일이 요청 없이 `ABSENT`가 됩니다)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
-  - [ ]* 8.10 Property 17: 스펙 링크 추출 테스트
+  - [x]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
-  - [ ] 8.11 `ContextCollector` 조립
+  - [x] 8.11 `ContextCollector` 조립
     - `DiffFilter`로 대상 파일 결정 → `claude_md` → `rule` → `import` → `spec` 순서로 누적기(`LinkedHashMap`)에 수집. 같은 경로가 다시 들어오면 우선순위가 더 높은 출처를 남김(수집 순서가 우선순위와 같아 실제로는 기존 출처가 남음)
     - 404 외 오류(401, 403, 재시도 소진)는 예외로 전파
     - 경고는 생성자로 받은 `WarningSink`에 `Warning(code, message)`로 전달. 순수 함수가 돌려준 경고도 여기로 넘김
@@ -242,7 +243,7 @@
     - 주의(8.6~8.8 리뷰): `ImportResolver.resolve(collected)`에는 `claude_md`뿐 아니라 이미 모은 `rule` 파일도 모두 넘깁니다. `resolve`는 `collected`의 경로만 문자열 그대로 비교해 건너뛰므로 rule을 빼면 rule 파일을 가리키는 import가 `IMPORT`로 다시 조회되고 그 안의 `@path`까지 따라가 요구사항 6.2·6.7을 어깁니다. 경로는 넘기기 전에 정규화합니다. 돌려받는 것은 새 `IMPORT`(`Revision.BASE`) 파일뿐이고 `import_*`·`context_file_too_large` 경고는 생성자의 `WarningSink`로 이미 나갔으므로 다시 넘기지 않습니다. `BaseFileReader`는 `claude_md`·rule 수집과 같은 인스턴스(같은 트리 색인)를 씁니다
     - 주의(7.6~7.7 리뷰): 7.6의 `BaseContextServerTest.claudeMdIsReadAtBaseShaNotHeadSha`는 base SHA를 테스트가 직접 `RepoTreeIndex.load`·`BaseFileReader`에 넘기므로, 조립 코드가 `snapshot.baseSha()`를 고르는지는 검증하지 않습니다. 8.11 테스트에서 base와 head SHA를 다르게 둔 스냅샷으로 트리·contents 요청이 모두 base SHA로 가는지 확인하세요 (design "GitHub 가짜 서버"의 base/head ref 선택)
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
-  - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
+  - [x]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
 
 - [ ] 9. Checkpoint: T2 완료 확인
@@ -269,6 +270,7 @@
     - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
     - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
     - 주의(15 리뷰): `ResultCodec.read`는 `inline_eligible`인데 `line`이 null인 Finding을 거부하지만 `write`는 막지 않습니다. 판정이 이 조합을 만들면 `--format json` 출력이 다시 읽히지 않고 20.2에서야 드러납니다
+    - 미정(여기서 정함 필요, 8.9~8.12 리뷰): `ReviewContext`의 경로에는 `Revision.HEAD` 스펙도 들어 있습니다. 컨텍스트 경로 비교를 전체 경로로 하면 `team_context` 밖(head 스펙 영역)의 파일을 가리키는 `spec` basis도 통과합니다. 11.5의 출력 규칙은 "`basis.ref`는 `team_context` 머리줄의 `path`"이므로, 비교 대상을 `Revision.BASE` 파일로 한정할지 정해야 합니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
@@ -294,6 +296,7 @@
     - 요약 전용: patch 대신 경로·상태·줄 수·Hunk 헤더, 같은 스키마 사용
     - 요청마다 모델과 effort 명시, 최대 출력 토큰 지정
     - 주의(11.1~11.4 리뷰): `DelimiterCodec`은 문자열 변환만 하고 영역을 감싸지 않습니다. 파일 경로, 제목, 본문, head 스펙, diff, 컨텍스트 파일 내용을 모두 `escape`한 뒤 태그로 감쌉니다. `team_context`의 파일 머리줄 `path`/`source` 값도 같습니다(경로에 태그 꼴이 있을 수 있음. 머리줄은 스펙 추론)
+    - 주의(8.9~8.12 리뷰): head SHA에서 가져온 스펙은 별도 필드가 아니라 `ReviewContext.files()` 안에 다른 파일과 섞여 `ContextSource.SPEC`, `Revision.HEAD`로 들어옵니다(`SpecCollector`). `team_context`(Common_Context)에는 `Revision.BASE` 파일만 넣고 `Revision.HEAD` 파일은 둘째 블록의 head 스펙 영역에 둡니다(요구사항 14.6). 거르지 않으면 head 스펙이 캐시되는 첫 블록에 들어갑니다
     - _Requirements: 3.7, 9.1, 14.1, 14.2, 14.3, 14.4, 14.6, 20.6, 20.7, 20.8, 20.9_
   - [ ] 11.6 `CostCalculator` 구현 (공개 순수 함수 `estimate(LlmUsage, ModelPricing)`, `BigDecimal` Σ(토큰 × 단가 / 1,000,000), `setScale(4, HALF_UP)`, 단가 없으면 `null`. P2가 같은 함수를 씀)
     - _Requirements: 20.2, 20.5_
