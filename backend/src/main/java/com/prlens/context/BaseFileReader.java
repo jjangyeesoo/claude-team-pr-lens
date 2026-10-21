@@ -32,6 +32,21 @@ final class BaseFileReader {
     this.warnings = warnings;
   }
 
+  /** 조회 결과. */
+  sealed interface Outcome {
+    record Found(String content) implements Outcome {}
+
+    record Missing() implements Outcome {}
+
+    record Directory() implements Outcome {}
+
+    record TooLarge() implements Outcome {}
+  }
+
+  Outcome fetch(String path) {
+    return new Outcome.Missing();
+  }
+
   /** 내용은 받은 그대로 돌려준다(줄바꿈을 바꾸지 않는다). */
   Optional<String> read(String path) {
     switch (index.lookup(path)) {

@@ -2,6 +2,7 @@ package com.prlens.context;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.prlens.context.BaseFileReader.Outcome;
 import com.prlens.context.FakeRepoClient.FileRequest;
 import com.prlens.github.RepoTree;
 import com.prlens.github.RepoTree.Entry;
@@ -97,5 +98,41 @@ class BaseFileReaderTest {
     assertThat(warnings).hasSize(1);
     assertThat(warnings.get(0).code()).isEqualTo("context_file_too_large");
     assertThat(warnings.get(0).message()).contains("docs/CLAUDE.md");
+  }
+
+  @Test
+  void fetchDistinguishesMissingDirectoryAndTooLarge() {
+    FakeRepoClient github =
+        new FakeRepoClient()
+            .file(BASE, "a.md", "내용")
+            .tooLarge(BASE, "big.md")
+            .directory(BASE, "dir-resp");
+    RepoTree tree =
+        new RepoTree(
+            List.of(
+                new Entry("a.md", Kind.BLOB),
+                new Entry("big.md", Kind.BLOB),
+                new Entry("src", Kind.TREE)),
+            false);
+    BaseFileReader exact = reader(github, tree);
+
+    assertThat(exact.fetch("lib/x.md")).isEqualTo(new Outcome.Missing());
+    assertThat(exact.fetch("src")).isEqualTo(new Outcome.Directory());
+    assertThat(github.fileRequests()).isEmpty();
+    assertThat(exact.fetch("a.md")).isEqualTo(new Outcome.Found("내용"));
+    assertThat(warnings).isEmpty();
+    assertThat(exact.fetch("big.md")).isEqualTo(new Outcome.TooLarge());
+    assertThat(warnings).hasSize(1);
+    assertThat(warnings.get(0).code()).isEqualTo("context_file_too_large");
+
+    BaseFileReader truncated = reader(github, new RepoTree(List.of(), true));
+    assertThat(truncated.fetch("none.md")).isEqualTo(new Outcome.Missing());
+    assertThat(truncated.fetch("dir-resp")).isEqualTo(new Outcome.Directory());
+    assertThat(github.fileRequests())
+        .containsExactly(
+            new FileRequest("a.md", BASE),
+            new FileRequest("big.md", BASE),
+            new FileRequest("none.md", BASE),
+            new FileRequest("dir-resp", BASE));
   }
 }
