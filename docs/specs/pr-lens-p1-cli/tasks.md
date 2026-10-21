@@ -234,7 +234,7 @@
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
   - [x]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
-  - [ ] 8.11 `ContextCollector` 조립
+  - [x] 8.11 `ContextCollector` 조립
     - `DiffFilter`로 대상 파일 결정 → `claude_md` → `rule` → `import` → `spec` 순서로 누적기(`LinkedHashMap`)에 수집. 같은 경로가 다시 들어오면 우선순위가 더 높은 출처를 남김(수집 순서가 우선순위와 같아 실제로는 기존 출처가 남음)
     - 404 외 오류(401, 403, 재시도 소진)는 예외로 전파
     - 경고는 생성자로 받은 `WarningSink`에 `Warning(code, message)`로 전달. 순수 함수가 돌려준 경고도 여기로 넘김
@@ -243,7 +243,7 @@
     - 주의(8.6~8.8 리뷰): `ImportResolver.resolve(collected)`에는 `claude_md`뿐 아니라 이미 모은 `rule` 파일도 모두 넘깁니다. `resolve`는 `collected`의 경로만 문자열 그대로 비교해 건너뛰므로 rule을 빼면 rule 파일을 가리키는 import가 `IMPORT`로 다시 조회되고 그 안의 `@path`까지 따라가 요구사항 6.2·6.7을 어깁니다. 경로는 넘기기 전에 정규화합니다. 돌려받는 것은 새 `IMPORT`(`Revision.BASE`) 파일뿐이고 `import_*`·`context_file_too_large` 경고는 생성자의 `WarningSink`로 이미 나갔으므로 다시 넘기지 않습니다. `BaseFileReader`는 `claude_md`·rule 수집과 같은 인스턴스(같은 트리 색인)를 씁니다
     - 주의(7.6~7.7 리뷰): 7.6의 `BaseContextServerTest.claudeMdIsReadAtBaseShaNotHeadSha`는 base SHA를 테스트가 직접 `RepoTreeIndex.load`·`BaseFileReader`에 넘기므로, 조립 코드가 `snapshot.baseSha()`를 고르는지는 검증하지 않습니다. 8.11 테스트에서 base와 head SHA를 다르게 둔 스냅샷으로 트리·contents 요청이 모두 base SHA로 가는지 확인하세요 (design "GitHub 가짜 서버"의 base/head ref 선택)
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
-  - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
+  - [x]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
 
 - [ ] 9. Checkpoint: T2 완료 확인

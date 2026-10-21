@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
+import com.prlens.github.GitHubApiException;
 import com.prlens.github.HttpGitHubClient;
 import com.prlens.github.PatCredentials;
 import com.prlens.model.ChangedFile;
@@ -16,7 +17,6 @@ import com.prlens.model.RepoRef;
 import com.prlens.model.ReviewContext;
 import com.prlens.model.Revision;
 import com.prlens.pullrequest.PrFetcher;
-import com.prlens.support.NonRetryableApiException;
 import com.prlens.support.RetryExecutor;
 import com.prlens.support.RetryPolicy;
 import com.prlens.support.SecretMasker;
@@ -282,13 +282,13 @@ class BaseContextServerTest {
         .respond("/repos/o/r/git/trees/base111?recursive=1", 200, tree(false, blob("CLAUDE.md")))
         .respond("/repos/o/r/contents/CLAUDE.md?ref=base111", 403, "{\"message\":\"forbidden\"}");
 
-    assertThatThrownBy(() -> collectContext("")).isInstanceOf(NonRetryableApiException.class);
+    assertThatThrownBy(() -> collectContext("")).isInstanceOf(GitHubApiException.class);
   }
 
   @Test
   void contextCollectorPropagatesUnauthorizedFromTree() {
     server.respond("/repos/o/r/git/trees/base111?recursive=1", 401, "{\"message\":\"bad\"}");
 
-    assertThatThrownBy(() -> collectContext("")).isInstanceOf(NonRetryableApiException.class);
+    assertThatThrownBy(() -> collectContext("")).isInstanceOf(GitHubApiException.class);
   }
 }
