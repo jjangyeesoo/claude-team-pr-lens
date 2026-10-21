@@ -142,7 +142,7 @@
   - [x]* 6.6 Property 10: 제외 패턴 목록 합성 테스트
     - **Validates: Requirements 3.8, 3.9, 3.10**
 
-- [ ] 7. GitHub 클라이언트와 PR 가져오기
+- [x] 7. GitHub 클라이언트와 PR 가져오기
   - PR 경계: 7.1 / 7.2~7.5 / 7.6~7.7
   - [x] 7.1 `HttpGitHubClient`, PAT용 `GitHubCredentials` 구현
     - 생성자 `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`. 요청 제한 시간 30초, 모든 요청을 `GitHubCredentials`로 인증(P1은 `GITHUB_TOKEN`)
@@ -191,7 +191,7 @@
     - 결과(7.7, 2026-10-21): 가정 대부분 확인됨. 다른 것은 없는 SHA의 트리 조회가 404가 아니라 **422**라는 점이고 `getTree`의 분류를 따로 정해야 합니다(`GitHubSmokeTest.treeOfUnknownShaThrowsNotFound`가 스모크 실행 시 실패로 남음). 1MB 초과·symlink·submodule은 픽스처 base에 대상이 없어 확인 못 함. 상세는 spike 2026-10-14 문서
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
-- [ ] 8. 컨텍스트 수집
+- [x] 8. 컨텍스트 수집
   - PR 경계: 8.1~8.5 / 8.6~8.8 / 8.9~8.12
   - [x] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
     - _Requirements: 4.1, 4.9_
@@ -246,7 +246,7 @@
   - [x]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
 
-- [ ] 9. Checkpoint: T2 완료 확인
+- [x] 9. Checkpoint: T2 완료 확인
   - T2 테스트가 모두 통과하는지 확인하고, 질문이 있으면 사용자에게 묻습니다.
 
 ### T1 리뷰 엔진 (B)
