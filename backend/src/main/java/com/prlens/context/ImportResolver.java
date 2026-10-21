@@ -51,8 +51,8 @@ final class ImportResolver {
         queue.add(new Node(file.path(), file.content(), 0));
       }
     }
-    // 요청했다가 실패한 경로. 값이 null이면 이미 경고를 낸 1MB 초과다
-    Map<String, String> failures = new HashMap<>();
+    // 요청했다가 실패한 경로와 그 결과. TooLarge는 조회할 때 이미 경고했다
+    Map<String, Outcome> failures = new HashMap<>();
     List<ContextFile> result = new ArrayList<>();
     while (!queue.isEmpty()) {
       Node node = queue.poll();
@@ -86,26 +86,26 @@ final class ImportResolver {
           result.add(new ContextFile(path, found.content(), ContextSource.IMPORT, Revision.BASE));
           queue.add(new Node(path, found.content(), depth));
         } else if (outcome instanceof Outcome.Missing) {
-          failures.put(path, NOT_FOUND);
-          warnFailure(NOT_FOUND, node, raw);
+          failures.put(path, outcome);
+          warnFailure(outcome, node, raw);
         } else if (outcome instanceof Outcome.Directory) {
-          failures.put(path, IS_DIRECTORY);
-          warnFailure(IS_DIRECTORY, node, raw);
+          failures.put(path, outcome);
+          warnFailure(outcome, node, raw);
         } else {
-          failures.put(path, null);
+          failures.put(path, outcome);
         }
       }
     }
     return result;
   }
 
-  private void warnFailure(String code, Node declaredBy, String raw) {
-    if (code == null) {
-      return;
+  private void warnFailure(Outcome failure, Node declaredBy, String raw) {
+    if (failure instanceof Outcome.Missing) {
+      warn(NOT_FOUND, "없는 파일을 가리키는 import를 건너뜁니다", declaredBy, raw);
+    } else if (failure instanceof Outcome.Directory) {
+      warn(IS_DIRECTORY, "폴더를 가리키는 import를 건너뜁니다", declaredBy, raw);
     }
-    String message =
-        code.equals(NOT_FOUND) ? "없는 파일을 가리키는 import를 건너뜁니다" : "폴더를 가리키는 import를 건너뜁니다";
-    warn(code, message, declaredBy, raw);
+    // TooLarge는 BaseFileReader가 이미 경고했으므로 더 내지 않는다
   }
 
   private void warn(String code, String message, Node declaredBy, String raw) {
