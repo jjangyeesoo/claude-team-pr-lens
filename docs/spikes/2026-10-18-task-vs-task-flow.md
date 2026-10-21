@@ -427,9 +427,9 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 | 시작 커밋 | `2b3568e` | `2b3568e` |
 | 시작 시각(UTC) | `2026-10-21T00:05:00Z` | `2026-10-21T00:05:07Z` |
 | PR 준비 직전 시각(UTC) | `2026-10-21T00:19:25Z` | `2026-10-21T00:34:28Z` |
-| 끝난 시각(UTC) | `2026-10-21T00:36:59Z` | `2026-10-21T00:36:52Z` |
+| 끝난 시각(UTC) | `2026-10-21T00:33:56Z` | `2026-10-21T00:36:52Z` |
 
-- 사람이 KST로 적은 시각(A 09:06 / 09:20 / 09:32, B 09:06 / 09:34 / 09:37)을 세션 기록의 첫 요청, 첫 `/pr-ready` 입력, 마지막 요청 시각으로 맞췄습니다.
+- 사람이 KST로 적은 시각(A 09:06 / 09:20 / 09:32, B 09:06 / 09:34 / 09:37)을 세션 기록의 첫 입력, 첫 `/pr-ready` 입력 직전, 마지막 턴 끝(`turn_duration`) 시각으로 맞췄습니다. 그 뒤의 `away_summary` 기록(A 00:36:59, B 00:39:57)은 쉬는 동안 남은 요약이라 끝난 시각으로 보지 않습니다.
 - 브랜치: A `feat/t2-p1-8.1-context-claude-md-rules-a`, B `feat/t2-p1-8.1-context-claude-md-rules-b`. 모델은 두 쪽 다 `claude-opus-5-5`입니다.
 - 준비와 측정은 같은 세션(저장소 루트)에서 했습니다. 절차 4는 새 세션을 권하지만, 이 세션은 A·B 진행에 끼어들지 않았고 블라인드 리뷰는 새 `reviewer` 에이전트가 했습니다.
 
@@ -464,7 +464,7 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 | 전체 테스트 (`./gradlew test --rerun-tasks`) | 525, 실패 0 (새 테스트 39) | 550, 실패 0 (새 테스트 64. 매개변수 테스트를 펼친 수 포함) |
 
 #### 컨텍스트 효율과 비용
-`session_usage.py`를 문서 명세대로 다시 만들어 셌습니다(저장소에는 넣지 않음). 보안 리뷰 플러그인 세션(A 2개, B 8개)은 1차와 같이 뺐습니다.
+`session_usage.py`를 문서 명세대로 다시 만들어 셌습니다(저장소에는 넣지 않음). 측정 범위는 끝난 시각까지이고, 보안 리뷰 플러그인 세션은 1차와 같이 뺐습니다(아래 표 다음 참고).
 
 | 지표 | A `/task` | B `/task-flow` |
 |---|---|---|
@@ -477,8 +477,9 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 | 입력 합계(캐시 포함) / 그중 캐시 읽기 | 11,922,901 / 11,625,761 | 10,148,427 / 9,665,361 |
 | 출력 합계 | 78,848 | 62,376 |
 | 비용 비율(단가 가중, 추정) | 1 | 0.98~1.04 (캐시 쓰기 배율 1.25~2) |
-| 걸린 시간(첫 요청~마지막 요청) | 28.8분 | 31.7분 |
+| 걸린 시간(usage가 있는 첫 응답~마지막 응답) | 28.8분 | 31.7분 |
 
+- 커밋 뒤 자동으로 돈 보안 리뷰(플러그인) 세션은 뺐습니다. A 2세션(입력 210,269 / 출력 9,765, 가중 비용 131,612~171,881), B 8세션(입력 1,003,879 / 출력 48,332, 가중 비용 560,792~703,397)입니다. 1차와 달리 B가 슬라이스마다 커밋해 세션 수 차이가 크고, 포함하면 비용 비율은 1.19~1.27배입니다. 판정(≤ 2배)은 같습니다.
 - 서브에이전트 기록의 출력 토큰은 작게 잡힙니다(reviewer 110~523, slice 1 implementer 183). 기록이 덜 세는 것으로 보이며, 그만큼 B의 비용이 낮게 잡혔을 수 있습니다.
 
 #### 사람 부담과 재작업
@@ -494,11 +495,11 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 |---|---|---|
 | `src/main` 변경 줄 수 | 403 (파일 6. 400줄 목표를 3줄 넘음) | 497 (파일 6. 넘음, 1차에 이어 두 번째) |
 | 테스트 파일 수와 줄 수 | 8개, 956줄 | 9개, 1,262줄 (4.5를 실제 `DiffFilter`로 검증) |
-| 커밋 구성 | 5 (`test:`, `feat:`, `docs:`, `test:` 리뷰 반영, `docs:` 스펙 반영) | 6 (슬라이스마다 `test:`, `feat:`). PR 준비의 문서 변경은 커밋되지 않음 |
-| 뒤 작업에 넘길 것 | `tasks.md` 결정 1, 주의 5. `design.md` 패키지 표·ContextCollector 절, G-15 신설(`README.md`·`design.md`·`tasks.md` Notes) | `tasks.md` 결정 1, 주의 3(작업 트리에만 있음). `design.md` 변경 없음 |
+| 커밋 구성 | 5 (`test:`, `feat:`, `docs:`, `test:` 리뷰 반영, `docs:` 스펙 반영) | 6 (슬라이스마다 `test:`, `feat:`). PR 준비의 문서 변경은 측정 끝까지 커밋되지 않음 |
+| 뒤 작업에 넘길 것 | `tasks.md` 결정 1(`docs:` 커밋 `50a940b`), 주의 5. `design.md` 패키지 표·ContextCollector 절, G-15 신설(`README.md`·`design.md`·`tasks.md` Notes) | `tasks.md` 결정 1(implementer가 `feat:` 커밋 `42d348e`에 넣음), 주의 3(PR 준비 뒤 작업 트리에만 있었음). `design.md` 변경 없음 |
 
 #### 교차 테스트와 판단 차이
-- 두 구현은 동작이 거의 같지만 내부 API가 다릅니다. A는 정적 수집기와 `ContextFileReader.read → FileFetch`를 씁니다. B는 인스턴스 수집기와 `BaseFileReader.read → Optional<String>`, 순수 `RuleSelector`를 씁니다. 그래서 수집기 수준 테스트만 조립 어댑터(A에는 `BaseFileReader`·`RuleSelector`, B에는 `ContextFileReader`를 테스트 쪽에 둠)로 돌렸습니다. 트리 색인, 프런트매터 파서, B의 파일 읽기 단위 테스트(A 16개, B 41개)는 뺐습니다.
+- 두 구현은 동작이 거의 같지만 내부 API가 다릅니다. A는 정적 수집기와 `ContextFileReader.read → FileFetch`를 씁니다. B는 인스턴스 수집기와 `BaseFileReader.read → Optional<String>`, 순수 `RuleSelector`를 씁니다. 그래서 수집기 수준 테스트만 조립 어댑터(A에는 `BaseFileReader`·`RuleSelector`, B에는 `ContextFileReader`를 테스트 쪽에 둠)로 돌렸습니다. 트리 색인, 프런트매터 파서, B의 파일 읽기 단위 테스트는 뺐습니다. 돌린 것은 A의 `ClaudeMdCollectorTest`·`ClaudeMdCandidatesPropertyTest`·`RuleCollectorTest`·`RuleSelectionPropertyTest`(23개)와 B의 `ClaudeMdCollectorTest`·`ClaudeMdCollectorPropertyTest`·`RuleCollectorTest`·`RuleSelectorTest`(23개)입니다. 뺀 것은 A의 `RepoTreeIndexTest`·`FrontmatterParserTest`·`FrontmatterNewlinePropertyTest`(16개)와 B의 `BaseFileReaderTest`·`RepoTreeIndexTest`·`FrontmatterParserTest`·`RulePropertyTest`(41개)입니다. `RulePropertyTest`는 Property 7이 B의 파서 API를 직접 불러 Property 14와 함께 파일째 뺐습니다.
 - 명명 차이: 무효 glob 경고 코드가 A는 `rule_invalid_glob`·`rule_all_globs_invalid`, B는 `rule_glob_invalid`·`rule_globs_all_invalid`입니다. 둘 다 요구사항에 없는 코드를 지었습니다.
 - 판단 차이: rule 수집 순서가 A는 트리 순서, B는 경로 오름차순입니다. 스펙은 수집 순서를 정하지 않고, 출력에서 경로순으로 정렬합니다(요구사항 8.3).
 - 어댑터가 만든 실패 1건(어댑터의 `HashMap`이 rule 순서를 섞음)은 어댑터를 고쳐 다시 돌린 결과로 뺐습니다.
@@ -517,11 +518,11 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 | 비용: 사람 입력 B ≤ A + 3 | 6 ≤ 12 | 충족 |
 | 비용: 시간 B ≤ A × 1.5 | 1.10배 | 충족 |
 
-결정 기준표로는 1차와 같은 **"필수 충족, 효과 미달"**입니다. 다만 1차보다 효과는 커졌고(0.89배에서 0.67배), 비용 차이는 사라졌습니다(1.6배에서 약 1배). 표는 2차 뒤에도 미달일 때의 결정을 정해 두지 않았으므로, 대체 여부와 PR로 낼 쪽은 사람이 정합니다(아래 "고른 쪽").
+결정 기준표로는 1차와 같은 **"필수 충족, 효과 미달"**입니다. 0.67배는 기준 0.6배의 1.12배라, "경계값 근처(±10%)"를 상대 비율(0.54~0.66)로 읽으면 그 행에도 해당하지 않습니다. 다만 1차보다 효과는 커졌고(0.89배에서 0.67배), 비용 차이는 크게 줄었습니다(1.6배에서 약 1배. 보안 리뷰 세션을 넣으면 1.19~1.27배). 표는 2차 뒤에도 미달일 때의 결정을 정해 두지 않았으므로, 대체 여부와 PR로 낼 쪽은 사람이 정합니다(아래 "고른 쪽").
 
 #### 드러난 것
 - **경계가 커지자 메인 컨텍스트 차이가 벌어졌습니다.** A는 하위 작업 다섯 개의 구현을 메인에서 했고, B의 메인은 계획·구현을 서브에이전트에 맡겨 PR 준비 전까지 13.3만에 머물렀습니다. 고정분(시작 직후)은 B가 약 8,500 더 큽니다.
-- **비용이 같아진 이유**: B의 `/pr-ready`가 `/task-flow`의 리뷰 파일을 재사용해 리뷰를 다시 돌리지 않았고, A는 PR 준비에서 리뷰를 두 번 돌렸습니다. 같은 조건(A 리뷰 1회)이었다면 B가 조금 비쌌을 것입니다.
+- **비용이 같아진 이유**: B의 `/pr-ready`가 `/task-flow`의 리뷰 파일을 재사용해 리뷰를 다시 돌리지 않았고, A는 PR 준비에서 리뷰를 두 번 돌렸습니다. 같은 조건(A 리뷰 1회)이었다면 B가 조금 비쌌을 것입니다. 또 B는 슬라이스마다 커밋해 커밋마다 도는 보안 리뷰 플러그인이 8번 돌았고(A 2번), 그 몫은 비교에서 뺐습니다.
 - **400줄 초과 (B)**: 1차(429줄)에 이어 497줄입니다. planner 계획은 약 405줄이었습니다. 슬라이스로 나눠도 PR 크기는 줄지 않습니다.
 - **PR 준비 마무리 (B)**: `/pr-ready`가 스펙 반영과 메모 파일 삭제를 하고 커밋은 사람에게 맡긴 채 끝나서, B 브랜치에 문서 변경이 커밋되지 않고 남았습니다.
 - **`/task`의 진행 흔들림 (A)**: 계획을 영어로 보고했고, 커밋 없이 `/pr-ready`로 넘어가 한 번 멈췄습니다. `test:` 커밋은 `/pr-ready`가 사후에 나눈 것이라 그 커밋만으로는 컴파일되지 않습니다.
@@ -534,7 +535,7 @@ B를 골라 [#35](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35)로
 - 측정은 준비를 한 같은 세션에서 했습니다(위 "측정 시점" 아래 참고).
 
 #### 고른 쪽
-B를 골라 [#42](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/42)로 냈습니다. B의 남은 문서 변경은 사람이 `3dfa0a2`로 커밋했습니다.
+B를 골라 [#42](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/42)로 냈습니다. B의 남은 문서 변경은 측정이 끝난 뒤(00:56Z) B 세션에 "커밋 푸시 해줘"를 보내 `3dfa0a2`로 커밋했습니다. 이 입력과 요청 2건은 측정 범위 밖입니다. 넣으면 B의 사람 입력은 7회, 비용 비율은 0.99~1.06배이고 판정은 같습니다. A의 같은 요청(답변 기록 10번)은 측정 안에 있어 이 부분은 조건이 다릅니다.
 - B를 고른 이유: 테스트와 커버리지(4.5를 실제 `DiffFilter`로 검증), 슬라이스별 test-first 증거가 더 낫고 블라인드 리뷰 결과는 같았습니다.
 - A가 나았던 점: 400줄에 가까운 크기(403줄), `design.md` 반영, BOM 처리를 G-15로 올린 판단. G-15는 #42에 옮기지 않았고, #42 설명에 "팀이 정하면 G-n으로 올림"으로 남겼습니다.
 - 대체 여부: 아직 정하지 않았습니다.
