@@ -17,8 +17,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * LLM 응답을 {@link ParsedResponse}로 바꾼다 (요구사항 9.4~9.6, 16.1, 16.2).
  *
- * <p>스키마 검증은 구조화된 출력에 맡기지 않고 여기서 다시 한다. enum은 대소문자를 무시하고 소문자로 정규화한다 (설계 G-7). 이 클래스는 basis와 라인을
- * 판정하지 않는다({@code FindingValidator}의 일).
+ * <p>필수 필드와 값(enum, 줄 번호, 빈 문자열)은 구조화된 출력에 맡기지 않고 여기서 다시 검사한다. 모르는 키({@code additionalProperties:
+ * false})는 제약 디코딩에 맡기고 다시 보지 않는다. enum은 대소문자를 무시하고 소문자로 정규화한다 (설계 G-7). 이 클래스는 basis와 라인을 판정하지
+ * 않는다({@code FindingValidator}의 일).
  */
 final class ResponseParser {
 
@@ -91,7 +92,12 @@ final class ResponseParser {
   }
 
   private static ParsedResponse violation(LlmResponse response, String text) {
-    String excerpt = text.substring(0, Math.min(EXCERPT_LENGTH, text.length()));
+    int end = Math.min(EXCERPT_LENGTH, text.length());
+    // 서로게이트 쌍을 가르지 않는다
+    if (end < text.length() && Character.isHighSurrogate(text.charAt(end - 1))) {
+      end--;
+    }
+    String excerpt = text.substring(0, end);
     return new ParsedResponse(
         "", List.of(), IncompleteReason.SCHEMA_VIOLATION, excerpt, response.usage());
   }

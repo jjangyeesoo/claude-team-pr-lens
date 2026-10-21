@@ -188,4 +188,15 @@ class FindingValidatorTest {
     assertThat(f.file()).isEqualTo("src/<~prlens:x.java");
     assertThat(f.verdict()).isEqualTo(LineVerdict.INLINE_ELIGIBLE);
   }
+
+  // 요구사항 12.1: 정규화한 file로 비교하고 결과의 file은 그대로 둔다
+  @Test
+  void normalizesFileBeforeComparing() {
+    for (String file : List.of("./src/A.java", "/src/A.java", "src\\A.java")) {
+      Finding f = validate(raw(file, 10, BasisType.GENERAL, null));
+
+      assertThat(f.file()).isEqualTo(file);
+      assertThat(f.verdict()).as(file).isEqualTo(LineVerdict.INLINE_ELIGIBLE);
+    }
+  }
 }

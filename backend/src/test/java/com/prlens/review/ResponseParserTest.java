@@ -194,4 +194,24 @@ class ResponseParserTest {
       assertThat(r.rawResponseExcerpt()).isEqualTo(body("s"));
     }
   }
+
+  @Test
+  void nullStopReasonOrTextIsSchemaViolationWithEmptyExcerpt() {
+    ParsedResponse nullText = parse("end_turn", null);
+    ParsedResponse nullStop = parse(null, body("s"));
+
+    assertThat(nullText.incompleteReason()).isEqualTo(IncompleteReason.SCHEMA_VIOLATION);
+    assertThat(nullText.rawResponseExcerpt()).isEmpty();
+    assertThat(nullStop.incompleteReason()).isEqualTo(IncompleteReason.SCHEMA_VIOLATION);
+    assertThat(nullStop.rawResponseExcerpt()).isEqualTo(body("s"));
+  }
+
+  @Test
+  void excerptDoesNotSplitSurrogatePair() {
+    String text = "x".repeat(1999) + "😀" + "y";
+
+    ParsedResponse r = parse("end_turn", text);
+
+    assertThat(r.rawResponseExcerpt()).isEqualTo("x".repeat(1999));
+  }
 }
