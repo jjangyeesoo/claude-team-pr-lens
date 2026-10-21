@@ -187,6 +187,7 @@
     - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
     - 주의(7.1 리뷰): 7.1은 다음을 가정으로 구현했습니다. secondary rate limit은 본문의 `secondary rate limit`(대소문자 무시)으로 판별합니다. 트리 항목 `type`이 `blob`/`tree`/`commit` 밖이면 버립니다. contents API의 symlink는 `NotFound`, submodule은 `IsDirectory`입니다. `getFile`은 `Accept: application/vnd.github.object+json`으로 요청하고, 다음 두 가지를 가정합니다. 폴더는 `{"type":"dir","entries":[...]}` 객체로 옵니다. 1MB를 넘는 파일은 `content`가 비고 `encoding: "none"`인 200 응답으로 와서 `TooLarge`가 됩니다. 이것들을 실제 응답으로 확인합니다
+    - 결정(7.7): 실행 조건은 `GITHUB_TOKEN`과 `PRLENS_SMOKE=1` 둘 다(Stop hook이 실제 GitHub를 부르지 않게)
     - 결과(7.7, 2026-10-21): 가정 대부분 확인됨. 다른 것은 없는 SHA의 트리 조회가 404가 아니라 **422**라는 점이고 `getTree`의 분류를 따로 정해야 합니다(`GitHubSmokeTest.treeOfUnknownShaThrowsNotFound`가 스모크 실행 시 실패로 남음). 1MB 초과·symlink·submodule은 픽스처 base에 대상이 없어 확인 못 함. 상세는 spike 2026-10-14 문서
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
