@@ -270,6 +270,7 @@
     - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
     - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
     - 주의(15 리뷰): `ResultCodec.read`는 `inline_eligible`인데 `line`이 null인 Finding을 거부하지만 `write`는 막지 않습니다. 판정이 이 조합을 만들면 `--format json` 출력이 다시 읽히지 않고 20.2에서야 드러납니다
+    - 미정(여기서 정함 필요, 8.9~8.12 리뷰): `ReviewContext`의 경로에는 `Revision.HEAD` 스펙도 들어 있습니다. 컨텍스트 경로 비교를 전체 경로로 하면 `team_context` 밖(head 스펙 영역)의 파일을 가리키는 `spec` basis도 통과합니다. 11.5의 출력 규칙은 "`basis.ref`는 `team_context` 머리줄의 `path`"이므로, 비교 대상을 `Revision.BASE` 파일로 한정할지 정해야 합니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
   - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
@@ -295,6 +296,7 @@
     - 요약 전용: patch 대신 경로·상태·줄 수·Hunk 헤더, 같은 스키마 사용
     - 요청마다 모델과 effort 명시, 최대 출력 토큰 지정
     - 주의(11.1~11.4 리뷰): `DelimiterCodec`은 문자열 변환만 하고 영역을 감싸지 않습니다. 파일 경로, 제목, 본문, head 스펙, diff, 컨텍스트 파일 내용을 모두 `escape`한 뒤 태그로 감쌉니다. `team_context`의 파일 머리줄 `path`/`source` 값도 같습니다(경로에 태그 꼴이 있을 수 있음. 머리줄은 스펙 추론)
+    - 주의(8.9~8.12 리뷰): head SHA에서 가져온 스펙은 별도 필드가 아니라 `ReviewContext.files()` 안에 다른 파일과 섞여 `ContextSource.SPEC`, `Revision.HEAD`로 들어옵니다(`SpecCollector`). `team_context`(Common_Context)에는 `Revision.BASE` 파일만 넣고 `Revision.HEAD` 파일은 둘째 블록의 head 스펙 영역에 둡니다(요구사항 14.6). 거르지 않으면 head 스펙이 캐시되는 첫 블록에 들어갑니다
     - _Requirements: 3.7, 9.1, 14.1, 14.2, 14.3, 14.4, 14.6, 20.6, 20.7, 20.8, 20.9_
   - [ ] 11.6 `CostCalculator` 구현 (공개 순수 함수 `estimate(LlmUsage, ModelPricing)`, `BigDecimal` Σ(토큰 × 단가 / 1,000,000), `setScale(4, HALF_UP)`, 단가 없으면 `null`. P2가 같은 함수를 씀)
     - _Requirements: 20.2, 20.5_
