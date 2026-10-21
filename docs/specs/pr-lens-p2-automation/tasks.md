@@ -373,6 +373,7 @@
     - `createReview`가 `PostOutcomeUnknownException`이면 마커를 다시 조회해 생겼으면 성공으로 처리, 없을 때만 한 번 더 보냄. 새 코멘트 ID 조회가 실패하면 PR 전체 코멘트 목록의 마커로 다시 대응
     - 이전 Line_Comment는 수정·삭제하지 않음
     - spike 9(422 본문 형식, 리뷰당 코멘트 수 상한) 결과 반영
+    - 주의(P1 10 리뷰): P1 `Finding.file`은 LLM 응답 그대로라 `./`, `/`, `\`, `<~prlens:` 꼴이 남을 수 있습니다. `INLINE_ELIGIBLE` 판정은 `RepoPaths.normalize(DelimiterCodec.unescape(file))`로 한 것이므로, `createReview` 코멘트의 `path`에는 `Finding.file`이 아니라 이 정규화한 경로를 씁니다. 그대로 보내면 GitHub가 422로 거부해 `github_rejected`가 됩니다
     - _Requirements: 11.15, 12.1, 12.2, 12.4, 12.6, 12.7, 12.8, 12.9, 12.10, 12.11, 12.12, 12.14_
   - [ ] 22.3 Summary upsert 구현 (게시 주체가 쓰고 마커가 있는 코멘트 중 가장 먼저 만들어진 것을 수정, 없으면 생성, 수정이 404면 한 번 새로 생성, 생성이 `PostOutcomeUnknownException`이면 마커를 다시 조회해 없을 때만 한 번 더 생성, 재시도 후 실패하면 `recordPublishError`)
     - _Requirements: 11.1, 11.2, 11.6, 11.9, 11.12, 11.14, 11.15_

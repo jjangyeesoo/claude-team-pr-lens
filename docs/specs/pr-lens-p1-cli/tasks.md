@@ -251,28 +251,28 @@
 
 ### T1 리뷰 엔진 (B)
 
-- [ ] 10. 응답 해석과 Finding 검증
-  - [ ] 10.1 `ReviewJsonSchema` 작성 (설계의 JSON 스키마, 모든 속성 `required`, null 허용 3개, `minimum`·`minLength` 없음) 과 스냅샷 테스트
+- [x] 10. 응답 해석과 Finding 검증
+  - [x] 10.1 `ReviewJsonSchema` 작성 (설계의 JSON 스키마, 모든 속성 `required`, null 허용 3개, `minimum`·`minLength` 없음) 과 스냅샷 테스트
     - _Requirements: 9.1, 9.2, 9.3_
-  - [ ] 10.2 `ResponseParser` 구현
+  - [x] 10.2 `ResponseParser` 구현
     - 정상: Jackson 트리 해석 → 로컬 검증(enum 대소문자 무시 후 소문자 정규화(설계 G-7), `line ≥ 1`, `message` 비어 있지 않음), 실패 시 `schema_violation` + 원본 앞 2,000자
     - `refusal`: 본문 미해석, `findings=[]`
     - `max_tokens`, `model_context_window_exceeded`: 스트리밍 파서로 완전히 닫힌 유효 Finding만 유지, `summary` 없으면 `""`, 사유는 둘 다 `max_tokens`
     - 그 밖의 `stop_reason`(`stop_sequence`, `tool_use`, `pause_turn`)은 `schema_violation`
     - 결과는 비공개 `RawFinding` 목록과 usage
     - _Requirements: 9.4, 9.5, 9.6, 16.1, 16.2, 20.1_
-  - [ ]* 10.3 Property 30(정상 응답 변환), Property 31(스키마 위반), Property 32(max_tokens 절단 복구) 테스트
+  - [x]* 10.3 Property 30(정상 응답 변환), Property 31(스키마 위반), Property 32(max_tokens 절단 복구) 테스트
     - **Validates: Requirements 9.4, 9.5, 9.6, 16.2, 20.1**
-  - [ ] 10.4 `FindingValidator` 구현
+  - [x] 10.4 `FindingValidator` 구현
     - basis: `rule`/`spec`이고 `ref`가 공백이거나 컨텍스트 경로에 없으면 `general`로 강등 + `Demotion`
     - 라인: 전체 대상 파일의 `head 경로 → LineRanges` 맵으로 `not_target_file` → `line_missing` → `out_of_range` → `INLINE_ELIGIBLE`
     - `basis`, `demotion`, 판정 필드 외에는 변경하지 않음
-    - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작)
-    - 주의(11.1~11.4 리뷰): 응답의 `file`이 이스케이프된 경로(`<~prlens:`꼴)일 수 있습니다. 경로에 `<prlens:` 꼴이 있을 때만 해당하며, 비교 전에 `file`만 `DelimiterCodec.unescape`하는 것이 G-13 제안값입니다. 스펙 추론이라 구현하면서 확인합니다
-    - 주의(15 리뷰): `ResultCodec.read`는 `inline_eligible`인데 `line`이 null인 Finding을 거부하지만 `write`는 막지 않습니다. 판정이 이 조합을 만들면 `--format json` 출력이 다시 읽히지 않고 20.2에서야 드러납니다
-    - 미정(여기서 정함 필요, 8.9~8.12 리뷰): `ReviewContext`의 경로에는 `Revision.HEAD` 스펙도 들어 있습니다. 컨텍스트 경로 비교를 전체 경로로 하면 `team_context` 밖(head 스펙 영역)의 파일을 가리키는 `spec` basis도 통과합니다. 11.5의 출력 규칙은 "`basis.ref`는 `team_context` 머리줄의 `path`"이므로, 비교 대상을 `Revision.BASE` 파일로 한정할지 정해야 합니다
+    - 주의(선머지 리뷰): `Basis.ref`는 null일 수 있고 `RepoPaths.normalize(null)`은 `NullPointerException`이므로 null·빈 문자열·공백 검사(요구사항 11.4)를 `normalize` 호출 전에 합니다. `normalize`는 공백을 지우지 않으므로 앞뒤에 공백이 붙은 `ref`나 `file`은 일치하지 않습니다(요구사항 11.1의 "정확히 일치"에 맞는 동작) (확인함: 구현은 `isBlank` 검사 뒤에 `normalize`를 부릅니다)
+    - 결정(10.4): 응답의 `file`은 비교할 때만 `unescape`하고 `Finding.file`에는 응답 그대로 둡니다(G-13 제안값, 요구사항 12.7·11.10의 "다른 필드 불변"). `message`·`suggestion`은 건드리지 않습니다
+    - 주의(15 리뷰): 확인함. `line`이 null이면 항상 `line_missing`이라 `inline_eligible`과 null `line`의 조합은 만들어지지 않습니다(`FindingValidatorTest.nullLineIsLineMissing`)
+    - 미정(G-18, 팀이 정함): `basis.ref`와 비교하는 컨텍스트 경로에 `Revision.HEAD` 스펙(`team_context` 밖)도 들어 있어 그 경로를 가리키는 `spec` basis도 통과합니다(10.4는 요구사항 11.2~11.3 문구대로 전체 경로와 비교). `Revision.BASE` 파일로 한정할지는 설계 "요구사항 공백" G-18입니다. 11.5의 출력 규칙은 `team_context` 머리줄의 `path`만 쓰게 하므로 모델이 head 스펙 경로를 쓸 가능성은 낮습니다
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7_
-  - [ ]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
+  - [x]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
 
 - [ ] 11. 청크 계획, 프롬프트, 비용, 병합
@@ -306,6 +306,7 @@
     - findings Chunk 순서 연결, Chunk가 둘 이상이면 summary에 `[n/N] 파일 목록` 머리줄, 토큰·비용 합(하나라도 `null`이면 `null`), Incomplete_Reason 첫 등장 순 중복 제거, `ChunkIssue` 기록(`schema_violation`이면 원본 앞 2,000자 포함, 단일·요약 전용 모드는 `chunkIndex` 1), `excludedFiles`와 `excludedFileDetails` 중복 제거
     - 주의(20.1 리뷰): 골든 픽스처 `split-three-chunks`의 summary는 Chunk마다 `[n/N] <경로>` 머리줄 다음 줄에 요약을 두고 Chunk 사이를 빈 줄 하나(`\n\n`)로 잇고 끝 줄바꿈은 없습니다. 파일이 여럿인 Chunk의 경로 구분자는 픽스처가 정하지 않았습니다. 이 형식은 스펙 추론이므로 다른 형식을 고르면 그 픽스처의 `expected-result.json`과 `expected.md`를 함께 고칩니다
     - 주의(20.1 리뷰): 분할 모드 `estimatedCostUsd`는 Chunk별로 `setScale(4, HALF_UP)`한 비용의 합입니다(픽스처는 0.0834 + 0.0482 + 0.0478 = 0.1794). 합친 토큰으로 다시 계산하면 0.1795가 되어 어긋납니다
+    - 주의(10 리뷰): `ChunkIssue.rawResponseExcerpt`에는 `ResponseParser`가 `schema_violation`일 때만 채우는 `ParsedResponse.rawResponseExcerpt()`(원본 앞 2,000자, 서로게이트 쌍을 가르지 않음)를 그대로 옮깁니다. 다른 사유에서는 null입니다
     - _Requirements: 13.5, 13.6, 13.7, 16.5, 20.10_
   - [ ]* 11.9 Property 29: 청크 결과 병합 테스트
     - **Validates: Requirements 13.5, 13.6, 13.7, 16.5, 20.10**
@@ -321,6 +322,8 @@
     - 주의(선머지 리뷰): `RetriesExhaustedException`이 3.1에서 생기므로 3.1이 머지된 뒤 시작합니다. `ReviewResult`는 `usage`, `incompleteDetails`, `stats`를 포함해 모든 필드가 필수라, 대상 0개일 때도 `Usage(0, 0, 0, 0, model, …)`와 `IncompleteDetails(List.of(), null)`을 만들어야 합니다
     - 미정(여기서 정함): 대상 0개일 때 `estimatedCostUsd`를 `0.0000`으로 할지 `null`로 할지. `null`이면 CLI가 "단가 없음" 경고(요구사항 20.5)를 잘못 냅니다
     - 주의(11.1~11.4 리뷰): SINGLE에서는 `ChunkPlanner.plan`을 부르지 않고 대상 전체(원래 순서)를 Chunk 하나로 씁니다. `plan`은 모드와 무관하게 경로순으로 정렬해 묶으므로 SPLIT에서만 부릅니다. 모드는 `ChunkPlanner.decideMode(targets, sizeLimit)`, 줄 수는 `changedLineCount(targets)`이고 둘 다 정적 메서드입니다. SINGLE에서 diff 순서가 경로순이 아니어도 되는지는 여기서 정합니다(데이터 영역만 달라지고 캐시 앞부분은 영향 없음)
+    - 주의(10 리뷰): `FindingValidator.apply(List<RawFinding>, ReviewContext, Map<String, LineRanges>)`에 넘기는 `targets` 맵은 필터를 통과한 전체 대상 파일을 `ChangedFile.path()`(이름 변경이면 새 경로, `previousPath`는 넣지 않음)로 키를 삼아 한 번만 만듭니다(Chunk마다 만들지 않음, 요구사항 12.3). 삭제된 파일(head 줄 수가 0인 Hunk만 있는 파일)도 빈 `LineRanges`로 넣어야 요구사항 12.6의 `out_of_range`가 나옵니다. 빼면 `not_target_file`이 됩니다
+    - 주의(10 리뷰): `ResponseParser.parse`는 `ParsedResponse(summary, findings: List<RawFinding>, incompleteReason, rawResponseExcerpt, usage: LlmUsage)`를 돌려줍니다. 모델 이름과 단가가 필요한 `Usage` 변환과 `CostCalculator.estimate`는 엔진이 `ParsedResponse.usage()`로 합니다. `incompleteReason`과 발췌문은 `ChunkIssue`로 옮깁니다
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
@@ -334,6 +337,7 @@
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
     - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
     - 결정(7.1 리뷰): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. 7.1이 `SecretMasker`를 중첩 public record `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`와 4인자 생성자 오버로드로 받기로 정했습니다(원래 생성자는 `Options.defaults()`, 곧 빈 마스커와 꺼진 디버그 로그로 넘김). `AnthropicLlmClient`도 같은 방식으로 맞춥니다. 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
+    - 주의(10 리뷰): `ResponseParser`는 `LlmResponse.stopReason()`이 null이면 `schema_violation`으로, `text()`가 null이면 `""`로 다룹니다. 그러나 `usage()`가 null이면 `ParsedResponse` 생성에서 `NullPointerException`이 납니다. 응답에 usage가 없어도 `LlmUsage(0, 0, 0, 0)`처럼 null이 아닌 값을 넘깁니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
   - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
@@ -528,6 +532,7 @@
   | G-15 PR 템플릿의 스펙 폴더 경로 (설계 "요구사항 공백") | 8.9, 8.10 (구현 완료, 결정되면 수정) |
   | G-16 스펙 경로 끝의 조사·구두점 (설계 "요구사항 공백") | 8.9, 8.10 (구현 완료, 결정되면 수정) |
   | G-17 URL ref에 `/`가 든 링크의 경계 (설계 "요구사항 공백") | 8.9, 8.10 (구현 완료, 결정되면 수정) |
+  | G-18 `basis.ref` 비교 대상(`Revision.HEAD` 스펙 경로 포함 여부, 설계 "요구사항 공백") | 10.4, 11.5 |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
