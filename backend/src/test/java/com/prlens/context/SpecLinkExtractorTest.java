@@ -120,14 +120,18 @@ class SpecLinkExtractorTest {
     String body =
         "docs/specs/../secret.md\n"
             + "https://github.com/o/r/blob/main/docs/specs/a/../../x.md\n"
-            + "docs/specs/.";
+            + "docs/specs/.\n"
+            + "../docs/specs/a.md";
 
     Extraction result = extract(body);
 
     assertThat(result.paths()).isEmpty();
     assertThat(codes(result))
         .containsExactly(
-            "spec_link_outside_specs", "spec_link_outside_specs", "spec_link_outside_specs");
+            "spec_link_outside_specs",
+            "spec_link_outside_specs",
+            "spec_link_outside_specs",
+            "spec_link_outside_specs");
     assertThat(result.warnings().get(0).message()).contains("docs/specs/../secret.md");
   }
 

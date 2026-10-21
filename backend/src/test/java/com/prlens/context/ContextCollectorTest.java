@@ -159,7 +159,7 @@ class ContextCollectorTest {
 
     assertThat(context.files()).extracting(ContextFile::path).containsExactly("CLAUDE.md");
     assertThat(github.fileRequests()).noneMatch(r -> r.path().equals("web/CLAUDE.md"));
-    assertThat(warnings).hasSize(1);
+    assertThat(warnings).extracting(Warning::code).containsExactly("exclude_unlock_ignored");
   }
 
   @Test

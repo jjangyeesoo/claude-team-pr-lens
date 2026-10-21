@@ -99,11 +99,14 @@ public final class SpecLinkArbitraries {
   }
 
   private static Arbitrary<Fragment> relative(boolean dotdot) {
-    return Combinators.combine(Arbitraries.of("", "./", "/"), specPath(dotdot), suffix())
+    return Combinators.combine(
+            Arbitraries.of("", "./", "/", "../", "../../"), specPath(dotdot), suffix())
         .as(
-            (prefix, path, suffix) ->
-                new Fragment(
-                    prefix + path + suffix, dotdot ? List.of() : List.of(path), 0, dotdot ? 1 : 0));
+            (prefix, path, suffix) -> {
+              boolean outside = dotdot || prefix.contains("..");
+              return new Fragment(
+                  prefix + path + suffix, outside ? List.of() : List.of(path), 0, outside ? 1 : 0);
+            });
   }
 
   private static Arbitrary<String> ref() {

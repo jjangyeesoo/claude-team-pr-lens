@@ -282,13 +282,17 @@ class BaseContextServerTest {
         .respond("/repos/o/r/git/trees/base111?recursive=1", 200, tree(false, blob("CLAUDE.md")))
         .respond("/repos/o/r/contents/CLAUDE.md?ref=base111", 403, "{\"message\":\"forbidden\"}");
 
-    assertThatThrownBy(() -> collectContext("")).isInstanceOf(GitHubApiException.class);
+    assertThatThrownBy(() -> collectContext(""))
+        .isInstanceOfSatisfying(
+            GitHubApiException.class, e -> assertThat(e.status()).isEqualTo(403));
   }
 
   @Test
   void contextCollectorPropagatesUnauthorizedFromTree() {
     server.respond("/repos/o/r/git/trees/base111?recursive=1", 401, "{\"message\":\"bad\"}");
 
-    assertThatThrownBy(() -> collectContext("")).isInstanceOf(GitHubApiException.class);
+    assertThatThrownBy(() -> collectContext(""))
+        .isInstanceOfSatisfying(
+            GitHubApiException.class, e -> assertThat(e.status()).isEqualTo(401));
   }
 }

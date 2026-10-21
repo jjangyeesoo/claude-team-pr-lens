@@ -21,7 +21,8 @@ final class SpecLinkExtractor {
   /** 경로에 쓰는 문자. 공백, 닫는 괄호·꺾쇠, 따옴표, 백틱, 앵커(#), 쿼리(?)에서 멈춘다. */
   private static final String P = "[^\\s)\\]>\"'#?`]";
 
-  private static final Pattern RELATIVE = Pattern.compile("(?<![\\w/])\\.?/?docs/specs/" + P + "+");
+  private static final Pattern RELATIVE =
+      Pattern.compile("(?<![\\w/.])(?:\\.{1,2}/)*/?docs/specs/" + P + "+");
 
   /** ref는 조회에 쓰지 않는다. 최소 일치라 ref 뒤 첫 {@code /docs/specs/}에서 경로가 시작한다. */
   private static final Pattern URL =
