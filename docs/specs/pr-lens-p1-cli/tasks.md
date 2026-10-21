@@ -191,7 +191,7 @@
 
 - [ ] 8. 컨텍스트 수집
   - PR 경계: 8.1~8.5 / 8.6~8.8 / 8.9~8.12
-  - [ ] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
+  - [x] 8.1 `RepoTreeIndex` 구현 (base SHA 재귀 트리 → 경로별 blob/tree, `truncated`이면 경로별 조회로 대체하고 rule 수집은 경고 후 건너뜀, 설계 G-9)
     - _Requirements: 4.1, 4.9_
   - [ ] 8.2 `CLAUDE.md` 수집 구현
     - 루트 `CLAUDE.md`, `.claude/CLAUDE.md`(대소문자 정확히 일치), 대상 파일(이름 변경이면 두 경로) 상위 폴더를 가까운 순으로, 루트 제외, 중복 없음, 제외 파일 경로 미사용
