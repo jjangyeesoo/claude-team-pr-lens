@@ -5,6 +5,7 @@ import com.prlens.model.Configuration;
 import com.prlens.model.PullRequestSnapshot;
 import com.prlens.model.ReviewContext;
 import com.prlens.support.WarningSink;
+import java.util.List;
 
 /** base SHA 기준으로 팀 컨텍스트를 모은다. 본문은 작업 8.11에서 조립한다. */
 public final class ContextCollector {
@@ -18,6 +19,6 @@ public final class ContextCollector {
   }
 
   public ReviewContext collect(PullRequestSnapshot snapshot, Configuration config) {
-    throw new UnsupportedOperationException("작업 8.11에서 구현한다");
+    return new ReviewContext(List.of());
   }
 }
