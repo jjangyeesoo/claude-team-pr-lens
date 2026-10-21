@@ -175,9 +175,9 @@
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
   - [x]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
-  - [ ]* 7.6 GitHub 가짜 서버 통합 테스트
+  - [x]* 7.6 GitHub 가짜 서버 통합 테스트
     - 401/403/404 메시지, rate limit 응답 세 종류(`retry-after`, remaining 0 + reset, secondary)의 분류와 대기 시간, 60초 초과 시 즉시 종료, 짧게 주입한 타임아웃, `Authorization` 헤더, base/head ref 선택, 트리 `truncated` 대체 경로
-    - 미정(7.1 리뷰): `HttpGitHubClient`의 요청 제한 시간은 상수 30초(`TIMEOUT`)이고 `Options`로 바꿀 수 없습니다. "짧게 주입한 타임아웃" 사례를 쓰려면 `Options`에 제한 시간 구성 요소를 더할지(design "공유 경계"의 `Options` 설명도 같이 고침), 다른 방법으로 검증할지 정합니다. 기준 주소는 `Options.apiBase`로 바꾸고, 뒤의 `/`는 잘라서 씁니다
+    - 결정(7.6): `Options`에 제한 시간을 더하지 않고 테스트 전용 `ShortTimeoutHttpClient`가 원래 요청의 30초를 기록한 뒤 짧은 값으로 바꿔 보냅니다. `Options`는 design "공유 경계"의 public record라 구성 요소를 더하면 설계와 P2 조립 코드가 바뀌고, 30초 지정과 시간 초과의 재시도 분류는 테스트 쪽 주입으로 모두 확인되기 때문입니다. 기준 주소의 뒤 `/` 자르기는 가짜 서버 주소(뒤 `/` 포함)로 확인합니다
     - _Requirements: 1.8, 1.11, 1.13, 21.2, 21.9, 21.10, 21.11_
 
   - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
