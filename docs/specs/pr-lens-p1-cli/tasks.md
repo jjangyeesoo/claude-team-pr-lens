@@ -199,15 +199,15 @@
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.9, 4.10_
   - [x]* 8.3 Property 13: 상위 폴더 CLAUDE.md 후보 테스트
     - **Validates: Requirements 4.4, 4.5, 4.6, 4.7**
-  - [ ] 8.4 `FrontmatterParser`와 rule 선택 구현
+  - [x] 8.4 `FrontmatterParser`와 rule 선택 구현
     - 첫 줄 `---`일 때만 다음 `---`까지 안전 YAML 로더로 해석, `paths` 문자열 → 한 개짜리 목록, CRLF 정규화
     - 오류 `YAML_ERROR`, `UNCLOSED`, `INVALID_PATHS`는 포함 + 경고
     - `.claude/rules/**` 중 소문자 `.md`, `paths` 없으면 포함, 있으면 대상 파일(이름 변경이면 이전 경로 또는 새 경로)과 일치할 때만 포함
     - 무효 glob 패턴은 그 패턴만 무시하고 경고, 모두 무효면 포함 + 경고(설계 G-4)
     - 주의(6 리뷰): `GlobMatcher.matches`는 무효 패턴이면 unchecked `GlobSyntaxException`을 던집니다. rule `paths`는 먼저 패턴마다 `GlobMatcher.validate`로 무효 패턴을 걸러 패턴당 경고 1건을 내고, 남은 패턴으로만 `matches`를 부르세요. 파일마다 `matches`를 try/catch하면 같은 경고가 대상 파일 수만큼 반복됩니다
-    - 미정(7.2~7.5 리뷰): `copied`인 파일은 `FileStatus.ADDED`로 오지만 `previousPath`에 복사 원본 경로가 들어 있습니다(`PrFetcher`는 상태와 관계없이 `previousFilename`이 있으면 담음). `DiffFilter`는 상태를 보지 않고 `previousPath != null`이면 이전 경로로도 패턴을 맞춥니다. rule `paths`를 맞출 때 `status == RENAMED`일 때만 이전 경로를 볼지, `DiffFilter`처럼 `previousPath`가 있으면 볼지 정합니다
+    - 결정(8.4): rule `paths`는 대상 파일의 새 경로와, `status == RENAMED`일 때만 이전 경로로 맞춥니다. `copied`(`ADDED` + `previousPath`)의 복사 원본은 PR이 바꾸지 않은 파일이라 쓰지 않습니다(요구사항 5.4와 Property 14가 "이름 변경"만 말함. 8.2의 CLAUDE.md 탐색도 같음). 제외 판정에 `previousPath`를 보는 `DiffFilter`와 다릅니다
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
-  - [ ]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
+  - [x]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
   - [ ] 8.6 `ImportResolver` 구현
     - 펜스 블록(닫히지 않으면 파일 끝까지)과 인라인 코드 건너뛰기, `(^|\s)@(\S+)` 인식
