@@ -180,13 +180,14 @@
     - 결정(7.6): `Options`에 제한 시간을 더하지 않고 테스트 전용 `ShortTimeoutHttpClient`가 원래 요청의 30초를 기록한 뒤 짧은 값으로 바꿔 보냅니다. `Options`는 design "공유 경계"의 public record라 구성 요소를 더하면 설계와 P2 조립 코드가 바뀌고, 30초 지정과 시간 초과의 재시도 분류는 테스트 쪽 주입으로 모두 확인되기 때문입니다. 기준 주소의 뒤 `/` 자르기는 가짜 서버 주소(뒤 `/` 포함)로 확인합니다
     - _Requirements: 1.8, 1.11, 1.13, 21.2, 21.9, 21.10, 21.11_
 
-  - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
+  - [x] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
     - 대상: 고정 픽스처 PR [#15](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/15) (구성과 확인한 사실은 [spike 2026-10-14](../../spikes/2026-10-14-fixture-pr.md)). 내용이 같은 이름 변경도 patch가 없음
     - 팀 저장소의 실제 PR 1건을 `PrFetcher`로 가져와 파일 수, patch 해석, `changed_files`와 받은 파일 수가 같은지 확인
     - base SHA로 재귀 트리 조회와 contents 조회가 되는지 확인
     - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
     - 주의(7.1 리뷰): 7.1은 다음을 가정으로 구현했습니다. secondary rate limit은 본문의 `secondary rate limit`(대소문자 무시)으로 판별합니다. 트리 항목 `type`이 `blob`/`tree`/`commit` 밖이면 버립니다. contents API의 symlink는 `NotFound`, submodule은 `IsDirectory`입니다. `getFile`은 `Accept: application/vnd.github.object+json`으로 요청하고, 다음 두 가지를 가정합니다. 폴더는 `{"type":"dir","entries":[...]}` 객체로 옵니다. 1MB를 넘는 파일은 `content`가 비고 `encoding: "none"`인 200 응답으로 와서 `TooLarge`가 됩니다. 이것들을 실제 응답으로 확인합니다
+    - 결과(7.7, 2026-10-21): 가정 대부분 확인됨. 다른 것은 없는 SHA의 트리 조회가 404가 아니라 **422**라는 점이고 `getTree`의 분류를 따로 정해야 합니다(`GitHubSmokeTest.treeOfUnknownShaThrowsNotFound`가 스모크 실행 시 실패로 남음). 1MB 초과·symlink·submodule은 픽스처 base에 대상이 없어 확인 못 함. 상세는 spike 2026-10-14 문서
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
 - [ ] 8. 컨텍스트 수집

@@ -56,3 +56,24 @@ GitHub API로 확인한 사실 (`gh api .../pulls/15/files`, 2026-10-14):
 ## 결과 기록
 
 7.7과 20.4를 실행한 결과는 이 아래에 날짜별로 덧붙입니다.
+
+### 2026-10-21 작업 7.7 실제 GitHub 스모크
+
+`GitHubSmokeTest`(`PRLENS_SMOKE=1`과 `GITHUB_TOKEN`이 모두 있을 때만 실행)를 PR #15에 실행했습니다. base `67951dbc5bd88af91969d30214129a82b6503d6d`, head `8d5e338c73e79e5d0590404b570d4b642d57fd10`. 9개 중 통과 5, 건너뜀 3, 실패 1입니다.
+
+| 확인 항목 | 결과 |
+|---|---|
+| PR 메타데이터 `title`·base/head SHA, 파일 항목 `filename`·`status`가 항상 채워짐 | 확인됨 (`PrFetcher`가 null 거부 record를 통과) |
+| `changed_files` 12 == 받은 파일 12, 경고 없음, 추가/삭제 326/77 | 확인됨 |
+| 상태 ADDED/MODIFIED/REMOVED/RENAMED, 이름 변경 이전 경로, patch가 `Absent`인 것은 png와 이름 변경뿐, `Unparseable` 없음 | 확인됨 |
+| base 재귀 트리가 잘리지 않음, `CLAUDE.md`·`.claude/rules/backend/testing.md`(BLOB)·`backend`(TREE) 포함 | 확인됨 |
+| 트리 항목 `path`가 항상 있음, `type`이 blob/tree/commit 안에 있음 | 확인됨 (다른 값 없음) |
+| contents: 파일 `Found`, 폴더 `IsDirectory`(`application/vnd.github.object+json`의 객체 응답), 없는 경로 `NotFound` | 확인됨 |
+| **없는 SHA의 트리 조회가 404** | **다름: 422**. 본문 `Invalid object requested. SHA must identify a commit or a tree.` (`0`x40과 임의의 40자리 16진수 둘 다). 클라이언트는 이를 `NonRetryableApiException`(상태 422)으로 던지고 `GitHubApiException`(404)이 아닙니다 |
+| 1MB 초과 blob이 `TooLarge`로 매핑 | 대상 없어 확인 못 함 (base 트리에 1MB 초과 blob 없음) |
+| symlink(mode 120000)가 `NotFound`로 매핑 | 대상 없어 확인 못 함 |
+| submodule(type commit)이 `IsDirectory`로 매핑 | 대상 없어 확인 못 함 |
+| secondary rate limit 본문 문구 | 확인 못 함 (일부러 일으키지 않음) |
+| 이름이 바뀐 저장소의 301 처리 | 확인 못 함 (이 스모크의 범위 밖) |
+
+조치: 이 PR은 `src/main`을 고치지 않고 `treeOfUnknownShaThrowsNotFound`의 assertion도 바꾸지 않았습니다(승인된 방침). 이 테스트는 opt-in이라 CI와 Stop hook에는 영향이 없고, 스모크를 실행하면 실패합니다. 실제 동작이 422이므로 `getTree`가 422를 어떻게 분류할지(`GitHubApiException` 404 가정 변경 여부)는 별도 `fix/` 브랜치에서 재현 테스트를 먼저 써서 정합니다.
