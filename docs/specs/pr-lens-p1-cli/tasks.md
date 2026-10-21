@@ -224,14 +224,15 @@
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
   - [x]* 8.8 Property 16: import 인식 메타모픽 테스트
     - **Validates: Requirements 6.4, 6.10**
-  - [ ] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
+  - [x] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
     - 상대 경로·같은 저장소 URL 두 정규식을 본문 순서로 병합, 앵커·쿼리 제거, 다른 저장소(대소문자 무시)·`..`·`docs/specs/` 밖은 경고 후 건너뜀
     - 중복 제거, 최대 20개(초과 개수 경고)
     - 조회: base → 404일 때만 head(`Revision.HEAD`), 둘 다 없거나 폴더면 경고
-    - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다. 허용할지 구간을 정리할지는 미정입니다
+    - 주의(선머지 리뷰): `RepoPaths.normalize`는 `..`을 남기므로 `..` 구간 검사와 `docs/specs/` 접두어 검사는 여기서 구간 단위로 합니다. `docs/specs//a.md`와 `docs/specs/a.md`는 정규화 뒤에도 다른 문자열이라 중복 제거에서 다른 경로가 됩니다.
+    - 결정(8.9): 빈 구간과 `.` 구간을 버려 `docs/specs/a.md`로 정리하고 같은 경로로 중복 제거합니다(8.6 `ImportResolver`와 같은 방식)
     - 주의(8.1~8.5 리뷰): base 조회는 `BaseFileReader.fetch`를 씁니다. `Missing`은 트리상 없음(요청 없음)과 404를 함께 뜻하므로 둘 다 head 재조회 대상이고, `Directory`는 폴더 경고 대상입니다. `TooLarge`는 `fetch`가 이미 `context_file_too_large` 경고를 냈으므로 head로 다시 조회하거나 경고를 또 내지 않습니다. `RepoTreeIndex`는 base 트리만 담으므로 head 조회는 이 색인과 `BaseFileReader`를 거치지 말고 `getFile(repo, path, headSha)`로 하세요(색인으로 거르면 base에 없는 파일이 요청 없이 `ABSENT`가 됩니다)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
-  - [ ]* 8.10 Property 17: 스펙 링크 추출 테스트
+  - [x]* 8.10 Property 17: 스펙 링크 추출 테스트
     - **Validates: Requirements 7.1, 7.3, 7.5, 7.6, 7.7**
   - [ ] 8.11 `ContextCollector` 조립
     - `DiffFilter`로 대상 파일 결정 → `claude_md` → `rule` → `import` → `spec` 순서로 누적기(`LinkedHashMap`)에 수집. 같은 경로가 다시 들어오면 우선순위가 더 높은 출처를 남김(수집 순서가 우선순위와 같아 실제로는 기존 출처가 남음)
