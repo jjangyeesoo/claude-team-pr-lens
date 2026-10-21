@@ -155,7 +155,7 @@ public interface GitHubCredentials { String authorizationHeader(RepoRef repo); }
 public interface GitHubClient {
   PullRequestMeta getPullRequest(RepoRef repo, int number);
   FilePage listFiles(RepoRef repo, int number, int page);          // per_page=100 고정
-  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 getPullRequest·listFiles처럼 GitHubApiException (Optional로 감싸지 않음. getFile만 404를 NotFound로 돌려줌)
+  RepoTree getTree(RepoRef repo, String sha);                      // recursive. 잘림은 RepoTree.truncated, 404는 getPullRequest·listFiles처럼 GitHubApiException (Optional로 감싸지 않음. getFile만 404를 NotFound로 돌려줌). 단 실제 GitHub는 없는 SHA에 404가 아니라 422("Invalid object requested. SHA must identify a commit or a tree.")를 주고 현재 구현은 이를 NonRetryableApiException(422)로 던짐(7.7에서 확인). 422 분류는 미정
   FileFetch getFile(RepoRef repo, String path, String sha);        // Found(content) | NotFound | IsDirectory | TooLarge
 }
 public record PullRequestMeta(String title, /*@Nullable*/ String body, String baseSha, String headSha, int changedFiles) {}

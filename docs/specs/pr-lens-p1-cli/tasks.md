@@ -175,18 +175,20 @@
     - _Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 1.12, 1.14_
   - [x]* 7.5 Property 2: 파일 목록 조회의 순서·중복·개수 테스트 (절단 판정은 엔진이 하므로 12.2의 Property 44)
     - **Validates: Requirements 1.7**
-  - [ ]* 7.6 GitHub 가짜 서버 통합 테스트
+  - [x]* 7.6 GitHub 가짜 서버 통합 테스트
     - 401/403/404 메시지, rate limit 응답 세 종류(`retry-after`, remaining 0 + reset, secondary)의 분류와 대기 시간, 60초 초과 시 즉시 종료, 짧게 주입한 타임아웃, `Authorization` 헤더, base/head ref 선택, 트리 `truncated` 대체 경로
-    - 미정(7.1 리뷰): `HttpGitHubClient`의 요청 제한 시간은 상수 30초(`TIMEOUT`)이고 `Options`로 바꿀 수 없습니다. "짧게 주입한 타임아웃" 사례를 쓰려면 `Options`에 제한 시간 구성 요소를 더할지(design "공유 경계"의 `Options` 설명도 같이 고침), 다른 방법으로 검증할지 정합니다. 기준 주소는 `Options.apiBase`로 바꾸고, 뒤의 `/`는 잘라서 씁니다
+    - 결정(7.6): `Options`에 제한 시간을 더하지 않고 테스트 전용 `ShortTimeoutHttpClient`가 원래 요청의 30초를 기록한 뒤 짧은 값으로 바꿔 보냅니다. `Options`는 design "공유 경계"의 public record라 구성 요소를 더하면 설계와 P2 조립 코드가 바뀌고, 30초 지정과 시간 초과의 재시도 분류는 테스트 쪽 주입으로 모두 확인되기 때문입니다. 기준 주소의 뒤 `/` 자르기는 가짜 서버 주소(뒤 `/` 포함)로 확인합니다
     - _Requirements: 1.8, 1.11, 1.13, 21.2, 21.9, 21.10, 21.11_
 
-  - [ ] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
+  - [x] 7.7 실제 GitHub 스모크 (수요일까지. `GITHUB_TOKEN`이 있을 때만 도는 수동 실행 테스트)
     - 대상: 고정 픽스처 PR [#15](https://github.com/jjangyeesoo/claude-team-pr-lens/pull/15) (구성과 확인한 사실은 [spike 2026-10-14](../../spikes/2026-10-14-fixture-pr.md)). 내용이 같은 이름 변경도 patch가 없음
     - 팀 저장소의 실제 PR 1건을 `PrFetcher`로 가져와 파일 수, patch 해석, `changed_files`와 받은 파일 수가 같은지 확인
     - base SHA로 재귀 트리 조회와 contents 조회가 되는지 확인
     - 2.3과 7.1이 가정한 것을 실제 응답으로 확인: 없는 SHA의 트리 조회가 주는 상태 코드(404로 가정), PR 메타데이터의 `title`·base/head SHA와 파일 항목의 `filename`·`status`, 트리 항목의 `path`가 항상 채워져 오는지, 트리 항목 `type`에 `blob`/`tree`/`commit` 외의 값이 있는지
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
     - 주의(7.1 리뷰): 7.1은 다음을 가정으로 구현했습니다. secondary rate limit은 본문의 `secondary rate limit`(대소문자 무시)으로 판별합니다. 트리 항목 `type`이 `blob`/`tree`/`commit` 밖이면 버립니다. contents API의 symlink는 `NotFound`, submodule은 `IsDirectory`입니다. `getFile`은 `Accept: application/vnd.github.object+json`으로 요청하고, 다음 두 가지를 가정합니다. 폴더는 `{"type":"dir","entries":[...]}` 객체로 옵니다. 1MB를 넘는 파일은 `content`가 비고 `encoding: "none"`인 200 응답으로 와서 `TooLarge`가 됩니다. 이것들을 실제 응답으로 확인합니다
+    - 결정(7.7): 실행 조건은 `GITHUB_TOKEN`과 `PRLENS_SMOKE=1` 둘 다(Stop hook이 실제 GitHub를 부르지 않게)
+    - 결과(7.7, 2026-10-21): 가정 대부분 확인됨. 다른 것은 없는 SHA의 트리 조회가 404가 아니라 **422**라는 점이고 `getTree`의 분류를 따로 정해야 합니다(`GitHubSmokeTest.treeOfUnknownShaThrowsNotFound`가 스모크 실행 시 실패로 남음). 1MB 초과·symlink·submodule은 픽스처 base에 대상이 없어 확인 못 함. 상세는 spike 2026-10-14 문서
     - _Requirements: 1.1, 1.5, 1.7, 1.14, 4.1_
 
 - [ ] 8. 컨텍스트 수집
@@ -238,6 +240,7 @@
     - 주의(선머지 리뷰): `ReviewContext`와 `ContextFile`은 경로 정규화를 강제하지 않고, `ReviewContext`의 중복 검사는 문자열 그대로 비교합니다(`./a`와 `a`를 다른 경로로 봄). 누적기에 넣기 전에 `RepoPaths.normalize`를 거쳐야 요구사항 4.8이 성립합니다. 불변화는 `new ReviewContext(files)`로 합니다(`of` 팩터리는 없음)
     - 주의(8.1~8.5 리뷰): `RepoTreeIndex.load(github, repo, baseSha)`를 한 번만 부르고 같은 색인을 `BaseFileReader`와 `RuleCollector`에 넘깁니다. `ClaudeMdCollector.collect`와 `RuleCollector.collect`에는 `DiffFilter.apply(...).targets()`만 넘깁니다. `RuleCollector`(선택 경고, `rules_skipped_tree_truncated`)와 `BaseFileReader`(`context_file_too_large`)는 경고를 생성자의 `WarningSink`로 이미 보내므로 조립 쪽에서 다시 넘기지 않습니다. `getTree` 예외는 `load`가 그대로 던집니다(요구사항 4.11)
     - 주의(8.6~8.8 리뷰): `ImportResolver.resolve(collected)`에는 `claude_md`뿐 아니라 이미 모은 `rule` 파일도 모두 넘깁니다. `resolve`는 `collected`의 경로만 문자열 그대로 비교해 건너뛰므로 rule을 빼면 rule 파일을 가리키는 import가 `IMPORT`로 다시 조회되고 그 안의 `@path`까지 따라가 요구사항 6.2·6.7을 어깁니다. 경로는 넘기기 전에 정규화합니다. 돌려받는 것은 새 `IMPORT`(`Revision.BASE`) 파일뿐이고 `import_*`·`context_file_too_large` 경고는 생성자의 `WarningSink`로 이미 나갔으므로 다시 넘기지 않습니다. `BaseFileReader`는 `claude_md`·rule 수집과 같은 인스턴스(같은 트리 색인)를 씁니다
+    - 주의(7.6~7.7 리뷰): 7.6의 `BaseContextServerTest.claudeMdIsReadAtBaseShaNotHeadSha`는 base SHA를 테스트가 직접 `RepoTreeIndex.load`·`BaseFileReader`에 넘기므로, 조립 코드가 `snapshot.baseSha()`를 고르는지는 검증하지 않습니다. 8.11 테스트에서 base와 head SHA를 다르게 둔 스냅샷으로 트리·contents 요청이 모두 base SHA로 가는지 확인하세요 (design "GitHub 가짜 서버"의 base/head ref 선택)
     - _Requirements: 4.8, 4.11, 6.7, 8.2, 8.5_
   - [ ]* 8.12 Property 18: 컨텍스트 경로 유일성과 출처 우선순위 테스트
     - **Validates: Requirements 4.8, 8.2, 8.5**
