@@ -49,6 +49,9 @@ Glossary 용어는 밑줄 표기(`Diff_Parser`), 클래스는 붙여 쓴 이름(
 | G-12 | 1MB 초과 컨텍스트 파일 | 팀 | 경고 후 건너뜀 |
 | G-13 | 응답 `file`이 이스케이프된 경로일 때의 비교 | 팀 | 비교 전 `file`만 `unescape` |
 | G-14 | LLM이 만든 문자열(`summary`, `file`)의 Markdown 구조 문자 처리 | 팀 | `message`·`suggestion`은 들여써 목록 안에 두고 `summary`·경로는 원문 그대로 |
+| G-15 | PR 템플릿의 스펙 폴더 경로 (폴더 링크는 건너뜀) | 팀 | 폴더를 그 폴더의 `requirements.md`, `design.md`, `tasks.md`로 펼치거나 템플릿을 파일 경로로 바꿈 |
+| G-16 | 스펙 경로 끝에 붙은 조사·구두점 | 팀 | 끝의 `.,;:`를 떼고 한글은 경로 문자에서 뺌 |
+| G-17 | URL ref에 `/`가 든 링크의 경계 | 팀 | 첫 `/docs/specs/`를 경계로 보는 현재 동작을 요구사항에 명시 |
 
 ## 관련 문서
 - 패키지 구조: [ADR 0003](../../adr/0003-role-based-flat-packages.md)
