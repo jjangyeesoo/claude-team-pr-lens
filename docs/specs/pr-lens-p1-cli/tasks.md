@@ -209,17 +209,18 @@
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.9, 5.10, 5.11, 22.4_
   - [x]* 8.5 Property 14(rule 선택)와 Property 7(프런트매터 부분) 테스트
     - **Validates: Requirements 5.4, 5.5, 5.6, 22.4**
-  - [ ] 8.6 `ImportResolver` 구현
+  - [x] 8.6 `ImportResolver` 구현
     - 펜스 블록(닫히지 않으면 파일 끝까지)과 인라인 코드 건너뛰기, `(^|\s)@(\S+)` 인식
     - 선언 파일 폴더 기준 해석과 `.`/`..` 정규화, `~/`·`/`·드라이브 문자·루트 위 `..` 거부 + 경고
     - BFS `(path, depth, declaredBy)`, 깊이 1~4만 가져오고 5 이상은 경고, 이미 담긴 경로는 건너뜀, 404·폴더는 경고
     - `claude_md`와 `import` 출처에서만 import 탐색
-    - 주의(선머지 리뷰): 절대 경로 거부 판정을 `RepoPaths.normalize`보다 먼저 합니다. `normalize`는 앞의 `/`를 지우므로 먼저 부르면 `/etc/x`가 `etc/x`로 받아들여집니다. `normalize`는 `.`·`..` 구간을 해석하지 않으므로 "선언 폴더 + import 경로"를 합친 뒤 구간 단위 해석과 중간의 `./`·`//` 정리는 여기서 합니다(그래야 "이미 담긴 경로" 비교가 맞음). `@\foo`처럼 역슬래시로 시작하는 경로를 절대 경로로 볼지는 미정입니다
-    - 주의(8.1~8.5 리뷰): `BaseFileReader.read`는 트리상 없음·폴더와 응답 `NotFound`·`IsDirectory`를 모두 경고 없이 `Optional.empty()`로 돌려주므로 "404·폴더는 경고"를 그 결과로 구분할 수 없습니다. 둘을 나눠 돌려주는 메서드를 더하거나 `getFile`을 직접 부르고, 1MB 초과 경고 코드는 `context_file_too_large`로 맞추세요
+    - 결정(8.6): 절대 경로 거부(`/`, `~/`, 드라이브 문자)를 구간 해석보다 먼저 하고 `RepoPaths.normalize`는 부르지 않습니다. "선언 폴더 + import 경로"를 구간 단위로 직접 해석합니다(`.`·빈 구간 버림, `..`은 앞 구간 제거, 지울 구간이 없으면 루트 밖). `@oo`는 `\`를 `/`로 바꾼 뒤 판정하므로 루트 밖으로 거부하고 `a.md`는 `a/b.md`입니다(Windows에서 `oo`가 드라이브 루트 기준 절대 경로이고 `normalize`가 `\`를 구분자로 보는 것과 맞춤). 해석 결과가 빈 문자열(`@.`, `@a/..`)이면 루트 폴더라 요청 없이 `import_is_directory`로 경고합니다
+    - 결정(8.6): `BaseFileReader.fetch`가 `Found`·`Missing`·`Directory`·`TooLarge`를 나눠 돌려주고 `read`는 `Found`일 때만 내용을 돌려줍니다. 1MB 초과는 `fetch`의 `context_file_too_large` 경고 하나만 내고 import 경고는 더 내지 않습니다(G-12 제안값). 경고 코드는 `import_outside_repo`, `import_depth_exceeded`, `import_not_found`, `import_is_directory`이고 메시지에 선언 파일과 원문 경로를 넣습니다
+    - 결정(8.6): BFS 판정 순서는 루트 밖 → 이미 담긴 경로(`collected` 포함, 경고 없음) → 깊이 5 이상 경고 → 이전에 실패한 경로(요청 없이 같은 경고) → 조회입니다. 같은 경로는 한 번만 요청하고, 한 파일 안의 같은 해석 경로는 첫 선언만 처리합니다. 인라인 코드는 한 줄 안에서만 짝짓고(줄을 넘는 스팬 없음) 펜스는 ``` 만 다룹니다(`~~~` 제외)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
-  - [ ]* 8.7 Property 15: import 도달 가능성 불변 테스트
+  - [x]* 8.7 Property 15: import 도달 가능성 불변 테스트
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7, 6.8, 6.11**
-  - [ ]* 8.8 Property 16: import 인식 메타모픽 테스트
+  - [x]* 8.8 Property 16: import 인식 메타모픽 테스트
     - **Validates: Requirements 6.4, 6.10**
   - [ ] 8.9 `SpecLinkExtractor`와 스펙 조회 구현
     - 상대 경로·같은 저장소 URL 두 정규식을 본문 순서로 병합, 앵커·쿼리 제거, 다른 저장소(대소문자 무시)·`..`·`docs/specs/` 밖은 경고 후 건너뜀

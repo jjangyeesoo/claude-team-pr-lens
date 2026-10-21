@@ -13,6 +13,18 @@ import java.util.Optional;
  */
 final class BaseFileReader {
 
+  /** 조회 결과. 없는 파일과 폴더를 나눠 알려, 부르는 쪽이 경고를 구분할 수 있게 한다. */
+  sealed interface Outcome {
+    record Found(String content) implements Outcome {}
+
+    record Missing() implements Outcome {}
+
+    record Directory() implements Outcome {}
+
+    /** 1MB 초과. 경고는 이미 냈다. */
+    record TooLarge() implements Outcome {}
+  }
+
   private final GitHubClient github;
   private final RepoRef repo;
   private final String baseSha;
@@ -32,36 +44,35 @@ final class BaseFileReader {
     this.warnings = warnings;
   }
 
-  /** 조회 결과. */
-  sealed interface Outcome {
-    record Found(String content) implements Outcome {}
-
-    record Missing() implements Outcome {}
-
-    record Directory() implements Outcome {}
-
-    record TooLarge() implements Outcome {}
-  }
-
+  /** 트리로 없거나 폴더인 것을 알면 요청하지 않는다. 1MB 초과는 경고 후 {@link Outcome.TooLarge}로 돌려준다. */
   Outcome fetch(String path) {
-    return new Outcome.Missing();
-  }
-
-  /** 내용은 받은 그대로 돌려준다(줄바꿈을 바꾸지 않는다). */
-  Optional<String> read(String path) {
     switch (index.lookup(path)) {
-      case ABSENT, DIRECTORY -> {
-        return Optional.empty();
+      case ABSENT -> {
+        return new Outcome.Missing();
+      }
+      case DIRECTORY -> {
+        return new Outcome.Directory();
       }
       case FILE, UNKNOWN -> {}
     }
     FileFetch fetch = github.getFile(repo, path, baseSha);
     if (fetch instanceof FileFetch.Found found) {
-      return Optional.of(found.content());
+      return new Outcome.Found(found.content());
+    }
+    if (fetch instanceof FileFetch.IsDirectory) {
+      return new Outcome.Directory();
     }
     if (fetch instanceof FileFetch.TooLarge) {
       warnings.warn(new Warning("context_file_too_large", "1MB를 넘는 컨텍스트 파일을 건너뜁니다: " + path));
+      return new Outcome.TooLarge();
     }
-    return Optional.empty();
+    return new Outcome.Missing();
+  }
+
+  /** 내용은 받은 그대로 돌려준다(줄바꿈을 바꾸지 않는다). */
+  Optional<String> read(String path) {
+    return fetch(path) instanceof Outcome.Found found
+        ? Optional.of(found.content())
+        : Optional.empty();
   }
 }
