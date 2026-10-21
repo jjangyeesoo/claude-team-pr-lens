@@ -75,7 +75,7 @@ class ImportPropertyTest {
       assertThat(file.revision()).isEqualTo(Revision.BASE);
       assertThat(resultPaths.add(file.path())).as("중복 " + file.path()).isTrue();
     }
-    assertThat(resultPaths).doesNotContainAnyElementsOf(collectedPaths);
+    assertThat(resultPaths).as("collected 경로와 겹침").noneMatch(collectedPaths::contains);
     assertThat(resultPaths).isEqualTo(expectedReachable(graph, collectedPaths));
 
     List<String> requested = github.fileRequests().stream().map(FileRequest::path).toList();
