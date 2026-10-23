@@ -60,12 +60,6 @@ class SourceConventionsTest {
     assertThat(linesMatching(INVISIBLE, source)).containsExactly(2, 3, 4, 5, 6);
   }
 
-  private static List<Path> javaSources(Path root) throws IOException {
-    try (Stream<Path> files = Files.walk(root)) {
-      return files.filter(p -> p.toString().endsWith(".java")).sorted().toList();
-    }
-  }
-
   @Test
   void linesWithPercentNReportsOneBasedLineNumbers() {
     String source =
@@ -102,5 +96,11 @@ class SourceConventionsTest {
       }
     }
     return found;
+  }
+
+  private static List<Path> javaSources(Path root) throws IOException {
+    try (Stream<Path> files = Files.walk(root)) {
+      return files.filter(p -> p.toString().endsWith(".java")).sorted().toList();
+    }
   }
 }
