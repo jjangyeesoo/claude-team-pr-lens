@@ -7,6 +7,9 @@ paths:
 - 아키텍처 규칙은 `src/test/java/com/prlens/ArchitectureTest.java`에 모은다. 대상 클래스가 생긴 규칙에서는 `allowEmptyShould(true)`를 뗀다. ArchUnit이 못 보는 것(문자열 리터럴의 `%n`)은 `SourceConventionsTest`가 소스를 읽어 검사한다
 - 순수 함수(diff, glob, 필터, 검증, 직렬화, 비용 계산)는 Spring 없이 테스트한다
 - 속성 테스트: 설계 문서의 Property 하나를 `@Property` 메서드 하나로 구현하고, 바로 위에 태그 주석을 단다: `// Feature: pr-lens-p1-cli, Property N: <이름>`. `tries`는 100 이상. 실패한 반례는 예시 테스트로 고정한다
+  - 생성기는 Property 문장이 이름으로 든 대상(필드, 분기, 대소문자 같은 변형)을 모두 만든다. 성공·실패 분기 가운데 한쪽이 거의 나오지 않으면 생성기를 나눈다
+  - 그 대상 일부를 예시 테스트로 대신 확인하면 태그 주석 아래에 `// 예시로 확인: <테스트 이름>`을 적는다
+- 경고·오류는 코드(`Warning.code()`, 예외 타입, HTTP 상태 코드)로 단언한다. 메시지 문자열은 보조로만 확인하고, 숫자를 메시지의 부분 문자열(`contains("2")`)로 확인하지 않는다
 - 공용 생성기는 `src/test/java/com/prlens/testkit/`에 둔다
 - 외부 경계(`GitHubClient`, `LlmClient`, `Sleeper`)에만 가짜 구현을 쓴다. 같은 모듈의 객체는 실제 객체를 쓴다
 - 실제 GitHub·Claude API를 호출하는 테스트는 환경변수가 있을 때만 돌게 하고 CI에서는 실행하지 않는다
