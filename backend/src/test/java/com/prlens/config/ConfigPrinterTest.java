@@ -133,7 +133,7 @@ class ConfigPrinterTest {
     Configuration configuration =
         with(
             List.of("a\tb"),
-            "a\nb\r\u0001 c",
+            "a\nb\r\u0001\u2028c",
             Configuration.defaults().maxCostUsdPerReview(),
             Configuration.defaults().pricing());
 
