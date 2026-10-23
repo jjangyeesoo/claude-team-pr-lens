@@ -27,8 +27,9 @@ P1은 `prlens review <PR URL>` CLI이고 Spring 컨텍스트 없이 실행한다
 - 전환 중: 스타터의 `common`(`ErrorResponse`, `ApiExceptionHandler`, `TimeConfig`)과 `StarterApplication`은 P2 스펙에서 위치를 정할 때까지 그대로 둔다 (ADR 0003). 새 코드를 `common` 아래에 두지 않는다
 - 출력: stdout에는 최종 결과만 쓴다. 진행·경고·오류는 stderr. `println`과 `%n`을 쓰지 않고 `\n`을 직접 붙인다 (OS와 무관하게 같은 바이트)
 - 저장소 내 경로는 `/` 구분자의 `String`으로만 다룬다. `java.nio.file.Path`로 바꾸지 않는다
-  - 비교하거나 맵 키로 쓰기 전에 `RepoPaths.normalize`를 거친다. 이 함수는 `..`와 중간의 `//`를 해석하지 않는다
-  - 외부에서 온 경로(PR 본문, `@import`, LLM 응답)는 `..`가 범위를 벗어나면 경고하고 건너뛴다 (`SpecLinkExtractor`, `ImportResolver`가 본보기)
+  - 비교하거나 맵 키로 쓰기 전에 `RepoPaths.normalize`를 거친다. 이 함수는 `\`→`/`와 앞의 `./`·`/` 제거만 한다(중간의 `./`·`//`·`..`와 끝의 `/`는 그대로)
+  - 외부에서 온 경로의 `..`는 그 경로를 정한 요구사항대로 다룬다. 스펙 링크는 `..`가 있으면 경고하고 건너뛴다(`SpecLinkExtractor`). `@import`는 해석하되 루트를 넘으면 경고하고 건너뛴다(`ImportResolver`). LLM 응답의 경로는 `..`를 해석하지 않고 그대로 비교한다(`FindingValidator`). 새 입력이면 요구사항에 정해졌는지 먼저 확인하고, 없으면 묻는다
+- 소스와 테스트에 BOM(U+FEFF), U+2028·U+2029, NBSP, 폭 없는 공백을 원문으로 넣지 않고 `﻿`처럼 이스케이프로 쓴다 (`SourceConventionsTest`가 검사한다)
 - Jackson은 3(`tools.jackson`)만 쓴다. Anthropic SDK가 Jackson 2(`com.fasterxml.jackson.databind`)도 끌어오므로 import를 확인한다
 - 클래스는 `import`로 가져와 단순 이름으로 쓴다. `net.jqwik.api.Tuple.Tuple2<...>`처럼 패키지 경로째 코드 본문에 쓰지 않는다. 같은 단순 이름이 겹칠 때만 한쪽을 패키지 경로로 쓴다. 중첩 클래스는 바깥 클래스를 import해 `Tuple.Tuple2`처럼 써도 된다 (테스트 코드도 같다. Javadoc의 `{@link}` 등 주석 안 언급과 문자열 리터럴은 해당 없다)
 - 비밀값(`GITHUB_TOKEN`, `ANTHROPIC_API_KEY`)은 환경변수에서만 읽고 출력·로그·프롬프트에 넣지 않는다
