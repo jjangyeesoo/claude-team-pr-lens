@@ -121,7 +121,7 @@ public final class ConfigLoader {
       throw new ConfigException(
           List.of(new ConfigException.Problem("encoding", "UTF-8이 아닙니다: " + file)));
     }
-    return text.startsWith("﻿") ? text.substring(1) : text;
+    return text.startsWith("\uFEFF") ? text.substring(1) : text;
   }
 
   /** 문제가 있으면 모두 모아 {@link ConfigException}으로 던진다. */
