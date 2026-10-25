@@ -431,9 +431,11 @@
     - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - _Requirements: 15.7, 15.8, 17.2_
-  - [ ] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
+  - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
-    - 주의(3 리뷰): `onRetry`의 `wait`는 0초일 수 있고(`retry-after: 0`, 음수 `delay`), 호출자가 정한 `delay`는 초 단위로 떨어지지 않을 수 있습니다. "대기 초"를 `toSeconds()`로 자르면 0으로 찍히므로 표기 방식을 정합니다. 줄바꿈 없이 쓰고 flush하는 진행 표시는 끝 글자가 비밀값의 앞부분과 같으면 다음 쓰기까지 늦게 나오므로, 모든 메시지를 `\n`으로 끝나는 한 줄로 씁니다
+    - 결정(18.4): 재시도 "대기 초"는 밀리초를 소수 셋째 자리까지 쓰고 끝의 0을 뗍니다(`0초`, `1.5초`, `0.25초`). 음수는 0으로 맞춥니다. `onRetry`의 `wait`는 0초이거나 초 단위로 떨어지지 않을 수 있어(`retry-after: 0`, 음수 `delay`) `toSeconds()`로 자르면 0으로 찍히기 때문입니다
+    - 결정(18.4): 모든 메시지는 줄바꿈 문자(`\r`, `\n`)를 공백으로 바꾼 한 줄에 `\n`을 붙여 쓰고 바로 flush합니다. 줄바꿈 없이 쓰고 flush하는 진행 표시는 끝 글자가 비밀값의 앞부분과 같으면 다음 쓰기까지 늦게 나오기 때문입니다
+    - 결정(18.4): 결과에서 유도하는 경고(파일 수 부족, 불완전 사유, 비용 상한 초과, 단가 없음)는 `StderrReporter.reportResult(ReviewResult, Configuration)`가 한 번에 냅니다. 18.3의 조립 함수가 결과를 받은 뒤 부릅니다
     - _Requirements: 1.14, 3.10, 13.12, 15.8, 16.6, 20.3, 20.4, 20.5, 21.7_
   - [ ] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
     - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
