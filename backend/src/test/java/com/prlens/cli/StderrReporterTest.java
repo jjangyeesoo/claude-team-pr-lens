@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class StderrReporterTest {
@@ -218,9 +219,21 @@ class StderrReporterTest {
 
   @Test
   void everyMessageEndsWithNewlineAndFlushes() {
-    reporter.chunkStarted(1, 2);
-    // flush하지 않은 채 바이트를 읽는다. 자동 flush를 끈 스트림이라 reporter가 flush했는지 알 수 있다
-    assertThat(written()).isEqualTo("Chunk 1/2 리뷰 중\n");
+    AtomicInteger flushes = new AtomicInteger();
+    ByteArrayOutputStream target =
+        new ByteArrayOutputStream() {
+          @Override
+          public void flush() {
+            flushes.incrementAndGet();
+          }
+        };
+    StderrReporter countingReporter =
+        new StderrReporter(new PrintStream(target, false, StandardCharsets.UTF_8));
+
+    countingReporter.chunkStarted(1, 2);
+
+    assertThat(target.toString(StandardCharsets.UTF_8)).isEqualTo("Chunk 1/2 리뷰 중\n");
+    assertThat(flushes.get()).isPositive();
   }
 
   @Test
