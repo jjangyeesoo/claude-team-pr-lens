@@ -454,7 +454,7 @@ LLM은 `summary`와 `findings`만 만듭니다. `excludedFiles`, `usage`, 완전
 
 **ExitCodeResolver** (요구사항 15.9~15.11, 16.7, 16.8): 결과가 있을 때만 정한다. `blocker ≥ 1` → 1, `incomplete` → 3, 나머지 → 0. 결과 생성 실패 → 2는 `cli`의 예외 매핑이 정한다(작업 18.5). `static int resolve(ReviewResult)`로 부른다.
 
-**stdout/stderr 규칙**: stdout에는 최종 결과 한 번만 씁니다. 결과를 모두 문자열로 만든 뒤 한 번에 쓰므로, 도중에 실패하면 stdout은 비어 있습니다(요구사항 1.9, 15.11, 21.6). 진행·경고·오류는 `StderrReporter`(마스킹된 스트림)로만 씁니다.
+**stdout/stderr 규칙**: stdout에는 최종 결과 한 번만 씁니다. 결과를 모두 문자열로 만든 뒤 한 번에 쓰므로, 도중에 실패하면 stdout은 비어 있습니다(요구사항 1.9, 15.11, 21.6). 진행·경고는 `StderrReporter`로, 오류는 마스킹된 stderr 스트림에 직접 씁니다(`StderrReporter`는 줄바꿈을 공백으로 바꿔 한 줄로 쓰므로 여러 줄 오류 메시지에는 쓰지 않습니다).
 
 ## Data Models
 

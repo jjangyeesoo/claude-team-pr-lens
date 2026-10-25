@@ -430,6 +430,7 @@
     - 주의(7.1 리뷰): 3인자 `HttpGitHubClient` 생성자는 빈 `SecretMasker`를 쓰고 디버그 로그가 꺼져 있습니다. 디버그 모드에서 HTTP 로그를 내려면 18.2에서 만든 같은 `SecretMasker`와 stderr로 가는 `debugLog`를 `Options`에 넣어 4인자 생성자로 조립합니다 (스펙을 읽고 추론한 항목)
     - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
+    - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -442,12 +443,14 @@
     - 주의(17 리뷰): `ExitCodeResolver.resolve(ReviewResult)`는 정적 메서드이고 0, 1, 3만 돌려줍니다. 결과를 만들지 못한 경우의 종료 코드 2는 이 매핑이 정합니다
     - 주의(7.1 리뷰): `x-ratelimit-reset`까지 60초를 넘으면 `github.RateLimitResetException`이 옵니다. `RetryAfterTooLongException`의 하위 타입이고 해제 시각(UTC ISO-8601)은 `getMessage()`와 `resetAt()`에만 있습니다. 상위 타입으로 잡아 `api()`·`seconds()`로 메시지를 새로 만들면 요구사항 21.10의 시각이 빠지므로 `getMessage()`를 그대로 씁니다
     - 주의(18.1~18.2 리뷰): `PrLensMain.main`은 `finally`에서 `out`·`err`를 `close()`한 뒤 `System.exit`을 부르므로, `PrLensMain.run`을 빠져나간 예외는 메시지 없이 JVM 기본 종료 코드 1로 끝납니다(닫힌 stderr에 쓰여 사라짐). `run`의 `catch`에서 모든 예외(`RuntimeException`, picocli `ExecutionException` 포함)를 잡아 매핑하고, 지금 `run`이 직접 2로 바꾸는 `UsageException`·`ConfigException`·`MissingSecretException`도 그 매핑으로 옮깁니다
+    - 주의(18.4 리뷰): `StderrReporter`에는 오류용 공개 메서드가 없고, 내부 `line()`은 줄바꿈(`\r`, `\n`)을 모두 공백으로 바꿉니다. 오류 메시지를 이 클래스로 쓰면 여러 줄인 `ConfigException.getMessage()`(18.2의 주의)가 한 줄로 뭉개지므로, 오류는 마스킹된 `err` 스트림에 직접 쓰고 `\n`으로 끝낸 뒤 flush합니다 (`design.md`의 stdout/stderr 규칙도 이에 맞춰 고쳤습니다)
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 실제 `FileDescriptor`를 열어 단위 테스트가 없고, 둘이 서로 바뀌어도 실패하는 테스트가 없습니다. 하위 프로세스로 실행해 결과는 stdout, 오류는 stderr에 BOM 없는 UTF-8로 나오는지, `\n` 없이 `s`로 끝나는 출력이 끝까지 나오는지, `PrLensMain`이 `System.exit` 직전에 스트림을 닫아도 출력이 잘리지 않는지 한 번 확인합니다
     - 주의(16 리뷰): 설정 사례에서 문자열 값은 큰따옴표로 감쌉니다. 따옴표 없는 `model: 5.5`나 `effort: yes`는 `llm.model`/`llm.effort` 오류가 됩니다. 단가표에 값 없이 적은 모델(`"m":`)은 네 단가 누락 오류입니다
     - 주의(18.1~18.2 리뷰): Linux에서 `PrLensMain.main`을 하위 프로세스로 실행하면 스트림을 닫은 뒤 `System.exit`을 불러도 stderr 오류 메시지가 끝까지 나오는 것을 리뷰 중 직접 확인했습니다(stdout 결과 출력과 macOS·Windows는 확인하지 않음). 통합 테스트에 인자 없는 `prlens` 사례(종료 코드 2, stderr에 사용법)를 넣습니다
+    - 주의(18.4 리뷰): stderr 내용을 비교할 때 `StderrReporter`의 형식을 씁니다. 경고는 `경고[<code>]: <message>`, 모드는 `리뷰 모드: <mode 소문자>, 변경 줄 수: N, 크기 상한: N, Chunk 수: N`, 진행은 `Chunk n/N 리뷰 중`, 재시도는 `재시도: <api> n/최대, 마지막 상태: <상태>, 대기 <초>초`(초는 소수로 쓰고 끝의 0을 뗌: `0`, `1.5`, `0.25`)입니다. 코드 값은 `files_truncated`, `incomplete`, `pricing_missing`, `cost_limit_exceeded`, `cumulative_cost_exceeded`입니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
   - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요
