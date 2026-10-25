@@ -1,5 +1,5 @@
 #!/bin/sh
 # prlens review <PR URL> [--format markdown|json] [--config <경로>]
 # 실행 jar는 `./gradlew bootJar`로 만든다 (backend/build/libs/prlens.jar).
-dir=$(cd "$(dirname "$0")" && pwd)
+dir=$(cd -- "$(dirname -- "$0")" >/dev/null && pwd)
 exec java -jar "$dir/../build/libs/prlens.jar" "$@"
