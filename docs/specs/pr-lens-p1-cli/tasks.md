@@ -324,6 +324,7 @@
     - 주의(11.1~11.4 리뷰): SINGLE에서는 `ChunkPlanner.plan`을 부르지 않고 대상 전체(원래 순서)를 Chunk 하나로 씁니다. `plan`은 모드와 무관하게 경로순으로 정렬해 묶으므로 SPLIT에서만 부릅니다. 모드는 `ChunkPlanner.decideMode(targets, sizeLimit)`, 줄 수는 `changedLineCount(targets)`이고 둘 다 정적 메서드입니다. SINGLE에서 diff 순서가 경로순이 아니어도 되는지는 여기서 정합니다(데이터 영역만 달라지고 캐시 앞부분은 영향 없음)
     - 주의(10 리뷰): `FindingValidator.apply(List<RawFinding>, ReviewContext, Map<String, LineRanges>)`에 넘기는 `targets` 맵은 필터를 통과한 전체 대상 파일을 `ChangedFile.path()`(이름 변경이면 새 경로, `previousPath`는 넣지 않음)로 키를 삼아 한 번만 만듭니다(Chunk마다 만들지 않음, 요구사항 12.3). 삭제된 파일(head 줄 수가 0인 Hunk만 있는 파일)도 빈 `LineRanges`로 넣어야 요구사항 12.6의 `out_of_range`가 나옵니다. 빼면 `not_target_file`이 됩니다
     - 주의(10 리뷰): `ResponseParser.parse`는 `ParsedResponse(summary, findings: List<RawFinding>, incompleteReason, rawResponseExcerpt, usage: LlmUsage)`를 돌려줍니다. 모델 이름과 단가가 필요한 `Usage` 변환과 `CostCalculator.estimate`는 엔진이 `ParsedResponse.usage()`로 합니다. `incompleteReason`과 발췌문은 `ChunkIssue`로 옮깁니다
+    - 주의(18.5 리뷰): CLI는 `PrLensException`을 타입으로 나누지 않고 `getMessage()`만 stderr에 씁니다(`cli.ErrorMapper`). `AllChunksFailedException`은 `PrLensException`을 상속하고, 설계 표가 요구하는 실패한 Chunk 수를 생성자 메시지에 넣어야 합니다. 메시지가 null이면 클래스 이름만 나옵니다
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
@@ -338,6 +339,7 @@
     - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
     - 결정(7.1 리뷰): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. 7.1이 `SecretMasker`를 중첩 public record `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`와 4인자 생성자 오버로드로 받기로 정했습니다(원래 생성자는 `Options.defaults()`, 곧 빈 마스커와 꺼진 디버그 로그로 넘김). `AnthropicLlmClient`도 같은 방식으로 맞춥니다. 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
     - 주의(10 리뷰): `ResponseParser`는 `LlmResponse.stopReason()`이 null이면 `schema_violation`으로, `text()`가 null이면 `""`로 다룹니다. 그러나 `usage()`가 null이면 `ParsedResponse` 생성에서 `NullPointerException`이 납니다. 응답에 usage가 없어도 `LlmUsage(0, 0, 0, 0)`처럼 null이 아닌 값을 넘깁니다
+    - 주의(18.5 리뷰): `PrLensException`이 아닌 예외는 CLI에서 원인 없이 `내부 오류가 발생했습니다 (<클래스 단순 이름>)`로만 보입니다. SDK가 던지는 런타임 예외 가운데 사용자에게 원인을 보여야 하는 것(HTTP·네트워크 외에 응답 역직렬화 실패 등)은 `LlmApiException`으로 감싸 던집니다 (스펙을 읽고 추론한 항목. SDK가 실제로 던지는 예외는 확인하지 않았습니다)
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
   - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
@@ -431,6 +433,7 @@
     - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
+    - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -446,7 +449,7 @@
     - 주의(18.4 리뷰): `StderrReporter`에는 오류용 공개 메서드가 없고, 내부 `line()`은 줄바꿈(`\r`, `\n`)을 모두 공백으로 바꿉니다. 오류 메시지를 이 클래스로 쓰면 여러 줄인 `ConfigException.getMessage()`(18.2의 주의)가 한 줄로 뭉개지므로, 오류는 마스킹된 `err` 스트림에 직접 쓰고 `\n`으로 끝낸 뒤 flush합니다 (`design.md`의 stdout/stderr 규칙도 이에 맞춰 고쳤습니다)
     - 결정(18.5): `PrLensException` 하위 타입은 타입별로 나누지 않고 `getMessage()`를 그대로 stderr에 쓰며 종료 코드 2입니다. 하위 예외가 사용자 메시지를 이미 담고 있고(`RateLimitResetException`은 해제 시각까지), 설계의 오류 표가 모두 종료 코드 2이기 때문입니다. 설계 표의 `AllChunksFailedException`은 T1 12.1에서 만들며 `PrLensException`이면 이 매핑을 그대로 탑니다
     - 결정(18.5): 예상하지 못한 예외와 `Error`는 `내부 오류가 발생했습니다 (<예외 클래스 이름>)` 한 줄이고, 메시지는 쓰지 않습니다. 스택은 디버그 모드에서만 마스킹된 stderr에 `\n` 줄바꿈으로 씁니다. `Error`도 잡는 것은 `main`이 스트림을 닫은 뒤 던져져 메시지 없이 종료 코드 1로 끝나는 것을 막기 위해서입니다
-    - 결정(18.5): 디버그 모드는 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜집니다(`PrLensMain.main`이 읽음). 스펙에 켜는 방법이 없어 정한 제안값입니다
+    - 결정(18.5): 디버그 모드는 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜집니다(`PrLensMain.main`이 읽음). 스펙에 켜는 방법이 없어 정한 제안값이며 G-20으로 올렸습니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
@@ -454,6 +457,7 @@
     - 주의(16 리뷰): 설정 사례에서 문자열 값은 큰따옴표로 감쌉니다. 따옴표 없는 `model: 5.5`나 `effort: yes`는 `llm.model`/`llm.effort` 오류가 됩니다. 단가표에 값 없이 적은 모델(`"m":`)은 네 단가 누락 오류입니다
     - 주의(18.1~18.2 리뷰): Linux에서 `PrLensMain.main`을 하위 프로세스로 실행하면 스트림을 닫은 뒤 `System.exit`을 불러도 stderr 오류 메시지가 끝까지 나오는 것을 리뷰 중 직접 확인했습니다(stdout 결과 출력과 macOS·Windows는 확인하지 않음). 통합 테스트에 인자 없는 `prlens` 사례(종료 코드 2, stderr에 사용법)를 넣습니다
     - 주의(18.4 리뷰): stderr 내용을 비교할 때 `StderrReporter`의 형식을 씁니다. 경고는 `경고[<code>]: <message>`, 모드는 `리뷰 모드: <mode 소문자>, 변경 줄 수: N, 크기 상한: N, Chunk 수: N`, 진행은 `Chunk n/N 리뷰 중`, 재시도는 `재시도: <api> n/최대, 마지막 상태: <상태>, 대기 <초>초`(초는 소수로 쓰고 끝의 0을 뗌: `0`, `1.5`, `0.25`)입니다. 코드 값은 `files_truncated`, `incomplete`, `pricing_missing`, `cost_limit_exceeded`, `cumulative_cost_exceeded`입니다
+    - 주의(18.5 리뷰): stderr를 비교할 때 오류 형식은 다음과 같습니다. `PrLensException`은 `getMessage()` 원문에 `\n`이 붙고(여러 줄인 `ConfigException`도 줄을 그대로 둡니다), 그 밖의 예외와 `Error`는 `내부 오류가 발생했습니다 (<클래스 단순 이름>)` 한 줄입니다. 스택은 `PRLENS_DEBUG`가 비어 있지 않을 때만 그 뒤에 나오며, `PrLensMain.main`이 이 환경변수를 읽는 경로는 `ErrorMapper` 단위 테스트가 보지 않으므로 여기서 하위 프로세스로 확인합니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
   - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요
@@ -542,6 +546,7 @@
   | G-17 URL ref에 `/`가 든 링크의 경계 (설계 "요구사항 공백") | 8.9, 8.10 (구현 완료, 결정되면 수정) |
   | G-18 `basis.ref` 비교 대상(`Revision.HEAD` 스펙 경로 포함 여부, 설계 "요구사항 공백") | 10.4, 11.5 |
   | G-19 읽은 텍스트의 BOM과 비ASCII 공백 (설계 "요구사항 공백") | 8.4, 8.6, 8.9 (구현 완료, 결정되면 수정) |
+  | G-20 디버그 모드를 켜는 방법 (설계 "요구사항 공백") | 18.3, 18.5 (구현 완료, 결정되면 수정), 18.6 |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
