@@ -438,12 +438,15 @@
     - 결정(18.4): 모든 메시지는 줄바꿈 문자(`\r`, `\n`)를 공백으로 바꾼 한 줄에 `\n`을 붙여 쓰고 바로 flush합니다. 줄바꿈 없이 쓰고 flush하는 진행 표시는 끝 글자가 비밀값의 앞부분과 같으면 다음 쓰기까지 늦게 나오기 때문입니다
     - 결정(18.4): 결과에서 유도하는 경고(파일 수 부족, 불완전 사유, 비용 상한 초과, 단가 없음)는 `StderrReporter.reportResult(ReviewResult, Configuration)`가 한 번에 냅니다. 18.3의 조립 함수가 결과를 받은 뒤 부릅니다
     - _Requirements: 1.14, 3.10, 13.12, 15.8, 16.6, 20.3, 20.4, 20.5, 21.7_
-  - [ ] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
+  - [x] 18.5 예외 → 종료 코드 매핑 구현 (2.3에서 만든 `PrLensException`의 하위 타입별 매핑, 설계의 오류 표, 예상하지 못한 예외는 "내부 오류" + 마스킹한 스택(디버그 모드), 종료 코드 2 경로에서 stdout 비움)
     - 주의(3 리뷰): 종료 코드 2 경로와 `System.exit` 앞에서도 메시지를 `\n`으로 끝내고 `System.out`과 `System.err`를 flush합니다(`close()`는 18.2의 주의대로 `PrLensMain`의 `System.exit` 직전에만). `MaskingPrintStream`은 줄이 끝나지 않은 나머지를 들고 있어 그대로 끝내면 마지막 오류 메시지가 사라질 수 있습니다(18.2의 주의와 같은 내용)
     - 주의(17 리뷰): `ExitCodeResolver.resolve(ReviewResult)`는 정적 메서드이고 0, 1, 3만 돌려줍니다. 결과를 만들지 못한 경우의 종료 코드 2는 이 매핑이 정합니다
     - 주의(7.1 리뷰): `x-ratelimit-reset`까지 60초를 넘으면 `github.RateLimitResetException`이 옵니다. `RetryAfterTooLongException`의 하위 타입이고 해제 시각(UTC ISO-8601)은 `getMessage()`와 `resetAt()`에만 있습니다. 상위 타입으로 잡아 `api()`·`seconds()`로 메시지를 새로 만들면 요구사항 21.10의 시각이 빠지므로 `getMessage()`를 그대로 씁니다
     - 주의(18.1~18.2 리뷰): `PrLensMain.main`은 `finally`에서 `out`·`err`를 `close()`한 뒤 `System.exit`을 부르므로, `PrLensMain.run`을 빠져나간 예외는 메시지 없이 JVM 기본 종료 코드 1로 끝납니다(닫힌 stderr에 쓰여 사라짐). `run`의 `catch`에서 모든 예외(`RuntimeException`, picocli `ExecutionException` 포함)를 잡아 매핑하고, 지금 `run`이 직접 2로 바꾸는 `UsageException`·`ConfigException`·`MissingSecretException`도 그 매핑으로 옮깁니다
     - 주의(18.4 리뷰): `StderrReporter`에는 오류용 공개 메서드가 없고, 내부 `line()`은 줄바꿈(`\r`, `\n`)을 모두 공백으로 바꿉니다. 오류 메시지를 이 클래스로 쓰면 여러 줄인 `ConfigException.getMessage()`(18.2의 주의)가 한 줄로 뭉개지므로, 오류는 마스킹된 `err` 스트림에 직접 쓰고 `\n`으로 끝낸 뒤 flush합니다 (`design.md`의 stdout/stderr 규칙도 이에 맞춰 고쳤습니다)
+    - 결정(18.5): `PrLensException` 하위 타입은 타입별로 나누지 않고 `getMessage()`를 그대로 stderr에 쓰며 종료 코드 2입니다. 하위 예외가 사용자 메시지를 이미 담고 있고(`RateLimitResetException`은 해제 시각까지), 설계의 오류 표가 모두 종료 코드 2이기 때문입니다. 설계 표의 `AllChunksFailedException`은 T1 12.1에서 만들며 `PrLensException`이면 이 매핑을 그대로 탑니다
+    - 결정(18.5): 예상하지 못한 예외와 `Error`는 `내부 오류가 발생했습니다 (<예외 클래스 이름>)` 한 줄이고, 메시지는 쓰지 않습니다. 스택은 디버그 모드에서만 마스킹된 stderr에 `\n` 줄바꿈으로 씁니다. `Error`도 잡는 것은 `main`이 스트림을 닫은 뒤 던져져 메시지 없이 종료 코드 1로 끝나는 것을 막기 위해서입니다
+    - 결정(18.5): 디버그 모드는 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜집니다(`PrLensMain.main`이 읽음). 스펙에 켜는 방법이 없어 정한 제안값입니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
   - [ ]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
