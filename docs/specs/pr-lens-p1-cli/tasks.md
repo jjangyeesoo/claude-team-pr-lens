@@ -459,8 +459,10 @@
     - 주의(18.4 리뷰): stderr 내용을 비교할 때 `StderrReporter`의 형식을 씁니다. 경고는 `경고[<code>]: <message>`, 모드는 `리뷰 모드: <mode 소문자>, 변경 줄 수: N, 크기 상한: N, Chunk 수: N`, 진행은 `Chunk n/N 리뷰 중`, 재시도는 `재시도: <api> n/최대, 마지막 상태: <상태>, 대기 <초>초`(초는 소수로 쓰고 끝의 0을 뗌: `0`, `1.5`, `0.25`)입니다. 코드 값은 `files_truncated`, `incomplete`, `pricing_missing`, `cost_limit_exceeded`, `cumulative_cost_exceeded`입니다
     - 주의(18.5 리뷰): stderr를 비교할 때 오류 형식은 다음과 같습니다. `PrLensException`은 `getMessage()` 원문에 `\n`이 붙고(여러 줄인 `ConfigException`도 줄을 그대로 둡니다), 그 밖의 예외와 `Error`는 `내부 오류가 발생했습니다 (<클래스 단순 이름>)` 한 줄입니다. 스택은 `PRLENS_DEBUG`가 비어 있지 않을 때만 그 뒤에 나오며, `PrLensMain.main`이 이 환경변수를 읽는 경로는 `ErrorMapper` 단위 테스트가 보지 않으므로 여기서 하위 프로세스로 확인합니다
     - _Requirements: 1.9, 1.10, 15.11, 15.12, 18.8, 18.9, 19.2, 19.3_
-  - [ ] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
+  - [x] 18.7 실행 패키징 (실행 jar와 래퍼 스크립트 `prlens`(sh), `prlens.cmd`, README에 `chcp 65001` 안내. jar 파일 이름은 `bootJar`의 `archiveFileName`으로 `prlens.jar`로 고정. P2의 Actions 워크플로가 이 이름을 씀)
     - `build.gradle.kts`에 `springBoot { mainClass = ... }`로 CLI 진입점(`PrLensMain`)을 지정. 지정하지 않으면 `java -jar`가 Spring 애플리케이션 클래스를 골라 웹 서버를 띄움(임시 프로젝트로 확인). `build.gradle.kts` 수정은 사람의 승인이 필요
+    - 결정(18.7): 래퍼 스크립트는 `backend/scripts/prlens`(sh)와 `prlens.cmd`에 둡니다. `.gitignore`의 `bin/`이 `backend/bin/`을 무시하기 때문입니다. 래퍼는 자기 위치 기준 `../build/libs/prlens.jar`만 찾고, 배포용 경로 탐색은 만들지 않습니다(P2 워크플로는 `java -jar prlens.jar`를 직접 씁니다)
+    - 결정(18.7): 확인한 것은 Linux(WSL, JDK 17)에서 `bootJar`의 `Start-Class`가 `PrLensMain`인 것, `java -jar`와 `scripts/prlens`가 웹 서버 없이 CLI로 실행되어 종료 코드 2와 stderr 메시지를 내는 것, 인자가 래퍼를 거쳐 그대로 전달되는 것입니다. `prlens.cmd`와 macOS 실행, 실제 리뷰 실행(18.3 전이라 파이프라인이 없음)은 확인하지 않았습니다
     - _Requirements: 22.1_
 
 - [ ] 19. Checkpoint: T3 완료 확인
