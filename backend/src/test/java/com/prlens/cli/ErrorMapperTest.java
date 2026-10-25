@@ -167,10 +167,12 @@ class ErrorMapperTest {
 
   @Test
   void nullMessageFallsBackToClassName() {
-    int code = map(new PrLensException(null) {});
+    PrLensException error = new PrLensException(null) {};
+
+    int code = map(error);
 
     assertThat(code).isEqualTo(2);
-    assertThat(stderr()).endsWith("\n").isNotEqualTo("null\n").isNotEqualTo("\n");
+    assertThat(stderr()).isEqualTo(error.getClass().getName() + "\n");
   }
 
   // 주의(18.1~18.2 리뷰): picocli가 실행 중 예외를 감싼 것은 풀어서 매핑한다
