@@ -41,7 +41,7 @@ cd backend && ./gradlew bootJar     # Windows PowerShell: .\gradlew.bat bootJar.
 ./scripts/prlens review https://github.com/<소유자>/<저장소>/pull/<번호> [--format markdown|json] [--config <경로>]
 ```
 
-Windows cmd는 `scripts\prlens.cmd review ...`로 실행합니다. 한글이 깨지면 먼저 `chcp 65001`을 실행해 코드 페이지를 UTF-8로 바꿉니다(CLI는 코드 페이지와 관계없이 BOM 없는 UTF-8로 출력하지만 cmd 창의 글꼴·표시가 따로 정해집니다). 래퍼 없이 `java -jar backend/build/libs/prlens.jar review ...`로도 실행합니다.
+Windows cmd는 `scripts\prlens.cmd review ...`, PowerShell은 `.\scripts\prlens.cmd review ...`로 실행합니다. 한글이 깨지면 먼저 `chcp 65001`을 실행해 코드 페이지를 UTF-8로 바꿉니다(CLI는 코드 페이지와 관계없이 BOM 없는 UTF-8로 출력하지만, cmd 창은 출력 바이트를 현재 코드 페이지로 해석해 표시합니다). 래퍼 없이 `java -jar backend/build/libs/prlens.jar review ...`로도 실행합니다.
 
 web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:3000). backend 주소는 `web/.env.local`의 `API_BASE_URL`로 바꿀 수 있습니다(기본 `http://localhost:8080`).
 

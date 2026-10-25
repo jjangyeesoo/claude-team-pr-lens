@@ -507,6 +507,7 @@
     - 팀 저장소의 실제 PR 1건을 패키징한 `prlens review`로 리뷰. 규칙 근거(`basis.type`이 `rule`)가 붙은 지적이 1건 이상 나오는지 확인(ROADMAP 2주차 완료 조건). 안 나오면 강등 기록(`demotion`)을 보고 프롬프트의 출력 규칙이나 rules를 고침
     - 400줄 PR의 실행 시간 측정(요구사항 9.7. 재시도 대기 제외, 첫 호출과 그 뒤 호출을 따로 기록), 인젝션 픽스처를 실제 모델로 한 번 실행
     - 결과를 PR이나 `docs/spikes/`에 기록
+    - 주의(18.7 리뷰): 18.7의 `backend/scripts/prlens.cmd`(Windows cmd, PowerShell)와 macOS의 `scripts/prlens`는 실행해 확인하지 못했습니다(Linux에서만 확인). 리허설 때 Windows와 macOS에서 래퍼로 `prlens review`를 한 번씩 실행해 인자와 종료 코드가 그대로 전달되는지 봅니다
     - _Requirements: 9.7, 14.7_
 
 - [x] 21. CI 매트릭스 구성
