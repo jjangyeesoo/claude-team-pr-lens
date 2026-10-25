@@ -42,6 +42,23 @@ class PrLensMainTest {
     assertThat(stderr()).endsWith("\n");
   }
 
+  // 주의(18.1~18.2 리뷰): run을 빠져나간 예외가 없어야 main이 닫은 stderr 때문에 메시지가 사라지지 않는다
+  @Test
+  void runnerExceptionMapsTo2WithMessage() {
+    int code =
+        PrLensMain.run(
+            new String[] {"review", URL},
+            out,
+            err,
+            a -> {
+              throw new IllegalStateException("예상하지 못한 오류");
+            });
+
+    assertThat(code).isEqualTo(2);
+    assertThat(outBytes.toString(StandardCharsets.UTF_8)).isEmpty();
+    assertThat(stderr()).isEqualTo("내부 오류가 발생했습니다 (IllegalStateException)\n");
+  }
+
   @Test
   void missingSecretExitsWith2() {
     int code =

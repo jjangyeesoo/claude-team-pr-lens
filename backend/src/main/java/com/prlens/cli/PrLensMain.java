@@ -1,6 +1,5 @@
 package com.prlens.cli;
 
-import com.prlens.config.ConfigException;
 import com.prlens.support.MaskingPrintStream;
 import com.prlens.support.SecretMasker;
 import java.io.PrintStream;
@@ -23,6 +22,7 @@ import picocli.CommandLine.ParseResult;
 public final class PrLensMain {
 
   private static final int USAGE_ERROR = 2;
+  private static final String DEBUG_ENV = "PRLENS_DEBUG";
 
   private PrLensMain() {}
 
@@ -54,7 +54,11 @@ public final class PrLensMain {
                     // 파이프라인 조립은 작업 18.3에서 구현한다
                     err.print("아직 구현되지 않았습니다.\n");
                     return USAGE_ERROR;
-                  }));
+                  }),
+              debug(env));
+    } catch (Throwable e) {
+      // run 밖(경로 계산 등)에서 난 오류도 스트림을 닫기 전에 알린다
+      code = ErrorMapper.toExitCode(e, out, err, debug(env));
     } finally {
       out.flush();
       err.flush();
@@ -64,14 +68,26 @@ public final class PrLensMain {
     System.exit(code);
   }
 
-  /** 명령을 실행하고 종료 코드를 돌려준다. 인자 오류는 stderr에 쓰고 2다. */
+  /** 환경변수 {@code PRLENS_DEBUG}가 비어 있지 않으면 디버그 모드다 (스펙에 켜는 방법이 없어 정한 제안값). */
+  private static boolean debug(Map<String, String> env) {
+    return !env.getOrDefault(DEBUG_ENV, "").isBlank();
+  }
+
+  /** 명령을 실행하고 종료 코드를 돌려준다. 어떤 오류든 stderr에 쓰고 2다. */
   static int run(String[] args, PrintStream out, PrintStream err, ReviewRunner runner) {
+    return run(args, out, err, runner, false);
+  }
+
+  /**
+   * {@code main}이 스트림을 닫기 전에 오류 메시지를 쓰도록 {@code run}을 빠져나가는 예외가 없게 한다. 빠져나가면 닫힌 stderr에 쓰여 메시지 없이
+   * 종료 코드 1로 끝난다.
+   */
+  static int run(
+      String[] args, PrintStream out, PrintStream err, ReviewRunner runner, boolean debug) {
     try {
       return execute(args, out, err, runner);
-    } catch (UsageException | ConfigException | MissingSecretException e) {
-      err.print(e.getMessage() + "\n");
-      err.flush();
-      return USAGE_ERROR;
+    } catch (Throwable e) {
+      return ErrorMapper.toExitCode(e, out, err, debug);
     } finally {
       out.flush();
       err.flush();
