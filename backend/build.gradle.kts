@@ -31,6 +31,16 @@ dependencies {
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+// 시작 클래스가 둘(@SpringBootApplication 클래스와 CLI 진입점)이면 java -jar가 웹 서버를 띄우므로 CLI 진입점을 지정한다.
+// jar 이름은 P2의 Actions 워크플로가 쓰므로 버전 없이 고정한다.
+springBoot {
+	mainClass = "com.prlens.cli.PrLensMain"
+}
+
+tasks.bootJar {
+	archiveFileName = "prlens.jar"
+}
+
 tasks.withType<Test> {
 	useJUnitPlatform()
 	// 실패한 테스트 이름, 기대값/실제값, 위치를 콘솔에 출력한다 (Stop hook이 이 로그를 Claude에게 전달).

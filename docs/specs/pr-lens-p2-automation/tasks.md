@@ -433,6 +433,7 @@
     - `.claude/skills/new-endpoint/SKILL.md`: 메모 패키지와 `@Valid` 기준이라 9.2, 17.2의 설계(직접 검증, `query` 전용 오류 처리)와 반대로 이끔. PR Lens 기준으로 고침(ROADMAP이 "P2, P3 전"으로 적은 항목)
     - 비밀값 목록(루트 `CLAUDE.md`, `backend/CLAUDE.md`, `reviewer.md`)에 `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `PRLENS_DB_URL`·`PRLENS_DB_PASSWORD` 추가
     - `.claude/settings.json`의 allow에는 `gradlew check`, `dockerTest`, `generateWebhookFixtures`, `bootJar`가 없어 실행할 때마다 승인을 묻습니다. 넣을지는 사람이 정합니다(권한 설정이므로 Claude가 임의로 고치지 않음)
+    - 주의(P1 18.7 리뷰): `web/CLAUDE.md`의 "backend는 `../backend`에서 `./gradlew bootRun`"도 고칩니다. P1 작업 18.7의 `springBoot { mainClass }` 이후 `bootRun`은 웹 서버가 아니라 `PrLensMain`을 실행하고, 인자가 없으면 사용법 오류로 끝납니다. 이 작업은 `backend/CLAUDE.md`만 고치기로 되어 있고 `web/CLAUDE.md`는 어느 작업에도 걸려 있지 않아, P3에서 web을 로컬 backend에 붙일 때 이 문서를 따르면 서버가 뜨지 않습니다
 
 ### 통합 (전원, 목~금)
 
