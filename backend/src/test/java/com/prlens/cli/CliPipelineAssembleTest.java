@@ -12,6 +12,7 @@ import com.prlens.github.RepoTree;
 import com.prlens.llm.LlmClient;
 import com.prlens.llm.LlmRequest;
 import com.prlens.llm.LlmResponse;
+import com.prlens.llm.LlmUsage;
 import com.prlens.model.Configuration;
 import com.prlens.model.RepoRef;
 import com.prlens.pullrequest.PullRequestUrl;
@@ -62,10 +63,16 @@ class CliPipelineAssembleTest {
   private static final class FakeGitHub implements GitHubClient {
     private final int reportedChanged;
     private final RuntimeException failure;
+    private final List<FilePage.Entry> files;
 
     FakeGitHub(int reportedChanged, RuntimeException failure) {
+      this(reportedChanged, failure, List.of());
+    }
+
+    FakeGitHub(int reportedChanged, RuntimeException failure, List<FilePage.Entry> files) {
       this.reportedChanged = reportedChanged;
       this.failure = failure;
+      this.files = files;
     }
 
     @Override
@@ -78,7 +85,7 @@ class CliPipelineAssembleTest {
 
     @Override
     public FilePage listFiles(RepoRef repo, int number, int page) {
-      return new FilePage(List.of(), false);
+      return new FilePage(files, false);
     }
 
     @Override
@@ -94,11 +101,20 @@ class CliPipelineAssembleTest {
 
   private static final class CountingLlm implements LlmClient {
     final AtomicInteger calls = new AtomicInteger();
+    private final String reply;
+
+    /** {@code reply}가 null이면 호출 자체가 실패다 (리뷰 대상이 없으면 LLM을 부르지 않는다). */
+    CountingLlm(String reply) {
+      this.reply = reply;
+    }
 
     @Override
     public LlmResponse send(LlmRequest request) {
       calls.incrementAndGet();
-      throw new AssertionError("리뷰 대상이 없으면 LLM을 부르지 않는다");
+      if (reply == null) {
+        throw new AssertionError("리뷰 대상이 없으면 LLM을 부르지 않는다");
+      }
+      return new LlmResponse("end_turn", reply, new LlmUsage(1_000, 100, 0, 0));
     }
   }
 
@@ -106,7 +122,7 @@ class CliPipelineAssembleTest {
   private final ByteArrayOutputStream errBytes = new ByteArrayOutputStream();
   private final CountingStream out = new CountingStream(outBytes);
   private final CountingStream err = new CountingStream(errBytes);
-  private final CountingLlm llm = new CountingLlm();
+  private final CountingLlm llm = new CountingLlm(null);
 
   private static CliPipeline.Preflight preflight(OutputFormat format) {
     return new CliPipeline.Preflight(
@@ -132,6 +148,32 @@ class CliPipelineAssembleTest {
     assertThat(out.printCalls).isEqualTo(1);
     assertThat(text).contains("## 요약").endsWith("\n").doesNotEndWith("\n\n");
     assertThat(llm.calls).hasValue(0);
+  }
+
+  // 조립 버그(LLM 팩토리 결과를 무시하거나 재시도 감싸기를 빠뜨림)는 LLM 경로를 지나야 드러난다
+  @Test
+  void changedFileGoesThroughLlmOnceAndSummaryReachesStdout() {
+    CountingLlm replying = new CountingLlm("{\"summary\":\"요약 문장\",\"findings\":[]}");
+    FilePage.Entry entry =
+        new FilePage.Entry("src/A.java", null, "modified", 1, 0, "@@ -1,0 +1,1 @@\n+int a;");
+    CliPipeline.Factories factories =
+        new CliPipeline.Factories(
+            (token, retry, masker, debugLog) -> new FakeGitHub(1, null, List.of(entry)),
+            (key, masker, debugLog) -> replying);
+
+    int code =
+        CliPipeline.review(
+            preflight(OutputFormat.MARKDOWN),
+            factories,
+            new SecretMasker(List.of()),
+            false,
+            out,
+            err);
+
+    assertThat(code).isZero();
+    assertThat(replying.calls).hasValue(1);
+    assertThat(out.text()).contains("요약 문장");
+    assertThat(err.text()).doesNotContain("Chunk 1/1");
   }
 
   @Test
