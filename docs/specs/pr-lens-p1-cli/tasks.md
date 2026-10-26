@@ -507,7 +507,7 @@
     - 주의(15 리뷰): `ResultCodec.read`는 `schemaVersion`이 1이 아니거나, `inline_eligible`인데 `line`이 null이거나, `line_missing`인데 `line`이 있거나, `excludedFiles`와 `excludedFileDetails[].path`가 순서까지 같지 않으면 `CodecException`으로 거부합니다. 손으로 쓴 `expected-result.json`도 이 조건을 지켜야 합니다
     - 주의(17 리뷰): `expected.md`는 `MarkdownFormatter` 출력과 바이트까지 같아야 합니다. 손으로 쓰지 말고 포매터 출력으로 만든 뒤 검토하며, 형식은 `design.md`의 "구현 형식(작업 17.1)"을 따릅니다
     - _Requirements: 14.7, 17.10, 17.11, 17.12_
-  - [ ] 20.2 골든 파이프라인 테스트 작성 (픽스처의 스냅샷과 컨텍스트를 주입해 엔진과 출력을 실행. 가짜 `LlmClient`, stdout 바이트와 종료 코드 비교. `--format json` 출력 전체가 `ResultCodec`으로 다시 읽히는지도 확인)
+  - [x] 20.2 골든 파이프라인 테스트 작성 (픽스처의 스냅샷과 컨텍스트를 주입해 엔진과 출력을 실행. 가짜 `LlmClient`, stdout 바이트와 종료 코드 비교. `--format json` 출력 전체가 `ResultCodec`으로 다시 읽히는지도 확인)
     - `PrFetcher`와 `ContextCollector`는 이 테스트를 거치지 않음(각자의 테스트 7.x, 8.x로 검증)
     - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
     - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다

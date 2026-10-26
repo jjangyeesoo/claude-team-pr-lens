@@ -450,6 +450,7 @@
     - `WebhookFixtureGenerator`와 `backend/`에서 `./gradlew generateWebhookFixtures`(`build.gradle.kts`에 태스크를 추가하므로 사람의 승인 필요). 결과 파일을 커밋하고, CI에서 다시 생성해 커밋본과 비교
     - 픽스처 폴더를 `.gitattributes`에 `-text`로 지정(CRLF 픽스처의 서명이 깨지지 않게). 한 픽스처는 GitHub 문서의 공개 서명 예시 값과 비교
     - 주의(P1 20.3 리뷰): P1 작업 20.3의 스캔(`FixtureSecretScanTest`)은 `fixtures/` 아래 모든 파일을 UTF-8로 읽고(올바른 UTF-8이 아니면 예외) 이메일 형식 문자열은 `example.com`을 포함해 모두 실패로 봅니다. webhook 픽스처의 `email` 필드는 비우거나 이메일 형식이 아닌 값으로 둡니다
+    - 주의(P1 20.2 리뷰): `src/test/resources/fixtures/webhook/`을 더하면 P1의 `GoldenPipelineTest`와 `FixturesTest`가 `FixtureLoader.names()`의 모든 하위 폴더를 골든 픽스처로 읽어, `snapshot.json`이 없는 `webhook`에서 실패합니다. 26.2의 비밀정보 스캔도 같은 `names()`를 쓰므로 `names()`를 걸러 내면 스캔에서도 빠집니다. 이 작업에서 (가) 골든 픽스처 목록을 따로 두는 메서드(`snapshot.json`이 있는 폴더만)를 만들어 두 테스트가 쓰게 하거나, (나) 스캔 대상을 `names()`와 떼어 냅니다
     - _Requirements: 16.8_
   - [ ] 26.2 픽스처 비밀정보 스캔에 PEM 헤더와 `ghs_` 접두어 추가 (P1 작업 20.3의 스캔이 `fixtures/` 아래를 모두 훑는지 확인. webhook 픽스처도 대상)
     - 주의(P1 20.3 리뷰): P1 작업 20.3의 `FixtureSecretScanTest`는 이미 PEM 헤더(`-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----`)와 `gh[pousr]_`(`ghs_` 포함)를 검사합니다. 스캔 대상은 `FixtureLoader.names()`가 돌려주는 `fixtures/` 하위 폴더를 재귀로 훑은 파일이고 `fixtures/` 바로 아래 파일은 대상이 아닙니다. `fixtures/webhook/`은 하위 폴더이므로 함께 훑습니다. 그래서 이 작업은 정규식을 더하는 일이 아니라 webhook 픽스처가 걸리지 않는지 확인하는 일입니다
