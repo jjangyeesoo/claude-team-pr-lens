@@ -1,10 +1,10 @@
 # 스펙
 
-| 스펙 | 범위 | 문서 | 상태 (2026-10-04) |
+| 스펙 | 범위 | 문서 | 상태 |
 |---|---|---|---|
-| [pr-lens-p1-cli](pr-lens-p1-cli/README.md) | P1 CLI (`prlens review`), FR-1~6, 2주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 |
-| [pr-lens-p2-automation](pr-lens-p2-automation/README.md) | P2 webhook 자동 리뷰, 저장, 게시, FR-7~11, 3주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 |
-| [pr-lens-p3-web](pr-lens-p3-web/README.md) | P3 웹 조회, FR-12~14, 4주차 | 요구사항 | 검토만 함. 수정 후 설계와 작업 목록 작성 필요. P2가 진행된 뒤로 미룸 |
+| [pr-lens-p1-cli](pr-lens-p1-cli/README.md) | P1 CLI (`prlens review`), FR-1~6, 2주차 | 요구사항, 설계, 작업 목록 | 조건부 완료 (2026-10-26). 20.5(400줄 실행 시간 측정과 인젝션 픽스처의 실제 모델 실행)를 뺀 모든 작업 완료 |
+| [pr-lens-p2-automation](pr-lens-p2-automation/README.md) | P2 webhook 자동 리뷰, 저장, 게시, FR-7~11, 3주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 (2026-10-04) |
+| [pr-lens-p3-web](pr-lens-p3-web/README.md) | P3 웹 조회, FR-12~14, 4주차 | 요구사항 | 검토만 함. 수정 후 설계와 작업 목록 작성 필요. P2가 진행된 뒤로 미룸 (2026-10-04) |
 
 ## 스펙의 형태
 스펙은 단계마다 폴더 하나입니다. `docs/specs/<이름>/`에 `requirements.md`(무엇을), `design.md`(어떻게), `tasks.md`(작업 목록과 의존 그래프), `README.md`(색인)를 둡니다. `handoff/`는 `/task`가 뒤 작업에 넘길 것을 적어 두는 임시 메모이고, `/pr-ready`가 스펙 문서에 반영한 뒤 지웁니다(`main`에 남아 있으면 안 되는 파일입니다).

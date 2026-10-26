@@ -2,7 +2,7 @@
 
 팀 컨텍스트(`CLAUDE.md`, `.claude/rules/`, PR에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구입니다. 3명이 5주 동안 Claude Code로 만들면서 팀 개발 방법론을 실험하는 연구회 프로젝트입니다.
 
-- **지금 상태 (2026-10-16)**: P1·P2 스펙과 P3 요구사항까지 준비됐고(팀 승인 전) P1 CLI 구현이 진행 중입니다. 끝난 것은 작업 1~6(패키지 뼈대, 공유 모델과 경계 인터페이스, 재시도와 비밀정보 마스킹, diff 해석과 출력, glob과 diff 필터)과 11.1~11.4(청크 계획, 구분자 코덱)입니다. GitHub 조회, 컨텍스트 수집, LLM 호출, CLI 조립은 아직 없고, web은 스타터의 메모 샘플 그대로입니다. 작업별 진행은 [P1 `tasks.md`](docs/specs/pr-lens-p1-cli/tasks.md)의 체크박스에, 1주차 준비 현황은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
+- **지금 상태 (2026-10-26)**: P1 CLI(`prlens review <PR URL>`)는 **조건부 완료**입니다. 작업 20.5(400줄 PR 실행 시간 측정과 인젝션 픽스처의 실제 모델 실행)를 뺀 모든 작업이 끝났습니다. 20.5는 API 크레딧을 더 넣지 않을 예정이라 하지 않았고, 그래서 요구사항 9.7(400줄 120초)은 측정하지 못한 상태입니다(P1 `tasks.md`의 `결정(20.4)`, `결정(22)`). 그 밖에 확인하지 않은 항목은 [리허설 기록](docs/spikes/2026-10-14-fixture-pr.md)의 "확인하지 않은 것"에 있습니다. M1 완료 조건(실제 PR 리뷰에서 규칙 근거 지적 1건 이상)은 고정 PR #15로 확인했습니다(Finding 23건 중 17건, [리허설 기록](docs/spikes/2026-10-14-fixture-pr.md)). P2·P3는 구현을 시작하지 않았고, web은 스타터의 메모 샘플 그대로입니다. 작업별 진행은 [P1 `tasks.md`](docs/specs/pr-lens-p1-cli/tasks.md)의 체크박스에, 1주차 준비 현황은 [ROADMAP의 "진행 상황"](docs/product/ROADMAP.md#진행-상황-2026-10-04-기준)에 있습니다.
 - **단계**: P1 CLI(`prlens review <PR URL>`) → P2 webhook 자동 리뷰와 저장 → P3 웹 조회. 2~4주차에 이 순서로 되는 데까지 개발하고 5주차에 발표합니다. 주차별 일정은 가이드이고 강제하지 않습니다
 - **구조**: 모노레포. `backend/`(CLI와 P2부터 서버), `web/`(P3부터 조회 화면)
 - backend: Spring Boot 4.1 · Java 17 · Gradle (Kotlin DSL) · Spotless(google-java-format)
@@ -56,7 +56,7 @@ web 개발 서버는 `web`에서 `npm run dev`로 띄웁니다(http://localhost:
 CLAUDE.md                        팀 공용 지시문 (구조, 워크플로, 스택 간 규칙, 컨벤션)
 backend/
 ├── CLAUDE.md                    backend 명령·아키텍처 (backend 파일을 다룰 때만 로드)
-└── build.gradle.kts, src/ ...   CLI와 서버 (P1 구현 중: model, support, diff, glob, filter와 review의 ChunkPlanner·DelimiterCodec까지)
+└── build.gradle.kts, src/ ...   CLI와 서버 (P1 CLI 조건부 완료. 서버는 P2부터)
 web/
 ├── CLAUDE.md                    web 명령·아키텍처 (web 파일을 다룰 때만 로드). 첫 줄의 @AGENTS.md는 Next.js가 관리
 ├── AGENTS.md                    Next.js가 생성: "번들된 문서(node_modules/next/dist/docs)를 먼저 읽어라"
