@@ -920,7 +920,7 @@ cost:
 | `RetriesExhaustedException(api, lastStatus, attempts)` | `support`(`RetryExecutor`) | API 이름, 마지막 상태/오류 종류, 시도 수 | 2 (분할 모드 개별 Chunk는 `chunk_failed`로 흡수) |
 | `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각. `seconds`는 초 단위로 올린 대기 시간이고, 실행기는 한도가 풀리는 시각을 알 수 없어 메시지에 넣지 않습니다(요구사항 21.10의 시각은 호출자 쪽에서 만듦) | 2 |
 | `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드 | 2 |
-| `AllChunksFailedException` | `review` | 실패한 Chunk 수 | 2 |
+| `AllChunksFailedException` | `review` | 실패한 Chunk 수와 마지막 Chunk의 API 이름·마지막 상태·시도 수 (마지막 `RetriesExhaustedException`이 cause) | 2 |
 | 결과 생성 성공 | | 불완전·비용 경고(있으면) | `ExitCodeResolver`: 1 / 3 / 0 |
 | 예상하지 못한 예외 | 어디서나 | "내부 오류" + 마스킹한 스택(디버그 모드) | 2 |
 
