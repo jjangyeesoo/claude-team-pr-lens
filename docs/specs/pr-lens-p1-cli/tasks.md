@@ -360,10 +360,6 @@
     - 확인: 구조화된 출력이 스키마대로 오는지, thinking 블록 뒤의 text 블록 선택, usage 네 토큰과 캐시 필드, `basis.ref`가 컨텍스트 경로와 같은 문자열로 오는지, 응답 시간과 비용
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
     - _Requirements: 9.1, 9.4, 20.1_
-  - [x] 13.5 G-21 반영: Claude 429 외 4xx 응답의 사유를 오류 메시지에 담음
-    - `AnthropicLlmClient`가 오류 응답 본문의 `error.type`과 `error.message`를 `종류: 메시지`로 만들어 `LlmApiException.detail()`에 담고(공백 정리, 메시지 200자, `SecretMasker` 적용), `RetryingLlmClient`가 이를 `Attempt.Fatal`의 `reason`으로 넘겨 `NonRetryableApiException` 메시지가 `Claude 요청이 실패했습니다 (상태 코드 400, invalid_request_error: …)`가 되게 합니다. 사유가 없으면 메시지는 그대로이고 GitHub 쪽은 바뀌지 않습니다
-    - 결정(13.5): 사유는 디버그 모드와 무관하게 항상 메시지에 넣습니다. 첫 실행에서 원인(잘못된 모델 이름, 요청 크기 초과 등)을 알 수 있어야 하기 때문입니다. 오류 본문에 입력 내용이 섞여 오는지는 실제 응답으로 확인하지 않았고, 마스킹과 200자 제한으로 노출을 줄입니다. 실제 API의 4xx 응답은 20.4 리허설에서 한 번 확인합니다
-    - _Requirements: 21.8, 19.4_
 
 - [x] 14. Checkpoint: T1 완료 확인
   - T1 테스트가 모두 통과하는지 확인하고, 질문이 있으면 사용자에게 묻습니다.
@@ -445,9 +441,8 @@
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
     - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
-    - 주의(13 리뷰): `AnthropicLlmClient(apiKey)`는 `Options.defaults()`(기본 주소, 제한 시간 180초, 빈 `SecretMasker`, 디버그 로그 꺼짐)를 씁니다. 실제 조립에서는 2인자 생성자에 `new AnthropicLlmClient.Options(null, Duration.ofSeconds(180), masker, debugLog)`를 넘기고, `Options`에는 제한 시간 기본값이 없으므로 180초를 직접 넘깁니다. 키는 `ANTHROPIC_API_KEY`에서 읽은 값을 이 생성자에만 넘깁니다 (코드를 확인한 항목)
+    - 주의(13 리뷰): `AnthropicLlmClient(apiKey)`는 `Options.defaults()`(기본 주소, 제한 시간 180초, 빈 `SecretMasker`, 디버그 로그 꺼짐)를 씁니다. 디버그 모드에서 Claude HTTP 로그를 내려면 `new AnthropicLlmClient(key, new AnthropicLlmClient.Options(null, Duration.ofSeconds(180), masker, debugLog))`처럼 제한 시간을 직접 넘깁니다. 키는 `ANTHROPIC_API_KEY`에서 읽은 값을 이 생성자에만 넘깁니다 (코드를 확인한 항목)
     - 주의(13 리뷰): SDK는 환경변수 `ANTHROPIC_LOG`(`debug`·`info`·`error`)를 읽고 요청과 응답을 `System.err`에 직접 씁니다(`x-api-key`, `authorization` 헤더는 SDK가 가림). SDK는 `System.err`를 쓸 때마다 다시 읽으므로, `PrLensMain.main`이 설치한 마스킹 스트림으로 나가는지는 클라이언트를 만드는 시점과 관계없습니다. 이 스트림을 바꾸거나 우회하지 않습니다 (리뷰어가 SDK 바이트코드로 확인한 항목. 실제 출력은 확인하지 않았습니다)
-    - 주의(13.5 리뷰): 13.5부터 Claude 4xx 오류 메시지에 응답 본문의 `error.message`가 마스킹한 뒤 200자로 들어갑니다. `AnthropicLlmClient(apiKey)`와 `Options.defaults()`는 빈 `SecretMasker`를 써서 사유를 가리지 않으므로, 200자 경계에 걸린 키의 앞부분은 stderr의 `MaskingPrintStream`도 가리지 못합니다. 디버그 모드와 관계없이 18.2의 `CliPipeline.secretMasker`를 `Options`에 넣어 2인자 생성자로 조립합니다 (코드를 확인한 항목)
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -522,7 +517,6 @@
     - 400줄 PR의 실행 시간 측정(요구사항 9.7. 재시도 대기 제외, 첫 호출과 그 뒤 호출을 따로 기록), 인젝션 픽스처를 실제 모델로 한 번 실행
     - 결과를 PR이나 `docs/spikes/`에 기록
     - 주의(18.7 리뷰): 18.7의 `backend/scripts/prlens.cmd`(Windows cmd, PowerShell)와 macOS의 `scripts/prlens`는 실행해 확인하지 못했습니다(Linux에서만 확인). 리허설 때 Windows와 macOS에서 래퍼로 `prlens review`를 한 번씩 실행해 인자와 종료 코드가 그대로 전달되는지 봅니다
-    - 미정(여기서 정함): 13.5의 사유 추출은 `{"type":"error","error":{"type","message"}}` 모양을 가짜 서버로만 확인했습니다. 실제 API의 4xx(잘못된 모델 이름 등) 응답 하나로, 사유가 `invalid_request_error: …`로 나오는지와 본문에 입력 내용이 섞여 오는지를 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 9.7, 14.7_
 
 - [x] 21. CI 매트릭스 구성

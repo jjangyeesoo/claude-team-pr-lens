@@ -50,11 +50,9 @@ public final class PrLensMain {
                   env,
                   workingDir,
                   homeDir,
-                  preflight -> {
-                    // 파이프라인 조립은 작업 18.3에서 구현한다
-                    err.print("아직 구현되지 않았습니다.\n");
-                    return USAGE_ERROR;
-                  }),
+                  preflight ->
+                      CliPipeline.review(
+                          preflight, CliPipeline.Factories.real(), masker, debug(env), out, err)),
               debug(env));
     } catch (Throwable e) {
       // run 밖(경로 계산 등)에서 난 오류도 스트림을 닫기 전에 알린다
