@@ -68,6 +68,8 @@ web/
 │   └── VerifyOnStop.java        Stop: 바뀐 스택만 포맷 + 검증, 실패하면 계속 고치게 함. /task-flow의 implementer는 끝날 때 검증
 ├── rules/
 │   ├── backend/testing.md       backend/** 를 다룰 때 로드 (JUnit 6, jqwik, ArchUnit, 픽스처)
+│   ├── backend/github.md        github·pullrequest·diff·glob·filter·context 패키지를 다룰 때 로드 (base SHA에서만 읽기, 재시도 결과 구분, glob 검증)
+│   ├── backend/review.md        llm·review 패키지를 다룰 때 로드 (프롬프트 이스케이프, 비용 합산, 분할·병합 규칙)
 │   ├── backend/api-design.md    REST API 규칙 (paths가 메모 샘플의 api 패키지 기준. P2 전에 수정)
 │   ├── frontend/nextjs.md       web/src/** 를 다룰 때 로드
 │   ├── docs/writing.md          docs/** 를 다룰 때 로드 (수치·주장을 출처와 대조)
