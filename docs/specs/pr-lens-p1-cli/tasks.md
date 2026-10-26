@@ -336,25 +336,26 @@
     - 주의(11.5~11.9 리뷰): system 프롬프트에는 `<prlens:team_context>` 같은 태그 이름과 `security`, `summary`, `findings` 같은 단어가 원문으로 들어 있습니다. Property 34의 고유 표식은 고정 접두어와 UUID처럼 그 문구의 부분 문자열이 될 수 없는 값으로 만들고, 태그 개수는 요청 전체가 아니라 블록별로 셉니다 (스펙을 읽고 추론한 항목)
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
-- [ ] 13. Claude API 어댑터
-  - [ ] 13.1 `AnthropicLlmClient` 구현 (1주차 spike 결과 반영)
+- [x] 13. Claude API 어댑터
+  - [x] 13.1 `AnthropicLlmClient` 구현 (1주차 spike 결과 반영)
     - SDK 자체 재시도 끄기, 요청 제한 시간 180초, `ANTHROPIC_API_KEY`는 이 클라이언트에만 전달
     - 요청 매핑: 모델, `max_tokens`, effort, system, user 블록 2개(첫 블록 ephemeral `cache_control`), `output_config.format`
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
-    - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
+    - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
     - 결정(7.1 리뷰): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. 7.1이 `SecretMasker`를 중첩 public record `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`와 4인자 생성자 오버로드로 받기로 정했습니다(원래 생성자는 `Options.defaults()`, 곧 빈 마스커와 꺼진 디버그 로그로 넘김). `AnthropicLlmClient`도 같은 방식으로 맞춥니다. 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
     - 주의(10 리뷰): `ResponseParser`는 `LlmResponse.stopReason()`이 null이면 `schema_violation`으로, `text()`가 null이면 `""`로 다룹니다. 그러나 `usage()`가 null이면 `ParsedResponse` 생성에서 `NullPointerException`이 납니다. 응답에 usage가 없어도 `LlmUsage(0, 0, 0, 0)`처럼 null이 아닌 값을 넘깁니다
-    - 주의(18.5 리뷰): `PrLensException`이 아닌 예외는 CLI에서 원인 없이 `내부 오류가 발생했습니다 (<클래스 단순 이름>)`로만 보입니다. SDK가 던지는 런타임 예외 가운데 사용자에게 원인을 보여야 하는 것(HTTP·네트워크 외에 응답 역직렬화 실패 등)은 `LlmApiException`으로 감싸 던집니다 (스펙을 읽고 추론한 항목. SDK가 실제로 던지는 예외는 확인하지 않았습니다)
+    - 주의(18.5 리뷰): `PrLensException`이 아닌 예외는 CLI에서 원인 없이 `내부 오류가 발생했습니다 (<클래스 단순 이름>)`로만 보입니다. SDK가 던지는 런타임 예외 가운데 사용자에게 원인을 보여야 하는 것(HTTP·네트워크 외에 응답 역직렬화 실패 등)은 `LlmApiException`으로 감싸 던집니다 (가짜 서버로 응답 본문 해석 실패, 연결 실패, 제한 시간 초과, HTTP 오류가 모두 `LlmApiException`이 되는 것을 확인했습니다. 실제 API의 오류 응답은 확인하지 않았습니다)
+    - 결정(13.1): `stopReason`이 없으면 null, text 블록이 없으면 `text`를 null로 둡니다(`ResponseParser`가 `stop_reason`으로 처리). `usage`는 항상 `LlmUsage`로 넘기고 캐시 필드가 없으면 0입니다. 상태 코드가 없는 오류의 `errorKind`는 `timeout`, `connection_error`, `invalid_response`이고, 앞의 둘만 `RetryingLlmClient`가 재시도합니다. `AnthropicLlmClient.Options(baseUrl, timeout, masker, debugLog)`로 `HttpGitHubClient.Options`와 같은 방식을 따릅니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
-  - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
+  - [x] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
     - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
     - 주의(3 리뷰): 실행기는 `retryAfter`가 ASCII 숫자만으로 된 문자열일 때만 유효로 봅니다. 앞뒤 공백, `+5`, `1.5`, HTTP 날짜는 오류 없이 지수 백오프로 넘어가므로, 헤더 값을 가공 없이 넘기되 공백이 붙어 오는지 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 21.1, 21.6, 21.7_
-  - [ ]* 13.3 요청·응답 매핑 단위 테스트 (모델·effort 항상 명시, 캐시 지점 위치, usage 필드 매핑)
+  - [x]* 13.3 요청·응답 매핑 단위 테스트 (모델·effort 항상 명시, 캐시 지점 위치, usage 필드 매핑)
     - _Requirements: 20.8, 20.9_
 
-  - [ ] 13.4 실제 Claude API 스모크 (수요일까지. `ANTHROPIC_API_KEY`가 있을 때만 도는 수동 실행 테스트)
+  - [x] 13.4 실제 Claude API 스모크 (수요일까지. `ANTHROPIC_API_KEY`가 있을 때만 도는 수동 실행 테스트)
     - 손으로 만든 작은 `LlmRequest`(짧은 system, 팀 컨텍스트 파일 하나, 작은 diff)를 `RetryingLlmClient(AnthropicLlmClient)`로 실제 호출해 `ResponseParser`까지 통과시킴
     - 확인: 구조화된 출력이 스키마대로 오는지, thinking 블록 뒤의 text 블록 선택, usage 네 토큰과 캐시 필드, `basis.ref`가 컨텍스트 경로와 같은 문자열로 오는지, 응답 시간과 비용
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
