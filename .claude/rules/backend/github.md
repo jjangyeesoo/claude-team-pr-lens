@@ -12,7 +12,7 @@ paths:
 - 팀 컨텍스트(`CLAUDE.md`, rules, `@import`)는 base SHA에서만 읽는다. head SHA에서 읽는 것은 PR 본문이 링크한 스펙뿐이고 base에서 404일 때만이다(요구사항 4.1, 5.1, D-7 제안값). 새 수집 코드의 `ContextFile`은 `Revision.BASE`로 만든다
 - base 파일은 `BaseFileReader.fetch`로 읽는다. `Missing`(트리에 없음, 404), `Directory`, `TooLarge`는 서로 다른 처리이므로 `read`로 뭉개지 않는다
 - 트리 색인은 `RepoTreeIndex.load`를 한 번만 부르고 같은 색인을 수집기들에 넘긴다
-- 한 요청에서 `HttpGitHubClient`가 주는 결과를 구분한다: `getPullRequest`·`listFiles`·`getTree`의 404는 `GitHubApiException`, `getFile`의 404는 `NotFound` 값이다
+- `HttpGitHubClient`의 404는 메서드마다 다르다: `getPullRequest`·`listFiles`·`getTree`는 `GitHubApiException`을 던지고, `getFile`은 `FileFetch.NotFound` 값을 돌려준다
 - 연결 실패와 제한 시간 초과는 예외로 던지지 않고 `Attempt.Retryable`로 돌려준다. 던지면 `RetryExecutor`가 재시도 없이 통과시킨다
 - 리다이렉트는 따르지 않는다(`Authorization` 보호, 요구사항 19.6). 3xx는 `Attempt.Fatal`이다
 - 디버그 로그의 헤더는 `SecretMasker.maskHeader`로 가린다. 값을 직접 로그에 쓰지 않는다

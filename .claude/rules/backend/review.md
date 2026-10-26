@@ -12,4 +12,4 @@ paths:
 - 분할 모드의 `estimatedCostUsd`는 Chunk별로 `setScale(4, HALF_UP)`한 비용의 합이다. 합친 토큰으로 다시 계산하면 한 자리가 어긋난다
 - `FILES_TRUNCATED`는 `ResultMerger.merge`가 `fileCountGap`이 있을 때 스스로 더한다. 엔진이 `ChunkOutcome`의 사유로 넣지 않는다(대상 없음은 `merge`를 거치지 않으므로 `ReviewEngine.noTarget`이 직접 넣는다)
 - `RetriesExhaustedException.lastStatus()`는 상태 코드 또는 네트워크 오류 종류를 담은 문자열이다. 숫자일 때만 `Integer`로 바꾸고(`ReviewEngine.numericStatus`) `Integer.parseInt`를 그대로 쓰지 않는다
-- `ArchitectureTest`가 `com.prlens.llm.AnthropicLlmClient`를 완전한 이름으로 검사하므로 이 클래스 이름을 바꾸지 않는다. 재시도는 `RetryingLlmClient`가 맡고, 재시도할 네트워크 오류는 예외로 던지지 않고 `Attempt.Retryable`로 돌려준다
+- `ArchitectureTest`가 `com.prlens.llm.AnthropicLlmClient`를 완전한 이름으로 검사하므로 이 클래스 이름을 바꾸지 않는다. 재시도는 `RetryingLlmClient`가 맡는다. 어댑터는 네트워크 오류를 `LlmApiException`(`errorKind`)으로 던지고, `RetryingLlmClient`가 이를 `Attempt.Retryable`로 바꿔 돌려준다(던진 채로 두면 `RetryExecutor`가 재시도 없이 통과시킨다)
