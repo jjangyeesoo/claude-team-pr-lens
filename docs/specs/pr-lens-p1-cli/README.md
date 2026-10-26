@@ -55,6 +55,7 @@ Glossary 용어는 밑줄 표기(`Diff_Parser`), 클래스는 붙여 쓴 이름(
 | G-18 | `basis.ref` 비교 대상에 `Revision.HEAD` 스펙 경로 포함 | 팀 | 포함(요구사항 11.2~11.3 문구대로 전체 경로) |
 | G-19 | 읽은 텍스트의 BOM과 비ASCII 공백 | 팀 | 텍스트 파일도 맨 앞 BOM 하나를 벗겨 냄, `@import`·스펙 링크의 공백은 ASCII만 |
 | G-20 | 디버그 모드를 켜는 방법 | 팀 | 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜짐. 예상하지 못한 예외의 스택과 HTTP 디버그 로그에 같은 조건을 씀 |
+| G-21 | Claude API의 429 외 4xx 응답 사유(오류 종류, 본문 message)를 사용자에게 보여 줄지 | 팀 | 메시지에 오류 종류를 더하고 본문 message는 디버그 모드(G-20)에서만 stderr에 냄 |
 
 ## 관련 문서
 - 패키지 구조: [ADR 0003](../../adr/0003-role-based-flat-packages.md)

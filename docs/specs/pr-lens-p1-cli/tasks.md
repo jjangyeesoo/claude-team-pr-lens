@@ -441,6 +441,8 @@
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
     - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
+    - 주의(13 리뷰): `AnthropicLlmClient(apiKey)`는 `Options.defaults()`(기본 주소, 제한 시간 180초, 빈 `SecretMasker`, 디버그 로그 꺼짐)를 씁니다. 디버그 모드에서 Claude HTTP 로그를 내려면 `new AnthropicLlmClient(key, new AnthropicLlmClient.Options(null, Duration.ofSeconds(180), masker, debugLog))`처럼 제한 시간을 직접 넘깁니다. 키는 `ANTHROPIC_API_KEY`에서 읽은 값을 이 생성자에만 넘깁니다 (코드를 확인한 항목)
+    - 주의(13 리뷰): SDK는 환경변수 `ANTHROPIC_LOG`(`debug`·`info`)를 읽고 요청과 응답을 `System.err`에 직접 씁니다(`x-api-key`, `authorization` 헤더는 SDK가 가림). 마스킹 스트림을 `System.setErr`로 설치한 뒤에 클라이언트를 만듭니다 (리뷰어가 SDK 바이트코드로 확인한 항목. 실제 출력은 확인하지 않았습니다)
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -557,6 +559,7 @@
   | G-18 `basis.ref` 비교 대상(`Revision.HEAD` 스펙 경로 포함 여부, 설계 "요구사항 공백") | 10.4, 11.5 |
   | G-19 읽은 텍스트의 BOM과 비ASCII 공백 (설계 "요구사항 공백") | 8.4, 8.6, 8.9 (구현 완료, 결정되면 수정) |
   | G-20 디버그 모드를 켜는 방법 (설계 "요구사항 공백") | 18.3, 18.5 (구현 완료, 결정되면 수정), 18.6 |
+  | G-21 429 외 4xx 응답의 사유 표시 (설계 "요구사항 공백") | 13.2, 18.5 (구현 완료, 결정되면 수정) |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)

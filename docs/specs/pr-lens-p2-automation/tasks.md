@@ -212,6 +212,7 @@
     - 주의(P1 12 리뷰): P1 엔진은 `costThresholdExceeded`를 SPLIT에서만, 실패하지 않은 Chunk의 누적 비용이 처음 상한을 넘을 때 한 번 부릅니다. 단가가 없어 Chunk 비용이 null이면 누적을 멈추고 부르지 않습니다. 단일 모드의 비용 상한 경고(P2 요구사항 8.4)는 이 콜백으로 오지 않으므로 결과의 `usage().estimatedCostUsd()`로 직접 판정합니다 (코드를 확인한 항목)
     - _Requirements: 4.7, 4.10, 17.3_
   - [ ] 11.2 작업 전용 LLM 데코레이터 구현(`execution` 패키지): `CancellableLlmClient`, `UsageRecordingLlmClient`. 체인은 `RetryingLlmClient(UsageRecordingLlmClient(CancellableLlmClient(공유 클라이언트)))`. 실패한 Review_Run의 비용은 응답마다 P1 `CostCalculator.estimate`로 계산해 반올림한 값을 더함
+    - 주의(P1 13 리뷰): P1 `AnthropicLlmClient`는 원인 사슬에 `InterruptedIOException`이 있으면 `errorKind`를 `timeout`으로 던지고, 바깥의 `RetryingLlmClient`가 이를 재시도합니다. 스레드 인터럽트로 OkHttp 호출을 끊어도 같은 경로를 탑니다. `CancellableLlmClient`가 인터럽트로 호출을 끊을 때 취소가 timeout 재시도로 이어지지 않게, 토큰이 취소됐으면 `LlmApiException` 대신 `JobTimeoutException`으로 바꿔 던지거나 `DeadlineSleeper`가 끊게 합니다. `errorKind` 상수(`TIMEOUT`, `CONNECTION_ERROR`)는 package-private이라 `execution` 패키지에서 참조할 수 없습니다 (스펙을 읽고 추론한 항목. 취소 동작은 확인하지 않았습니다)
     - _Requirements: 4.7, 8.2, 8.3_
   - [ ] 11.3 `ReviewJob` 구현 (설계 실행 순서 1~7단계)
     - `markRunning`이 false면 종료 → PR·컨텍스트 조회(`PrFetcher.fetch(repo, number)`) → head가 Dedupe_Key와 다르면 Claude 호출 전에 `failed`/`head_moved`(G-1), base가 다르면 경고 로그를 남기고 가져온 값을 `ReviewCompletion.baseSha`로 저장(G-2) → 작업별 `ReviewEngine` → `completeRun`

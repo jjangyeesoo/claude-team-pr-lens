@@ -1,11 +1,22 @@
 # 실제 Claude API 스모크 (P1 작업 13.4)
 
-2026-10-26, Windows, JDK 17, Gradle 9.7.1. `AnthropicSmokeTest`(`com.prlens.review`)를 사용자가 직접 한 번 실행했다. 원본은 `backend/build/test-results/test/TEST-com.prlens.review.AnthropicSmokeTest.xml`의 표준 출력이다. 키는 사용자의 별도 PowerShell 프로세스에서만 썼고 기록에 남기지 않았다.
+2026-10-26, Windows, Gradle 9.7.1(Gradle 출력에서 확인). 실행한 JDK 버전은 확인하지 않았다(빌드 설정의 대상은 Java 17). `AnthropicSmokeTest`(`com.prlens.review`)를 사용자가 직접 한 번 실행했다. 원본은 `backend/build/test-results/test/TEST-com.prlens.review.AnthropicSmokeTest.xml`의 표준 출력이다. 이 파일은 커밋되지 않고 다음 `test` 실행 때 덮어써지므로 아래에 그대로 인용한다. 키는 사용자의 별도 PowerShell 프로세스에서만 썼고 기록에 남기지 않았다.
 
 ## 입력
 - 모델과 effort: `Configuration.defaults()` (`claude-opus-5-5`, `medium`, 최대 출력 토큰 16,000)
 - 파일 하나(`UserController.java`, 추가 8줄, 안에 `System.out.println`), 컨텍스트 파일 둘(`.claude/rules/backend/logging.md`에 "운영 코드에서 System.out.println을 쓰지 않는다", `CLAUDE.md`)
 - `PromptBuilder.build(SINGLE, …)`로 만든 요청을 `RetryingLlmClient(AnthropicLlmClient)`로 보내고 `ResponseParser`, `FindingValidator`를 통과시켰다
+
+## 원본 출력 (XML의 `system-out` 그대로)
+```
+[smoke] 응답 시간 5908 ms
+[smoke] stop_reason=end_turn
+[smoke] usage=LlmUsage[inputTokens=196, outputTokens=297, cacheWriteTokens=1731, cacheReadTokens=0]
+[smoke] 추정 비용(USD)=0.0154
+[smoke] summary=UserController를 추가해 사용자 조회 메서드(find)를 도입하는 PR입니다. 운영 코드에서 System.out.println을 사용해 팀 로깅 규칙을 위반합니다.
+[smoke] finding MINOR src/main/java/com/example/UserController.java:5 basis=RULE/.claude/rules/backend/logging.md verdict=INLINE_ELIGIBLE
+```
+같은 XML의 `testsuite`: `tests="1" skipped="0" failures="0" errors="0"`, `time="6.321"`(테스트 케이스는 6.312초).
 
 ## 확인한 것
 | 항목 | 결과 |
