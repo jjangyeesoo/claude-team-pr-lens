@@ -275,7 +275,7 @@
   - [x]* 10.5 Property 23, 24, 25, 26 테스트 (basis 검증 불변, 멱등, 필드 보존, 라인 판정)
     - **Validates: Requirements 11.2, 11.3, 11.4, 11.5, 11.8, 11.9, 11.10, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.10, 12.11**
 
-- [ ] 11. 청크 계획, 프롬프트, 비용, 병합
+- [x] 11. 청크 계획, 프롬프트, 비용, 병합
   - PR 경계: 11.1~11.4 / 11.5~11.9
   - [x] 11.1 모드 결정과 `ChunkPlanner` 구현
     - 모드: 대상 0개 `NO_TARGET`, count ≤ L 단일(count 0 포함, 설계 G-2), ≤ 3L 분할, 초과 요약 전용
@@ -288,7 +288,7 @@
     - _Requirements: 14.5, 14.8_
   - [x]* 11.4 Property 33: Delimiter 이스케이프 테스트
     - **Validates: Requirements 14.2, 14.5, 14.8**
-  - [ ] 11.5 `PromptBuilder` 구현
+  - [x] 11.5 `PromptBuilder` 구현
     - system: 리뷰 지시문(`PROMPT_VERSION`), 출력 규칙, 인젝션 규칙, `<~` 이스케이프 설명. PR·diff 텍스트 없음
     - 출력 규칙에 "`basis.ref`는 `team_context` 파일 머리줄의 `path`를 글자 그대로, 근거 파일이 없으면 `general`과 null, `file`은 `file_path` 값 그대로"를 넣음(설계 "PromptBuilder와 요청 배치"). 빠지면 근거가 모두 `general`로 강등돼 M1 데모 조건을 못 채움
     - 첫 user 블록: `<prlens:team_context>` 안 Common_Context(출처 순서 → 경로 오름차순, 파일별 `path`/`source` 머리줄), 블록 끝 `cache_control`
@@ -298,17 +298,17 @@
     - 주의(11.1~11.4 리뷰): `DelimiterCodec`은 문자열 변환만 하고 영역을 감싸지 않습니다. 파일 경로, 제목, 본문, head 스펙, diff, 컨텍스트 파일 내용을 모두 `escape`한 뒤 태그로 감쌉니다. `team_context`의 파일 머리줄 `path`/`source` 값도 같습니다(경로에 태그 꼴이 있을 수 있음. 머리줄은 스펙 추론)
     - 주의(8.9~8.12 리뷰): head SHA에서 가져온 스펙은 별도 필드가 아니라 `ReviewContext.files()` 안에 다른 파일과 섞여 `ContextSource.SPEC`, `Revision.HEAD`로 들어옵니다(`SpecCollector`). `team_context`(Common_Context)에는 `Revision.BASE` 파일만 넣고 `Revision.HEAD` 파일은 둘째 블록의 head 스펙 영역에 둡니다(요구사항 14.6). 거르지 않으면 head 스펙이 캐시되는 첫 블록에 들어갑니다
     - _Requirements: 3.7, 9.1, 14.1, 14.2, 14.3, 14.4, 14.6, 20.6, 20.7, 20.8, 20.9_
-  - [ ] 11.6 `CostCalculator` 구현 (공개 순수 함수 `estimate(LlmUsage, ModelPricing)`, `BigDecimal` Σ(토큰 × 단가 / 1,000,000), `setScale(4, HALF_UP)`, 단가 없으면 `null`. P2가 같은 함수를 씀)
+  - [x] 11.6 `CostCalculator` 구현 (공개 순수 함수 `estimate(LlmUsage, ModelPricing)`, `BigDecimal` Σ(토큰 × 단가 / 1,000,000), `setScale(4, HALF_UP)`, 단가 없으면 `null`. P2가 같은 함수를 씀)
     - _Requirements: 20.2, 20.5_
-  - [ ]* 11.7 Property 40: 추정 비용 계산 테스트
+  - [x]* 11.7 Property 40: 추정 비용 계산 테스트
     - **Validates: Requirements 20.2**
-  - [ ] 11.8 `ResultMerger` 구현
+  - [x] 11.8 `ResultMerger` 구현
     - findings Chunk 순서 연결, Chunk가 둘 이상이면 summary에 `[n/N] 파일 목록` 머리줄, 토큰·비용 합(하나라도 `null`이면 `null`), Incomplete_Reason 첫 등장 순 중복 제거, `ChunkIssue` 기록(`schema_violation`이면 원본 앞 2,000자 포함, 단일·요약 전용 모드는 `chunkIndex` 1), `excludedFiles`와 `excludedFileDetails` 중복 제거
     - 주의(20.1 리뷰): 골든 픽스처 `split-three-chunks`의 summary는 Chunk마다 `[n/N] <경로>` 머리줄 다음 줄에 요약을 두고 Chunk 사이를 빈 줄 하나(`\n\n`)로 잇고 끝 줄바꿈은 없습니다. 파일이 여럿인 Chunk의 경로 구분자는 픽스처가 정하지 않았습니다. 이 형식은 스펙 추론이므로 다른 형식을 고르면 그 픽스처의 `expected-result.json`과 `expected.md`를 함께 고칩니다
     - 주의(20.1 리뷰): 분할 모드 `estimatedCostUsd`는 Chunk별로 `setScale(4, HALF_UP)`한 비용의 합입니다(픽스처는 0.0834 + 0.0482 + 0.0478 = 0.1794). 합친 토큰으로 다시 계산하면 0.1795가 되어 어긋납니다
     - 주의(10 리뷰): `ChunkIssue.rawResponseExcerpt`에는 `ResponseParser`가 `schema_violation`일 때만 채우는 `ParsedResponse.rawResponseExcerpt()`(원본 앞 2,000자, 서로게이트 쌍을 가르지 않음)를 그대로 옮깁니다. 다른 사유에서는 null입니다
     - _Requirements: 13.5, 13.6, 13.7, 16.5, 20.10_
-  - [ ]* 11.9 Property 29: 청크 결과 병합 테스트
+  - [x]* 11.9 Property 29: 청크 결과 병합 테스트
     - **Validates: Requirements 13.5, 13.6, 13.7, 16.5, 20.10**
 
 - [ ] 12. `ReviewEngine` 조립
