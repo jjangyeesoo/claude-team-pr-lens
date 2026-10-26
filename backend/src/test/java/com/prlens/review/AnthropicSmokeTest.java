@@ -106,7 +106,7 @@ class AnthropicSmokeTest {
               }
             },
             (api, next, max, status, wait) ->
-                System.out.println("[smoke] 재시도 " + api + " " + next + "/" + max + " " + status));
+                out("[smoke] 재시도 " + api + " " + next + "/" + max + " " + status));
     RetryingLlmClient llm = new RetryingLlmClient(new AnthropicLlmClient(key), executor);
 
     long started = System.nanoTime();
@@ -118,15 +118,15 @@ class AnthropicSmokeTest {
         FindingValidator.apply(
             parsed.findings(), context, Map.of(file.path(), LineRanges.of(hunks(file))));
 
-    System.out.println("[smoke] 응답 시간 " + elapsedMillis + " ms");
-    System.out.println("[smoke] stop_reason=" + response.stopReason());
-    System.out.println("[smoke] usage=" + response.usage());
-    System.out.println(
+    out("[smoke] 응답 시간 " + elapsedMillis + " ms");
+    out("[smoke] stop_reason=" + response.stopReason());
+    out("[smoke] usage=" + response.usage());
+    out(
         "[smoke] 추정 비용(USD)="
             + CostCalculator.estimate(response.usage(), config.pricing().get(config.model())));
-    System.out.println("[smoke] summary=" + parsed.summary());
+    out("[smoke] summary=" + parsed.summary());
     for (Finding f : findings) {
-      System.out.println(
+      out(
           "[smoke] finding "
               + f.severity()
               + " "
@@ -146,6 +146,11 @@ class AnthropicSmokeTest {
     assertThat(parsed.incompleteReason()).isNull();
     assertThat(response.usage().inputTokens()).isPositive();
     assertThat(response.usage().outputTokens()).isPositive();
+  }
+
+  /** 팀 규칙(`println`·`%n` 금지)에 따라 줄바꿈을 직접 붙인다. */
+  private static void out(String line) {
+    System.out.print(line + "\n");
   }
 
   private static List<Hunk> hunks(ChangedFile file) {
