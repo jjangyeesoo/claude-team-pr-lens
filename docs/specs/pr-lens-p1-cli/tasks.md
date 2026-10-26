@@ -479,7 +479,7 @@
     - 결정(18.7): 확인한 것은 Linux(WSL, JDK 17)에서 `bootJar`의 `Start-Class`가 `PrLensMain`인 것, `java -jar`와 `scripts/prlens`가 웹 서버 없이 CLI로 실행되어 종료 코드 2와 stderr 메시지를 내는 것, 인자가 래퍼를 거쳐 그대로 전달되는 것입니다. `prlens.cmd`와 macOS 실행, 실제 리뷰 실행(18.3 전이라 파이프라인이 없음)은 확인하지 않았습니다
     - _Requirements: 22.1_
 
-- [ ] 19. Checkpoint: T3 완료 확인
+- [x] 19. Checkpoint: T3 완료 확인
   - T3 테스트가 모두 통과하는지 확인하고, 질문이 있으면 사용자에게 묻습니다.
 
 ### 컨텍스트 (컨텍스트 담당 A, 트랙과 병렬)
