@@ -540,8 +540,10 @@
   - 1.1이 머지되면 바로 만듭니다. OS별 문제(줄바꿈, 인코딩, 경로)가 금요일 전에 드러나야 합니다
   - _Requirements: 22.7, 22.8_
 
-- [ ] 22. Final Checkpoint
+- [x] 22. Final Checkpoint
   - 전체 테스트와 세 OS CI가 통과하는지 확인하고, 질문이 있으면 사용자에게 묻습니다.
+  - 확인(2026-10-26): `backend/`의 `./gradlew test --rerun-tasks`는 838개 중 실패 0, 오류 0, skip 10입니다. skip은 환경변수가 있을 때만 도는 실제 API 스모크(`GitHubSmokeTest` 9개, `AnthropicSmokeTest` 1개)입니다. `main`의 `036bbde`에서 GitHub Actions `ci`가 `backend-os`의 `windows-latest`, `ubuntu-latest`, `macos-latest`와 `backend`, `web` 모두 성공했습니다
+  - 결정(22): 크레딧이 없어 20.5는 하지 않고 22를 닫습니다. 20.5와 상위 작업 20은 미완료로 남고, 요구사항 9.7(400줄 120초)은 측정하지 못한 상태입니다. 20.5는 크레딧을 확보하면 그때 합니다
 
 ## Notes
 
