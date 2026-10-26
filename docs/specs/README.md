@@ -2,7 +2,7 @@
 
 | 스펙 | 범위 | 문서 | 상태 |
 |---|---|---|---|
-| [pr-lens-p1-cli](pr-lens-p1-cli/README.md) | P1 CLI (`prlens review`), FR-1~6, 2주차 | 요구사항, 설계, 작업 목록 | 조건부 완료 (2026-10-26). 20.5(크레딧이 필요한 실제 API 측정)를 뺀 모든 작업 완료 |
+| [pr-lens-p1-cli](pr-lens-p1-cli/README.md) | P1 CLI (`prlens review`), FR-1~6, 2주차 | 요구사항, 설계, 작업 목록 | 조건부 완료 (2026-10-26). 20.5(400줄 실행 시간 측정과 인젝션 픽스처의 실제 모델 실행)를 뺀 모든 작업 완료 |
 | [pr-lens-p2-automation](pr-lens-p2-automation/README.md) | P2 webhook 자동 리뷰, 저장, 게시, FR-7~11, 3주차 | 요구사항, 설계, 작업 목록 | 검토 지적 반영 완료. 팀 승인 전 (2026-10-04) |
 | [pr-lens-p3-web](pr-lens-p3-web/README.md) | P3 웹 조회, FR-12~14, 4주차 | 요구사항 | 검토만 함. 수정 후 설계와 작업 목록 작성 필요. P2가 진행된 뒤로 미룸 (2026-10-04) |
 

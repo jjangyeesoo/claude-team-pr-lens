@@ -17,7 +17,7 @@ PR Lens P2는 GitHub App webhook으로 리뷰를 자동 실행하고(T1), 결과
 
 ### 작업 환경 확인 결과
 
-- 이 저장소(`claude-team-prlen`)에는 스타터(`backend/`, `web/`)가 있고 P1 구현 코드는 아직 없습니다. 기본 패키지는 P1과 같이 `com.prlens`입니다(P1 작업 1.1에서 변경).
+- 이 저장소(`claude-team-prlen`)에는 스타터(`backend/`, `web/`)가 있고, P1 CLI는 20.5(400줄 실행 시간 측정과 인젝션 픽스처의 실제 모델 실행)를 뺀 모든 작업이 `main`에 머지되어 있습니다(2026-10-26, P1 `tasks.md`의 `결정(22)`). 기본 패키지는 P1과 같이 `com.prlens`입니다(P1 작업 1.1에서 변경).
 - 패키지 구조는 [ADR 0003](../../adr/0003-role-based-flat-packages.md), 에러 형식과 API 경로는 [ADR 0008](../../adr/0008-keep-api-conventions.md)을 따릅니다. Standard_Error_Response는 `ErrorResponse { code, message, details }`이고 조회 API 경로는 `/api/v1/`로 시작합니다.
 - P1 설계가 이 설계의 전제를 명시합니다(P1 설계 "공유 경계"): `RetryExecutor(RetryPolicy, Sleeper, RetryListener)`, `HttpGitHubClient(HttpClient, GitHubCredentials, RetryExecutor)`, `RetryingLlmClient(LlmClient, RetryExecutor)`의 생성자 주입, `PrFetcher.fetch(RepoRef, int)`, sealed가 아닌 `PrLensException`, 공개 함수 `CostCalculator.estimate(LlmUsage, ModelPricing)`. P1 구현이 다르면 T1 조립 코드(`JobScope`)만 고칩니다.
 - 스타터의 `common` 패키지는 이 스펙에서 정리합니다(제안, ADR 0003의 미결 항목). `ErrorResponse`(Spring에 의존하지 않는 record)는 `support`로, `ApiExceptionHandler`와 `TimeConfig`(`Clock` 빈)는 `server`로 옮깁니다. `webhook`과 `query`가 `server`에 의존하지 않고도 에러 본문을 만들 수 있게 하려는 것입니다. `@SpringBootApplication` 클래스(`PrLensServerApplication`)는 `server`로 옮기지 않고 루트 패키지 `com.prlens`에 둡니다("서버 실행").
