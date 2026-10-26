@@ -325,10 +325,14 @@
     - 주의(10 리뷰): `FindingValidator.apply(List<RawFinding>, ReviewContext, Map<String, LineRanges>)`에 넘기는 `targets` 맵은 필터를 통과한 전체 대상 파일을 `ChangedFile.path()`(이름 변경이면 새 경로, `previousPath`는 넣지 않음)로 키를 삼아 한 번만 만듭니다(Chunk마다 만들지 않음, 요구사항 12.3). 삭제된 파일(head 줄 수가 0인 Hunk만 있는 파일)도 빈 `LineRanges`로 넣어야 요구사항 12.6의 `out_of_range`가 나옵니다. 빼면 `not_target_file`이 됩니다
     - 주의(10 리뷰): `ResponseParser.parse`는 `ParsedResponse(summary, findings: List<RawFinding>, incompleteReason, rawResponseExcerpt, usage: LlmUsage)`를 돌려줍니다. 모델 이름과 단가가 필요한 `Usage` 변환과 `CostCalculator.estimate`는 엔진이 `ParsedResponse.usage()`로 합니다. `incompleteReason`과 발췌문은 `ChunkIssue`로 옮깁니다
     - 주의(18.5 리뷰): CLI는 `PrLensException`을 타입으로 나누지 않고 `getMessage()`만 stderr에 씁니다(`cli.ErrorMapper`). `AllChunksFailedException`은 `PrLensException`을 상속하고, 설계 표가 요구하는 실패한 Chunk 수를 생성자 메시지에 넣어야 합니다. 메시지가 null이면 클래스 이름만 나옵니다
+    - 주의(11.5~11.9 리뷰): `ResultMerger.merge`는 `outcomes`가 비었거나 `usage`가 있는 Chunk가 하나도 없으면 `IllegalArgumentException`입니다. 대상 0개(`NO_TARGET`)는 `merge`를 쓰지 않고 엔진이 `ReviewResult`를 직접 만들고(`files_truncated` 사유와 `FileCountGap` 포함), 모든 Chunk가 실패하면 `merge`를 부르기 전에 `AllChunksFailedException`을 던집니다
+    - 주의(11.5~11.9 리뷰): `FILES_TRUNCATED`는 `merge`가 `fileCountGap`이 null이 아닐 때 Chunk 사유 뒤에 스스로 더합니다. 엔진은 이 사유를 `ChunkOutcome.incompleteReason`에 넣지 않습니다(`ChunkIssue`로 잘못 기록됨)
+    - 주의(11.5~11.9 리뷰): `RetriesExhaustedException.lastStatus()`는 "상태 코드 또는 네트워크 오류 종류"를 담은 `String`입니다. `ChunkOutcome.failed(index, files, Integer)`에는 숫자일 때만 `Integer`로 넘기고 아니면 null로 넘깁니다. `Integer.parseInt`를 그대로 쓰지 않습니다
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
   - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
     - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음). 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
+    - 주의(11.5~11.9 리뷰): system 프롬프트에는 `<prlens:team_context>` 같은 태그 이름과 `security`, `summary`, `findings` 같은 단어가 원문으로 들어 있습니다. Property 34의 고유 표식은 고정 접두어와 UUID처럼 그 문구의 부분 문자열이 될 수 없는 값으로 만들고, 태그 개수는 요청 전체가 아니라 블록별로 셉니다 (스펙을 읽고 추론한 항목)
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
 - [ ] 13. Claude API 어댑터
