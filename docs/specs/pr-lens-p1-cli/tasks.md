@@ -512,6 +512,7 @@
     - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
     - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다
     - 주의(20.1 리뷰): 인젝션 픽스처 4개는 `blocker` Finding이 있어 기대 종료 코드가 1이고, `single-basic`, `split-three-chunks`, `excluded-files`는 `complete`이면서 `blocker`가 없어 0입니다. 제목·본문 인젝션의 `security` Finding은 `line`이 null인 `summary_only`(`line_missing`)입니다. `llm-responses/NN.json`은 파일 이름 순서가 Chunk 호출 순서이고 `text`가 객체면 `FixtureLoader`가 압축 JSON 문자열로 바꿉니다. `FixtureLoader`는 리소스를 `Path`로 열어서 jar 안에서는 동작하지 않습니다
+    - 주의(18.3~18.6 리뷰): 출력 단계는 `CliPipeline.emit(result, context, config, format, reporter, out)`로 떼어 두었습니다. `reportResult` 호출, `--format json`은 `ResultCodec.write` 결과 뒤에 `\n`, Markdown은 `MarkdownFormatter` 출력 그대로, stdout에 한 번 쓰기, 종료 코드는 `ExitCodeResolver.resolve`가 모두 이 메서드 안에 있습니다. `CliPipeline.review`는 항상 `PrFetcher`와 `ContextCollector`를 거치므로, 스냅샷과 컨텍스트를 직접 주입하는 이 테스트는 `emit`을 부르거나(`StderrReporter`는 `ByteArrayOutputStream` 위의 `PrintStream`으로 만듭니다) `GitHubFactory`에 픽스처를 돌려주는 가짜 `GitHubClient`를 넘겨 `review`를 부릅니다. 출력 규칙을 따로 다시 짜지 않습니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
   - [x] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - 주의(20.1 리뷰): 픽스처에는 40자 hex 모양의 가짜 SHA(`aaaa…`, `bbbb…`), `config/secrets/dev.yml` 경로 문자열(내용 `placeholder: true`), 인젝션 표식 `[prlens-injection]`이 정상 데이터로 들어 있습니다. 토큰 정규식이 이것들을 오탐하지 않아야 합니다(40자 hex 전체를 비밀정보로 보지 않음)
@@ -523,6 +524,7 @@
     - 결과를 PR이나 `docs/spikes/`에 기록
     - 주의(18.7 리뷰): 18.7의 `backend/scripts/prlens.cmd`(Windows cmd, PowerShell)와 macOS의 `scripts/prlens`는 실행해 확인하지 못했습니다(Linux에서만 확인). 리허설 때 Windows와 macOS에서 래퍼로 `prlens review`를 한 번씩 실행해 인자와 종료 코드가 그대로 전달되는지 봅니다
     - 미정(여기서 정함): 13.5의 사유 추출은 `{"type":"error","error":{"type","message"}}` 모양을 가짜 서버로만 확인했습니다. 실제 API의 4xx(잘못된 모델 이름 등) 응답 하나로, 사유가 `invalid_request_error: …`로 나오는지와 본문에 입력 내용이 섞여 오는지를 확인합니다 (스펙을 읽고 추론한 항목)
+    - 주의(18.3~18.6 리뷰): 18.6의 하위 프로세스 테스트는 환경변수 없음과 명령 없음 두 사례만 확인했습니다. 실제 결과가 stdout에 BOM 없는 UTF-8로 끝까지 나오는지, `PRLENS_DEBUG`를 켰을 때 GitHub·Claude HTTP 디버그 로그가 stderr에 마스킹되어 나오는지, 재시도 대기 중단(`IllegalStateException`) 경로는 확인하지 않았습니다. redirect는 따르지 않으므로(결정 18.3) 이름이 바뀐 저장소의 PR URL은 3xx 상태 코드 오류로 끝납니다
     - _Requirements: 9.7, 14.7_
 
 - [x] 21. CI 매트릭스 구성

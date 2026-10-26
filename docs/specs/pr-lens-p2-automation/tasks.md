@@ -323,6 +323,7 @@
   - [ ] 18.3 저장 흐름 구현
     - CLI 조립에 `UsageRecordingLlmClient`를 끼움, `repositoryId` 조회(G-5), `saveCliRun`(새 연결)
     - stderr에 Review_Run ID 또는 저장 오류 출력. 결과 생성 실패면 `failure`로 저장하고, PR 스냅샷 전 실패는 저장하지 않음(G-6)
+    - 주의(P1 18.3~18.6 리뷰): P1 `CliPipeline.review`는 결과를 stdout에 쓴 뒤 종료 코드(int)만 돌려주고 `ReviewResult`와 `PullRequestSnapshot`은 밖으로 내지 않으며, 실패하면 예외만 던집니다. 저장 ID를 stdout보다 먼저 stderr에 쓰는 순서나 스냅샷 뒤 실패를 `failure`로 저장하는 일은 이 메서드를 나눠야 할 수 있습니다(출력 단계는 `emit`으로 떼어 두었습니다). LLM 데코레이터는 `LlmFactory`가 만든 클라이언트를 `review`가 `RetryingLlmClient`로 감싸므로, 팩토리에서 `UsageRecordingLlmClient`를 씌우면 11.2의 체인 순서와 같아집니다
     - _Requirements: 9.1, 9.4, 9.5, 9.7, 9.9_
   - [ ]* 18.4 CLI `--save` 테스트 (설계 종료 코드 표 전 행, stdout이 `--save` 유무와 관계없이 같음, `--save`가 없으면 DB 연결 없음, `P2ExitCodes` 전수 표)
     - _Requirements: 9.2, 9.6, 9.7, 9.8, 9.9_
@@ -419,6 +420,7 @@
     - 저장소는 `InMemoryReviewStore` 또는 `JdbcReviewStore`. PR 조회 → `repositoryId` → `principal()` → `registerAutomatedRun(ACTIONS, staleAfter = 작업 제한 시간)` → `markRunning`. `Duplicate`·`MaxAttemptsReached`이면 Claude 호출 없이 종료 코드 0
     - 리뷰 → `completeRun`/`failRun` → `publish` → `Published`이면 `recordPublished`. 저장이 실패하면 메모리 저장소로 옮겨 게시를 계속
     - 결과별 stderr 출력과 `P2ExitCodes`
+    - 주의(P1 18.3~18.6 리뷰): P1 `CliPipeline.review`는 `ReviewResult`를 밖으로 내지 않고 종료 코드만 돌려줍니다. 이 흐름도 같은 메서드를 쓰므로 18.3의 주의를 따릅니다
     - _Requirements: 4.11, 20.1, 20.2, 20.3, 20.4, 20.5, 20.7, 20.8, 20.9_
   - [ ]* 24.2 `--publish` 테스트 (허용되지 않은 저장소는 외부 호출 없이 종료 코드 2, 중복이면 0, `superseded`는 실패로 치지 않음, 게시 실패는 1 또는 4)
     - _Requirements: 20.3, 20.4, 20.5, 20.8, 20.9_
