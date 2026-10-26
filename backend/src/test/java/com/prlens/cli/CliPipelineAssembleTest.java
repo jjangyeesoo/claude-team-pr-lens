@@ -9,6 +9,7 @@ import com.prlens.github.FilePage;
 import com.prlens.github.GitHubClient;
 import com.prlens.github.PullRequestMeta;
 import com.prlens.github.RepoTree;
+import com.prlens.llm.LlmApiException;
 import com.prlens.llm.LlmClient;
 import com.prlens.llm.LlmRequest;
 import com.prlens.llm.LlmResponse;
@@ -16,6 +17,9 @@ import com.prlens.llm.LlmUsage;
 import com.prlens.model.Configuration;
 import com.prlens.model.RepoRef;
 import com.prlens.pullrequest.PullRequestUrl;
+import com.prlens.support.Attempt;
+import com.prlens.support.RetriesExhaustedException;
+import com.prlens.support.RetryExecutor;
 import com.prlens.support.SecretMasker;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -150,7 +154,79 @@ class CliPipelineAssembleTest {
     assertThat(llm.calls).hasValue(0);
   }
 
-  // 조립 버그(LLM 팩토리 결과를 무시하거나 재시도 감싸기를 빠뜨림)는 LLM 경로를 지나야 드러난다
+  // 재시도 감싸기를 빠뜨리거나 같은 StderrReporter를 RetryListener로 넘기지 않으면 첫 호출 실패가 그대로 오류가 된다
+  @Test
+  void llmRetriesOverloadedResponseThenSucceedsAndReportsRetry() {
+    List<LlmResponse> replies = new ArrayList<>();
+    AtomicInteger calls = new AtomicInteger();
+    LlmClient flaky =
+        request -> {
+          if (calls.incrementAndGet() == 1) {
+            throw new LlmApiException("overloaded", 529, null, "0", null);
+          }
+          replies.add(
+              new LlmResponse(
+                  "end_turn",
+                  "{\"summary\":\"재시도 뒤 요약\",\"findings\":[]}",
+                  new LlmUsage(1, 1, 0, 0)));
+          return replies.get(0);
+        };
+    FilePage.Entry entry =
+        new FilePage.Entry("src/A.java", null, "modified", 1, 0, "@@ -1,0 +1,1 @@\n+int a;");
+    CliPipeline.Factories factories =
+        new CliPipeline.Factories(
+            (token, retry, masker, debugLog) -> new FakeGitHub(1, null, List.of(entry)),
+            (key, masker, debugLog) -> flaky);
+
+    int code =
+        CliPipeline.review(
+            preflight(OutputFormat.MARKDOWN),
+            factories,
+            new SecretMasker(List.of()),
+            false,
+            out,
+            err);
+
+    assertThat(code).isZero();
+    assertThat(calls).hasValue(2);
+    assertThat(out.text()).contains("재시도 뒤 요약");
+    assertThat(err.text()).contains("재시도: Claude 2/");
+  }
+
+  // GitHub 쪽 실행기도 설정의 재시도 횟수로 만들어지고 같은 StderrReporter에 알린다
+  @Test
+  void githubRetryExecutorUsesConfiguredMaxRetriesAndReports() {
+    List<RetryExecutor> executors = new ArrayList<>();
+    CliPipeline.Factories factories =
+        new CliPipeline.Factories(
+            (token, retry, masker, debugLog) -> {
+              executors.add(retry);
+              return new FakeGitHub(0, null);
+            },
+            (key, masker, debugLog) -> llm);
+    CliPipeline.review(
+        preflight(OutputFormat.MARKDOWN), factories, new SecretMasker(List.of()), false, out, err);
+
+    AtomicInteger attempts = new AtomicInteger();
+    assertThatThrownBy(
+            () ->
+                executors
+                    .get(0)
+                    .execute(
+                        "GitHub",
+                        () -> {
+                          attempts.incrementAndGet();
+                          return new Attempt.Retryable<String>("500", "0", null);
+                        }))
+        .isInstanceOfSatisfying(
+            RetriesExhaustedException.class,
+            e -> assertThat(e.attempts()).isEqualTo(Configuration.defaults().maxRetries() + 1));
+
+    assertThat(attempts).hasValue(Configuration.defaults().maxRetries() + 1);
+    assertThat(err.text()).contains("재시도: GitHub 2/");
+  }
+
+  // 조립 버그(LLM 팩토리 결과를 무시함)는 LLM 경로를 지나야 드러난다
   @Test
   void changedFileGoesThroughLlmOnceAndSummaryReachesStdout() {
     CountingLlm replying = new CountingLlm("{\"summary\":\"요약 문장\",\"findings\":[]}");

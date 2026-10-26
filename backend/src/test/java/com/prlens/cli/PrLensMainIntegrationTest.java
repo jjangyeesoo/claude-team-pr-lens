@@ -244,6 +244,7 @@ class PrLensMainIntegrationTest {
     assertThat(result.exitCode()).isEqualTo(2);
     assertThat(result.stdout()).isEmpty();
     assertThat(result.stderr()).contains("GITHUB_TOKEN").contains("ANTHROPIC_API_KEY");
+    assertThat(result.stderr()).doesNotStartWith("\uFEFF").endsWith("\n");
   }
 
   // 주의(18.1~18.2 리뷰): 명령 없이 실행하면 사용법을 stderr에 알리고 2로 끝난다
@@ -254,6 +255,7 @@ class PrLensMainIntegrationTest {
     assertThat(result.exitCode()).isEqualTo(2);
     assertThat(result.stdout()).isEmpty();
     assertThat(result.stderr()).contains("사용법: prlens review");
+    assertThat(result.stderr()).doesNotStartWith("\uFEFF").endsWith("\n");
   }
 
   private record Subprocess(int exitCode, String stdout, String stderr) {}

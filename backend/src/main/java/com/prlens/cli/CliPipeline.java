@@ -176,9 +176,23 @@ final class CliPipeline {
     ReviewContext context = new ContextCollector(github, reporter).collect(snapshot, config);
     ReviewResult result = new ReviewEngine(llm, reporter).review(snapshot, context, config);
 
+    return emit(result, context, config, preflight.format(), reporter, out);
+  }
+
+  /**
+   * 결과에서 유도하는 경고를 stderr로, 결과를 stdout으로 한 번 쓰고 종료 코드를 돌려준다. Markdown은 포매터 출력이 이미 {@code \n}으로 끝나므로
+   * 그대로 쓰고, JSON은 {@code ResultCodec.write} 결과 뒤에 {@code \n}을 붙인다.
+   */
+  static int emit(
+      ReviewResult result,
+      ReviewContext context,
+      Configuration config,
+      OutputFormat format,
+      StderrReporter reporter,
+      PrintStream out) {
     reporter.reportResult(result, config);
     String text =
-        preflight.format() == OutputFormat.JSON
+        format == OutputFormat.JSON
             ? new ResultCodec().write(result) + "\n"
             : new MarkdownFormatter().format(result, context);
     out.print(text);
