@@ -184,4 +184,26 @@ class RetryingLlmClientTest {
     assertThatThrownBy(() -> client(llm, 3).send(REQUEST)).isSameAs(invalid);
     assertThat(llm.calls).isEqualTo(1);
   }
+
+  // G-21: 429 외 4xx는 응답이 알려 준 사유를 메시지에 담는다
+  @Test
+  void other4xxMessageCarriesStatusAndDetail() {
+    LlmApiException bad =
+        new LlmApiException("http 400", 400, "400", null, "invalid_request_error: 모델 없음", null);
+    ScriptedLlm llm = new ScriptedLlm().fail(bad);
+
+    assertThatThrownBy(() -> client(llm, 3).send(REQUEST))
+        .isInstanceOfSatisfying(
+            NonRetryableApiException.class,
+            e -> assertThat(e.reason()).isEqualTo("invalid_request_error: 모델 없음"))
+        .hasMessage("Claude 요청이 실패했습니다 (상태 코드 400, invalid_request_error: 모델 없음)");
+  }
+
+  @Test
+  void other4xxWithoutDetailKeepsPlainMessage() {
+    ScriptedLlm llm = new ScriptedLlm().fail(http(400, null));
+
+    assertThatThrownBy(() -> client(llm, 3).send(REQUEST))
+        .hasMessage("Claude 요청이 실패했습니다 (상태 코드 400)");
+  }
 }

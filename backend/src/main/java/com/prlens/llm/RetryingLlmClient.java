@@ -43,7 +43,7 @@ public final class RetryingLlmClient implements LlmClient {
         // retry-after는 가공하지 않고 넘긴다. 유효한지는 실행기가 판단한다
         return new Attempt.Retryable<>(String.valueOf(status), e.retryAfter(), null);
       }
-      return new Attempt.Fatal<>(API, status);
+      return new Attempt.Fatal<>(API, status, e.detail());
     }
   }
 }

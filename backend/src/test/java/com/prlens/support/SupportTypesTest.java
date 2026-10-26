@@ -68,4 +68,22 @@ class SupportTypesTest {
         .withMessage("api");
     assertThat(new Attempt.Fatal<String>("GitHub", 422).status()).isEqualTo(422);
   }
+
+  // G-21: 사유는 선택이다. 없으면 기존 메시지 그대로다
+  @Test
+  void fatalReasonDefaultsToNullAndMessageHasNoReason() {
+    assertThat(new Attempt.Fatal<String>("GitHub", 422).reason()).isNull();
+
+    NonRetryableApiException plain = new NonRetryableApiException("GitHub", 422);
+    assertThat(plain.reason()).isNull();
+    assertThat(plain).hasMessage("GitHub 요청이 실패했습니다 (상태 코드 422)");
+  }
+
+  @Test
+  void nonRetryableMessageAppendsReasonWhenPresent() {
+    NonRetryableApiException withReason = new NonRetryableApiException("Claude", 400, "a: b");
+
+    assertThat(withReason.reason()).isEqualTo("a: b");
+    assertThat(withReason).hasMessage("Claude 요청이 실패했습니다 (상태 코드 400, a: b)");
+  }
 }

@@ -294,4 +294,18 @@ class RetryExecutorTest {
 
     assertThat(slept).isEqualTo(seconds(0));
   }
+
+  // G-21: Fatal이 실은 사유가 예외까지 전해진다
+  @Test
+  void fatalWithReasonPassesItToException() {
+    Script script = new Script(new Attempt.Fatal<>("Claude", 400, "invalid_request_error: bad"));
+
+    NonRetryableApiException exception =
+        catchThrowableOfType(
+            NonRetryableApiException.class, () -> executor(3).execute("Claude", script));
+
+    assertThat(exception.reason()).isEqualTo("invalid_request_error: bad");
+    assertThat(exception).hasMessage("Claude 요청이 실패했습니다 (상태 코드 400, invalid_request_error: bad)");
+    assertThat(script.calls).isEqualTo(1);
+  }
 }

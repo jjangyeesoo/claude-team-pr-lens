@@ -28,7 +28,7 @@ public final class RetryExecutor {
         return success.value();
       }
       if (outcome instanceof Attempt.Fatal<T> fatal) {
-        throw new NonRetryableApiException(api, fatal.status());
+        throw new NonRetryableApiException(api, fatal.status(), fatal.reason());
       }
       Attempt.Retryable<T> retryable = (Attempt.Retryable<T>) outcome;
       Duration wait = policy.waitAfter(attempt, retryable);
