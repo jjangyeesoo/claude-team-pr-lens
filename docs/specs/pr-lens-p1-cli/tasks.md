@@ -336,25 +336,26 @@
     - 주의(11.5~11.9 리뷰): system 프롬프트에는 `<prlens:team_context>` 같은 태그 이름과 `security`, `summary`, `findings` 같은 단어가 원문으로 들어 있습니다. Property 34의 고유 표식은 고정 접두어와 UUID처럼 그 문구의 부분 문자열이 될 수 없는 값으로 만들고, 태그 개수는 요청 전체가 아니라 블록별로 셉니다 (스펙을 읽고 추론한 항목)
     - **Validates: Requirements 1.14, 3.6, 3.7, 9.1, 13.1, 13.9, 13.10, 13.11, 14.3, 20.4, 20.6, 20.7**
 
-- [ ] 13. Claude API 어댑터
-  - [ ] 13.1 `AnthropicLlmClient` 구현 (1주차 spike 결과 반영)
+- [x] 13. Claude API 어댑터
+  - [x] 13.1 `AnthropicLlmClient` 구현 (1주차 spike 결과 반영)
     - SDK 자체 재시도 끄기, 요청 제한 시간 180초, `ANTHROPIC_API_KEY`는 이 클라이언트에만 전달
     - 요청 매핑: 모델, `max_tokens`, effort, system, user 블록 2개(첫 블록 ephemeral `cache_control`), `output_config.format`
     - 응답 매핑: `stop_reason`, 첫 text 블록, usage 네 토큰(thinking 포함 출력 토큰). HTTP 오류와 네트워크 오류는 `LlmApiException`(상태 코드, 오류 종류, `retry-after`)으로 던짐
-    - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `stopReason`이나 `text`가 없는 응답을 어떻게 다룰지는 여기서 정합니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
+    - 주의(선머지 리뷰): 클래스 이름은 `AnthropicLlmClient`로 둡니다. `ArchitectureTest`의 "`review`는 이 클래스를 참조하지 않는다" 규칙이 이름 문자열로 대상을 찾으므로, 이름이 다르면 규칙이 조용히 무력해집니다. 2.3의 `LlmRequest`·`LlmResponse`·`LlmUsage`에는 null 검사가 없습니다. `LlmApiException` 생성자는 `(message, status, errorKind, retryAfter, cause)`이고 필요하면 오버로드를 더합니다
     - 결정(7.1 리뷰): HTTP 디버그 로그의 헤더는 인스턴스 메서드 `SecretMasker.maskHeader(name, value)`로 가립니다. 7.1이 `SecretMasker`를 중첩 public record `HttpGitHubClient.Options(URI apiBase, Clock clock, SecretMasker masker, Consumer<String> debugLog)`와 4인자 생성자 오버로드로 받기로 정했습니다(원래 생성자는 `Options.defaults()`, 곧 빈 마스커와 꺼진 디버그 로그로 넘김). `AnthropicLlmClient`도 같은 방식으로 맞춥니다. 민감하지 않은 헤더는 값이 null이면 NPE이고, 이름이 null이면 항상 NPE입니다
     - 주의(10 리뷰): `ResponseParser`는 `LlmResponse.stopReason()`이 null이면 `schema_violation`으로, `text()`가 null이면 `""`로 다룹니다. 그러나 `usage()`가 null이면 `ParsedResponse` 생성에서 `NullPointerException`이 납니다. 응답에 usage가 없어도 `LlmUsage(0, 0, 0, 0)`처럼 null이 아닌 값을 넘깁니다
-    - 주의(18.5 리뷰): `PrLensException`이 아닌 예외는 CLI에서 원인 없이 `내부 오류가 발생했습니다 (<클래스 단순 이름>)`로만 보입니다. SDK가 던지는 런타임 예외 가운데 사용자에게 원인을 보여야 하는 것(HTTP·네트워크 외에 응답 역직렬화 실패 등)은 `LlmApiException`으로 감싸 던집니다 (스펙을 읽고 추론한 항목. SDK가 실제로 던지는 예외는 확인하지 않았습니다)
+    - 주의(18.5 리뷰): `PrLensException`이 아닌 예외는 CLI에서 원인 없이 `내부 오류가 발생했습니다 (<클래스 단순 이름>)`로만 보입니다. SDK가 던지는 런타임 예외 가운데 사용자에게 원인을 보여야 하는 것(HTTP·네트워크 외에 응답 역직렬화 실패 등)은 `LlmApiException`으로 감싸 던집니다 (가짜 서버로 응답 본문 해석 실패, 연결 실패, 제한 시간 초과, HTTP 오류가 모두 `LlmApiException`이 되는 것을 확인했습니다. 실제 API의 오류 응답은 확인하지 않았습니다)
+    - 결정(13.1): `stopReason`이 없으면 null, text 블록이 없으면 `text`를 null로 둡니다(`ResponseParser`가 `stop_reason`으로 처리). `usage`는 항상 `LlmUsage`로 넘기고 캐시 필드가 없으면 0입니다. 상태 코드가 없는 오류의 `errorKind`는 `timeout`, `connection_error`, `invalid_response`이고, 앞의 둘만 `RetryingLlmClient`가 재시도합니다. `AnthropicLlmClient.Options(baseUrl, timeout, masker, debugLog)`로 `HttpGitHubClient.Options`와 같은 방식을 따릅니다
     - _Requirements: 9.1, 19.6, 20.1, 20.8, 21.2_
-  - [ ] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
+  - [x] 13.2 `RetryingLlmClient` 데코레이터 구현 (생성자 `RetryingLlmClient(LlmClient, RetryExecutor)`, API 이름 "Claude", `LlmApiException`을 `Attempt.Retryable`/`Fatal`로 분류)
     - 주의(3 리뷰): 연결 실패와 제한 시간 초과를 예외로 던지면 실행기가 재시도 없이 그대로 통과시킵니다. 재시도하려면 `Attempt.Retryable`로 돌려줍니다. `NonRetryableApiException`의 api는 `execute(api, …)`의 인자이고 `Attempt.Fatal.api()`는 쓰이지 않으므로 두 값을 같게 넘깁니다
     - 주의(3 리뷰): 실행기는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외(`api()`, `lastStatus()`)와 `RetryListener`에 넘기고, 이 문자열이 요구사항 21.6·21.7의 메시지에 그대로 나옵니다. HTTP 상태는 숫자만으로 된 문자열(`"503"`), 네트워크 오류는 숫자가 아닌 종류 이름으로 맞춥니다 (스펙을 읽고 추론한 항목)
     - 주의(3 리뷰): 실행기는 `retryAfter`가 ASCII 숫자만으로 된 문자열일 때만 유효로 봅니다. 앞뒤 공백, `+5`, `1.5`, HTTP 날짜는 오류 없이 지수 백오프로 넘어가므로, 헤더 값을 가공 없이 넘기되 공백이 붙어 오는지 확인합니다 (스펙을 읽고 추론한 항목)
     - _Requirements: 21.1, 21.6, 21.7_
-  - [ ]* 13.3 요청·응답 매핑 단위 테스트 (모델·effort 항상 명시, 캐시 지점 위치, usage 필드 매핑)
+  - [x]* 13.3 요청·응답 매핑 단위 테스트 (모델·effort 항상 명시, 캐시 지점 위치, usage 필드 매핑)
     - _Requirements: 20.8, 20.9_
 
-  - [ ] 13.4 실제 Claude API 스모크 (수요일까지. `ANTHROPIC_API_KEY`가 있을 때만 도는 수동 실행 테스트)
+  - [x] 13.4 실제 Claude API 스모크 (수요일까지. `ANTHROPIC_API_KEY`가 있을 때만 도는 수동 실행 테스트)
     - 손으로 만든 작은 `LlmRequest`(짧은 system, 팀 컨텍스트 파일 하나, 작은 diff)를 `RetryingLlmClient(AnthropicLlmClient)`로 실제 호출해 `ResponseParser`까지 통과시킴
     - 확인: 구조화된 출력이 스키마대로 오는지, thinking 블록 뒤의 text 블록 선택, usage 네 토큰과 캐시 필드, `basis.ref`가 컨텍스트 경로와 같은 문자열로 오는지, 응답 시간과 비용
     - 결과를 PR 설명이나 `docs/spikes/`에 기록. CI에서는 실행하지 않음(요구사항 22.7)
@@ -440,6 +441,8 @@
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
     - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
+    - 주의(13 리뷰): `AnthropicLlmClient(apiKey)`는 `Options.defaults()`(기본 주소, 제한 시간 180초, 빈 `SecretMasker`, 디버그 로그 꺼짐)를 씁니다. 디버그 모드에서 Claude HTTP 로그를 내려면 `new AnthropicLlmClient(key, new AnthropicLlmClient.Options(null, Duration.ofSeconds(180), masker, debugLog))`처럼 제한 시간을 직접 넘깁니다. 키는 `ANTHROPIC_API_KEY`에서 읽은 값을 이 생성자에만 넘깁니다 (코드를 확인한 항목)
+    - 주의(13 리뷰): SDK는 환경변수 `ANTHROPIC_LOG`(`debug`·`info`·`error`)를 읽고 요청과 응답을 `System.err`에 직접 씁니다(`x-api-key`, `authorization` 헤더는 SDK가 가림). SDK는 `System.err`를 쓸 때마다 다시 읽으므로, `PrLensMain.main`이 설치한 마스킹 스트림으로 나가는지는 클라이언트를 만드는 시점과 관계없습니다. 이 스트림을 바꾸거나 우회하지 않습니다 (리뷰어가 SDK 바이트코드로 확인한 항목. 실제 출력은 확인하지 않았습니다)
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
@@ -556,6 +559,7 @@
   | G-18 `basis.ref` 비교 대상(`Revision.HEAD` 스펙 경로 포함 여부, 설계 "요구사항 공백") | 10.4, 11.5 |
   | G-19 읽은 텍스트의 BOM과 비ASCII 공백 (설계 "요구사항 공백") | 8.4, 8.6, 8.9 (구현 완료, 결정되면 수정) |
   | G-20 디버그 모드를 켜는 방법 (설계 "요구사항 공백") | 18.3, 18.5 (구현 완료, 결정되면 수정), 18.6 |
+  | G-21 429 외 4xx 응답의 사유 표시 (설계 "요구사항 공백") | 13.1, 13.2, 18.5 (구현 완료, 결정되면 수정) |
 - 이 스펙은 2주차 세 트랙을 한 건으로 묶은 것입니다(ROADMAP 1주차의 "2주차 스펙 검토와 승인"에 해당). 스펙 하나가 PR 하나가 될 수 없으므로 PR은 상위 작업 단위로 냅니다(Overview의 "PR 단위", 루트 `CLAUDE.md`). PR 경계는 설계 문서의 클래스 수로 어림해 정한 것이라, 실제로 해 보고 맞지 않으면 이 문서의 경계를 고칩니다.
 - **데모 최소 경로와 밀리면 미룰 것**: 금요일 데모(실제 PR 1건, 규칙 근거 지적 1건 이상)에 꼭 필요한 것은 1.1, 1.2, 2.1~2.3, 3.1, 3.3, 5.1~5.3, 6.1, 6.3, 7.1, 7.2, 7.4, 8.1, 8.2, 8.4, 8.11, 10.1, 10.2, 10.4, 11.1(단일 모드), 11.3, 11.5, 11.6, 11.8, 12.1, 13.1, 13.2, 17.1, 17.3, 18.1~18.3, 18.5, 23.2, 20.4입니다. 일정이 밀리면 아래 순서로 미룹니다(ROADMAP "일정 위험과 완충": FR-6 분할을 먼저 줄임).
   1. `*` 표시 작업 전부(속성 테스트와 보조 테스트)
