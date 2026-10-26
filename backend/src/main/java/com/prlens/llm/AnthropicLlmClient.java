@@ -21,6 +21,7 @@ import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -37,6 +38,9 @@ public final class AnthropicLlmClient implements LlmClient {
 
   static final String CONNECTION_ERROR = "connection_error";
   static final String INVALID_RESPONSE = "invalid_response";
+
+  /** 오류 응답 사유(메시지 부분)의 최대 글자 수 (설계 G-21). */
+  static final int DETAIL_MAX_CHARS = 200;
 
   private static final JsonMapper MAPPER = JsonMapper.builder().build();
 
@@ -162,7 +166,56 @@ public final class AnthropicLlmClient implements LlmClient {
         status,
         String.valueOf(status),
         retryAfter.isEmpty() ? null : retryAfter.get(0),
+        detail(e),
         e);
+  }
+
+  /**
+   * 오류 응답 본문의 {@code error.type}과 {@code error.message}를 {@code 종류: 메시지}로 만든다 (설계 G-21). 메시지는 공백을
+   * 정리하고 비밀값을 가린 뒤 {@value #DETAIL_MAX_CHARS}자까지만 쓴다. 본문이 오류 객체가 아니면 null이다.
+   */
+  private String detail(AnthropicServiceException e) {
+    Map<String, JsonValue> error = objectOf(objectOf(e.body()).get("error"));
+    if (error.isEmpty()) {
+      return null;
+    }
+    String type = collapse(textOf(error.get("type")));
+    String message = collapse(textOf(error.get("message")));
+    // 마스킹을 먼저 한다. 자른 뒤에 하면 경계에 걸린 비밀값의 앞부분이 그대로 남는다
+    if (message != null) {
+      message = options.masker().mask(message);
+      if (message.codePointCount(0, message.length()) > DETAIL_MAX_CHARS) {
+        message = message.substring(0, message.offsetByCodePoints(0, DETAIL_MAX_CHARS));
+      }
+    }
+    if (type == null) {
+      return message;
+    }
+    type = options.masker().mask(type);
+    return message == null ? type : type + ": " + message;
+  }
+
+  /** 공백(줄바꿈 포함)을 한 칸으로 줄이고 앞뒤를 자른다. 비었거나 null이면 null이다. */
+  private static String collapse(String text) {
+    if (text == null) {
+      return null;
+    }
+    String collapsed = text.replaceAll("\\s+", " ").strip();
+    return collapsed.isEmpty() ? null : collapsed;
+  }
+
+  // SDK의 JsonValue는 raw 타입 JsonField를 상속해 asObject()와 asString()이 raw Optional로 보이므로 여기서 한 번만 형을
+  // 맞춘다
+  @SuppressWarnings("unchecked")
+  private static Map<String, JsonValue> objectOf(JsonValue value) {
+    if (value == null) {
+      return Map.of();
+    }
+    return ((Optional<Map<String, JsonValue>>) (Optional<?>) value.asObject()).orElse(Map.of());
+  }
+
+  private static String textOf(JsonValue value) {
+    return value == null ? null : (String) value.asString().orElse(null);
   }
 
   private static boolean hasTimeoutCause(Throwable error) {

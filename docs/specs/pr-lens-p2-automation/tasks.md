@@ -241,6 +241,7 @@
     - DB 풀: HikariCP, 최대 크기 = 작업자 수 + 4. 커넥션 획득 1초 제한은 webhook 요청 경로에만. 포트 8080. 종료 시 진행 중 작업은 기다리지 않음(다음 시작 때 `interrupted`)
     - `ServerCommand`가 `logging.config=classpath:logback-server.xml`을 지정(4.2)
     - 조립이 끝나면 서버를 띄워 smee로 전달된 실제 `pull_request` 이벤트 하나가 서명 검증을 통과하고 202를 받는지 확인(사람이 실행. 26.6 리허설 전의 첫 종단 확인)
+    - 주의(P1 13.5 리뷰): P1 `AnthropicLlmClient`는 Claude 4xx 사유를 `Options.masker`로 가린 뒤 200자에서 자릅니다. 빈 마스커로 만들면 잘린 키 앞부분이 `NonRetryableApiException.getMessage()`에 남아 `failRun`의 `maskedMessage` 치환으로도 지워지지 않습니다. 공유 클라이언트에는 서버의 Secret_Value(최소 Anthropic 키)를 담은 `SecretMasker`를 넘깁니다. 같은 이유로 `failRun`에 저장하는 메시지는 Claude가 준 문구가 최대 약 200자 들어갈 수 있으니 저장 전에 길이와 마스킹을 한 번 더 확인합니다 (코드를 확인한 항목)
     - _Requirements: 2.1, 3.4, 6.8, 7.10, 7.11, 10.11, 10.12, 19.5_
   - [ ]* 12.3 복구 테스트 (세 경로, 게시만 하는 복구가 LLM을 부르지 않음, 복구가 `interrupted`를 다시 등록하지 않음, 시작 검증 이름 목록, `\n` 이스케이프 키, 빈 허용 목록 경고와 비루프백 주소 경고)
     - _Requirements: 3.4, 4.8, 4.14, 4.15, 6.8, 10.12_
@@ -338,7 +339,7 @@
     - 422는 `GitHubUnprocessableException`(치환한 본문, 최대 8KB). 요청 로그에는 메서드·경로·상태만 남김
     - 생성 요청(`createIssueComment`, `createReview`)은 rate limit 응답만 재시도하고, 5xx·연결 실패·제한 시간 초과는 다시 보내지 않고 `PostOutcomeUnknownException`
     - 예시 테스트(HTTP 수준): 페이지네이션, 422 본문 보존, 생성 요청이 5xx에서 재전송되지 않음
-    - 주의(P1 3 리뷰): P1 `RetryExecutor`는 `Attempt.Fatal`을 항상 기반 타입 `NonRetryableApiException(api, status)`으로 던지고 본문을 실을 자리가 없습니다. 422는 `Fatal(422)`을 돌려주지 말고 호출 안에서 `GitHubUnprocessableException`을 직접 던집니다(호출자가 던진 예외는 실행기가 그대로 통과시킴)
+    - 주의(P1 3 리뷰): P1 `Attempt.Fatal`에는 선택 인자 `reason`이 있어 `NonRetryableApiException.reason()`과 메시지 `(상태 코드 N, <reason>)`에 실리지만, 실행기는 항상 기반 타입 `NonRetryableApiException`으로만 던집니다. 422의 8KB 본문과 `GitHubUnprocessableException` 하위 타입은 이 경로로 만들 수 없습니다. 422는 `Fatal(422)`을 돌려주지 말고 호출 안에서 `GitHubUnprocessableException`을 직접 던집니다(호출자가 던진 예외는 실행기가 그대로 통과시킴)
     - _Requirements: 11.1, 11.2, 11.15, 12.1, 12.2, 15.2, 18.4_
   - [ ] 20.2 게시 주체 식별 구현 (`AppPrincipalResolver`: `GET /app`의 slug와 `GET /users/{slug}[bot]`의 ID, 프로세스 캐시 / `TokenPrincipalResolver`: `GET /user`의 ID와 login, 403이고 `GITHUB_ACTIONS=true`이면 `github-actions[bot]`). 작성자 비교는 숫자 ID가 기본, 없으면 login. 10.1(JWT)과 10.3 뒤에 구현하고 생성자는 2.6에서 정한 형태를 그대로 씀
     - spike 10 결과 반영. 비교 기준이 바뀌면 `GitHubPrincipal.isAuthor`만 수정

@@ -208,7 +208,8 @@ public sealed interface Attempt<T> {
   record Success<T>(T value) implements Attempt<T> {}
   record Retryable<T>(String statusOrError, /*@Nullable*/ String retryAfter,   // 헤더 원문. 유효성은 실행기가 판단
                       /*@Nullable*/ Duration delay) implements Attempt<T> {}  // 호출자가 정한 대기(GitHub rate limit). `wait`는 record 구성 요소 이름으로 쓸 수 없음
-  record Fatal<T>(String api, int status) implements Attempt<T> {}             // 실행기가 NonRetryableApiException으로 던진다
+  record Fatal<T>(String api, int status, /*@Nullable*/ String reason)         // 실행기가 NonRetryableApiException(api, status, reason)으로 던진다. 2인자 생성자는 reason이 null
+      implements Attempt<T> {}
 }
 // RetryExecutor: public <T> T execute(String api, Supplier<Attempt<T>> call)
 
@@ -919,7 +920,7 @@ cost:
 | `RateLimitResetException(seconds, resetAt)` | `github`(`HttpGitHubClient`가 직접 던짐) | `getMessage()`: 한도가 풀리는 시각(UTC) | 2 |
 | `RetriesExhaustedException(api, lastStatus, attempts)` | `support`(`RetryExecutor`) | API 이름, 마지막 상태/오류 종류, 시도 수 | 2 (분할 모드 개별 Chunk는 `chunk_failed`로 흡수) |
 | `RetryAfterTooLongException(api, seconds)` | `support`(`RetryExecutor`) | API 이름, 헤더 값 또는 한도가 풀리는 시각. `seconds`는 초 단위로 올린 대기 시간이고, 실행기는 한도가 풀리는 시각을 알 수 없어 메시지에 넣지 않습니다(요구사항 21.10의 시각은 호출자 쪽에서 만듦) | 2 |
-| `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드 | 2 |
+| `NonRetryableApiException(api, 4xx)` | `support`(`RetryExecutor`. 호출자가 `Attempt.Fatal`을 돌려줄 때) | API 이름, 상태 코드. Claude는 응답이 알려 준 사유도(G-21) | 2 |
 | `AllChunksFailedException` | `review` | 실패한 Chunk 수와 마지막 Chunk의 API 이름·마지막 상태·시도 수 (마지막 `RetriesExhaustedException`이 cause) | 2 |
 | 결과 생성 성공 | | 불완전·비용 경고(있으면) | `ExitCodeResolver`: 1 / 3 / 0 |
 | 예상하지 못한 예외 | 어디서나 | "내부 오류" + 마스킹한 스택(디버그 모드) | 2 |
@@ -1000,7 +1001,7 @@ for attempt in 1..(maxRetries+1):
 | G-18 | `Revision.HEAD` 스펙(`SpecCollector`가 head SHA에서 가져온 스펙)도 `ReviewContext` 경로에 있어, `team_context` 밖(둘째 블록의 head 스펙 영역) 파일을 가리키는 `spec` basis도 요구사항 11.2~11.3 문구대로 통과함. 근거를 `Revision.BASE` 파일로 한정할지 요구사항에 없음 | `FindingValidator`는 `ReviewContext`의 모든 경로와 비교함(작업 10.4). 한정하면 11.2~11.3의 "ReviewContext의 파일 경로"를 "Common_Context 파일 경로"로 바꿔야 함 | 10.4, 11.5 |
 | G-19 | 읽은 텍스트의 BOM(U+FEFF)과 비ASCII 공백(NBSP 등) 처리가 요구사항에 없고 구성 요소마다 다름. 설정 파일은 맨 앞 BOM 하나를 벗겨 냄. rule 파일은 BOM으로 시작하면 요구사항 5.2("첫 줄이 `---`") 글자대로 프런트매터 없음으로 봄. CLAUDE.md·import 파일이 BOM으로 시작하면 첫 줄의 `@`는 import가 아니고 첫 줄의 여는 펜스도 펜스로 보지 않음. `@import`의 "공백 문자"(요구사항 6.4)는 Java `\s`라 ASCII 공백만 보므로 NBSP 뒤의 `@`는 import가 아님. 스펙 링크의 경로 문자(요구사항 7.1)도 `[^\s…]`라 경로 뒤의 NBSP가 경로에 들어가 `spec_not_found`가 됨 | 현재 구현: 위와 같음(작업 8.4, 8.6, 8.9, 16.1). NBSP와 BOM 시작 사례를 고정하는 `ImportResolverTest`는 없으므로 결정을 반영할 때 함께 더함. 제안값은 GitHub에서 읽은 텍스트 파일(CLAUDE.md, import, rule, 스펙(base·head))도 설정 파일처럼 맨 앞 BOM 하나를 벗겨 내고, 요구사항 6.4·7.1의 "공백 문자"는 ASCII 공백(`[ \t\n\x0B\f\r]`)만 뜻한다고 명시하는 것. 요구사항 1.10, 11.4, 19.2의 "공백 문자로만 이루어짐"은 `String.strip`·`isBlank` 기준(유니코드 공백 포함, NBSP 제외)이라 이 결정 대상이 아님 | 5.2, 6.4, 7.1, 22.3 |
 | G-20 | 설계와 요구사항 19.4·19.5가 "디버그 모드", "HTTP 디버그 로그"를 말하지만 켜는 방법이 어디에도 없음 | 현재 구현: `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜고, 지금은 예상하지 못한 예외의 마스킹된 스택 출력에만 씀(작업 18.5). 제안값은 이 환경변수를 그대로 확정하고 18.3의 `HttpGitHubClient` 디버그 로그도 같은 조건으로 켜는 것. 대안은 `--debug` 옵션(`ReviewArgs`, 사용법, 테스트가 함께 바뀜) | 19.4, 19.5 |
-| G-21 | Claude API가 429 외 4xx(잘못된 모델 이름, 스키마 거부, 인증 실패 등)를 내면 사용자에게 응답 본문의 사유를 보여 줄지 요구사항 21.8이 정하지 않음 | 현재 구현(작업 13.1, 13.2): `AnthropicLlmClient`는 `LlmApiException`에 상태 코드와 SDK 예외(cause)를 담지만, `RetryingLlmClient`가 이를 `Attempt.Fatal(api, status)`로 바꾸므로 `NonRetryableApiException`의 메시지는 "Claude 요청이 실패했습니다 (상태 코드 400)"뿐이고 본문의 사유는 남지 않음. 제안값은 메시지에 Claude가 준 오류 종류(`error.type`)를 더하고, 본문의 `message`는 디버그 모드(G-20)에서만 stderr에 내는 것. 어느 쪽이든 `SecretMasker`를 거침. 구현은 `NonRetryableApiException`에 사유를 담는 방법과 `RetryingLlmClient`가 `LlmApiException`을 그대로 던지는 방법이 있어 결정할 때 18.5와 함께 고름 | 21.8, 19.4 |
+| G-21 | Claude API가 429 외 4xx(잘못된 모델 이름, 스키마 거부, 인증 실패 등)를 내면 사용자에게 응답 본문의 사유를 보여 줄지 요구사항 21.8이 정하지 않음 | 확정(작업 13.5): 오류 메시지에 응답 본문의 `error.type`과 `error.message`를 `종류: 메시지` 꼴로 항상 담는다. 메시지는 공백을 정리하고 `SecretMasker`로 가린 뒤 200자까지만 쓴다. 본문이 오류 객체가 아니면 사유 없이 상태 코드만 보인다. `AnthropicLlmClient`가 `LlmApiException.detail()`로 만들고 `RetryingLlmClient`가 `Attempt.Fatal.reason`으로 넘겨 `NonRetryableApiException`이 `Claude 요청이 실패했습니다 (상태 코드 400, invalid_request_error: …)`를 낸다. GitHub 응답은 요구사항 1.11을 따르므로 바뀌지 않는다. 디버그 모드에서만 내는 방안은 노출 범위와 재실행 비용을 비교해 채택하지 않았다 | 21.8, 19.4 |
 
 G-8~G-12는 스펙 검토(2026-10-04)에서 추가한 항목이고, G-13은 작업 11.1~11.4 리뷰에서, G-14는 작업 17 리뷰에서, G-15~G-17은 작업 8.9~8.12 리뷰에서, G-18은 작업 10 리뷰에서, G-19는 PR #27~51 리뷰 기록 정리(작업 8.1~8.5, 8.6~8.8, 16 리뷰에서 기각한 지적)에서, G-20은 작업 18.5 리뷰에서, G-21은 작업 13 리뷰에서 추가했습니다. "미정"으로 적은 부분은 팀이 정합니다.
 

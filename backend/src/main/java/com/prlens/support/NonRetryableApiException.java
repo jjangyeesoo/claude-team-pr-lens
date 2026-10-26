@@ -5,11 +5,20 @@ public class NonRetryableApiException extends PrLensException {
 
   private final String api;
   private final int status;
+  private final String reason;
 
   public NonRetryableApiException(String api, int status) {
-    super(api + " 요청이 실패했습니다 (상태 코드 " + status + ")");
+    this(api, status, null);
+  }
+
+  /**
+   * @param reason 응답이 알려 준 사유(예: 오류 종류와 메시지). 없으면 null이다
+   */
+  public NonRetryableApiException(String api, int status, String reason) {
+    super(api + " 요청이 실패했습니다 (상태 코드 " + status + (reason == null ? "" : ", " + reason) + ")");
     this.api = api;
     this.status = status;
+    this.reason = reason;
   }
 
   public String api() {
@@ -18,5 +27,10 @@ public class NonRetryableApiException extends PrLensException {
 
   public int status() {
     return status;
+  }
+
+  /** 응답이 알려 준 사유. 없으면 null이다. */
+  public String reason() {
+    return reason;
   }
 }

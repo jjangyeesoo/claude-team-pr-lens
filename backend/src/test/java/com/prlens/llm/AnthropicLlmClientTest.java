@@ -276,4 +276,98 @@ class AnthropicLlmClientTest {
           .containsExactly("summary", "findings");
     }
   }
+
+  private static String errorBody(String type, String message) {
+    String messageField =
+        message == null ? "" : ",\"message\":" + MAPPER.writeValueAsString(message);
+    return "{\"type\":\"error\",\"error\":{\"type\":\"" + type + "\"" + messageField + "}}";
+  }
+
+  private static LlmApiException failure(FakeClaudeServer server) {
+    try {
+      client(server).send(request());
+    } catch (LlmApiException e) {
+      return e;
+    }
+    throw new AssertionError("LlmApiException이 던져지지 않았습니다");
+  }
+
+  // G-21: 429 외 4xx의 사유(오류 종류와 메시지)를 사용자에게 보여 준다
+  @Test
+  void clientErrorCarriesErrorTypeAndMessageAsDetail() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer()
+            .respond(400, errorBody("invalid_request_error", "model: 모델을 찾을 수 없습니다"))) {
+      assertThat(failure(server).detail()).isEqualTo("invalid_request_error: model: 모델을 찾을 수 없습니다");
+    }
+  }
+
+  @Test
+  void detailCollapsesWhitespaceAndTruncatesMessageTo200Chars() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer()
+            .respond(400, errorBody("invalid_request_error", "a\n  b\t" + "x".repeat(500)))) {
+      assertThat(failure(server).detail())
+          .isEqualTo("invalid_request_error: a b " + "x".repeat(196));
+    }
+  }
+
+  @Test
+  void detailIsMaskedWithSecretMasker() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer()
+            .respond(401, errorBody("authentication_error", "invalid key " + KEY))) {
+      assertThat(failure(server).detail()).isEqualTo("authentication_error: invalid key ***");
+    }
+  }
+
+  @Test
+  void detailFallsBackToErrorTypeWhenBodyHasNoMessage() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer().respond(404, errorBody("not_found_error", null))) {
+      assertThat(failure(server).detail()).isEqualTo("not_found_error");
+    }
+  }
+
+  // 마스킹이 자르기보다 먼저여야 한다. 거꾸로면 200자 경계에서 잘린 키 앞부분이 남는다
+  @Test
+  void maskingHappensBeforeTruncationSoNoKeyPrefixSurvives() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer()
+            .respond(400, errorBody("invalid_request_error", "x".repeat(195) + KEY + " tail"))) {
+      String detail = failure(server).detail();
+
+      assertThat(detail).isEqualTo("invalid_request_error: " + "x".repeat(195) + "*** t");
+      assertThat(detail).doesNotContain("sk-an");
+    }
+  }
+
+  @Test
+  void errorTypeIsMaskedToo() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer().respond(400, errorBody("bad_" + KEY, "m"))) {
+      assertThat(failure(server).detail()).isEqualTo("bad_***: m");
+    }
+  }
+
+  @Test
+  void blankMessageIsTreatedAsMissingAndTypeWhitespaceIsCollapsed() {
+    try (FakeClaudeServer server =
+        new FakeClaudeServer()
+            .respond(400, errorBody("invalid_request_error", "   \n "))
+            .respond(400, errorBody("invalid\\n  request", "m"))) {
+      assertThat(failure(server).detail()).isEqualTo("invalid_request_error");
+      assertThat(failure(server).detail()).isEqualTo("invalid request: m");
+    }
+  }
+
+  @Test
+  void detailIsNullWhenBodyIsNotAnErrorObject() {
+    try (FakeClaudeServer server = new FakeClaudeServer().respond(400, "plain text")) {
+      LlmApiException e = failure(server);
+
+      assertThat(e.status()).isEqualTo(400);
+      assertThat(e.detail()).isNull();
+    }
+  }
 }

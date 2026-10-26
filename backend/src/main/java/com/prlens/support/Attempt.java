@@ -18,10 +18,18 @@ public sealed interface Attempt<T> {
     }
   }
 
-  /** 재시도하지 않는 응답. 실행기가 {@code NonRetryableApiException}으로 던진다. */
-  record Fatal<T>(String api, int status) implements Attempt<T> {
+  /**
+   * 재시도하지 않는 응답. 실행기가 {@code NonRetryableApiException}으로 던진다.
+   *
+   * @param reason 응답이 알려 준 사유. 없으면 null이다
+   */
+  record Fatal<T>(String api, int status, String reason) implements Attempt<T> {
     public Fatal {
       Objects.requireNonNull(api, "api");
+    }
+
+    public Fatal(String api, int status) {
+      this(api, status, null);
     }
   }
 }
