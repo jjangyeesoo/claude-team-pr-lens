@@ -90,6 +90,13 @@ class StderrReporterTest {
   }
 
   @Test
+  void chunkStartedPrintsNothingForSingleChunk() {
+    reporter.chunkStarted(1, 1);
+
+    assertThat(written()).isEmpty();
+  }
+
+  @Test
   void chunkStartedPrintsNOfN() {
     reporter.chunkStarted(2, 3);
 

@@ -49,6 +49,10 @@ public final class StderrReporter implements ReviewListener, RetryListener, Warn
 
   @Override
   public void chunkStarted(int index, int total) {
+    // 요구사항 13.12: n/N 표시는 분할 모드만. 엔진은 단일·요약 전용 모드에서도 (1, 1)을 부른다
+    if (total <= 1) {
+      return;
+    }
     line("Chunk " + index + "/" + total + " 리뷰 중");
   }
 

@@ -415,7 +415,7 @@
   - [x]* 17.4 Property 36: 종료 코드 결정 테스트
     - **Validates: Requirements 15.9, 15.10, 16.7, 16.8**
 
-- [ ] 18. CLI 명령과 파이프라인
+- [x] 18. CLI 명령과 파이프라인
   - PR 경계: 18.1~18.2 / 18.3~18.6 / 18.7
   - [x] 18.1 `PrLensMain`, `ReviewCommand` 구현 (picocli, `review <url> [--format markdown|json] [--config <path>]`, 자동 오류 처리 끄고 `UsageException`으로 전달)
     - 결정(18.1): picocli가 직접 쓰는 출력(사용법)은 `setOut`/`setErr`에 UTF-8 `PrintWriter`를 명시해 넘깁니다. 기본 writer의 문자 집합은 확인하지 않고 명시로 피했습니다. 인자 오류는 `execute()`가 처리기의 예외를 삼키므로 `parseArgs`를 직접 불러 `UsageException`으로 바꿉니다
@@ -430,7 +430,7 @@
     - 결정(18.2): `logback.xml`의 encoder에 `<charset>UTF-8</charset>`을 명시했습니다. Logback encoder의 기본 문자 집합은 확인하지 않고 명시로 피했습니다. 설정이 stderr, WARN, UTF-8인지는 `LogbackConfigTest`가 읽어 확인합니다
     - 주의(16 리뷰): `ConfigLoader`는 사용자 홈을 스스로 찾지 않습니다. `new ConfigLoader(Path.of("").toAbsolutePath(), Path.of(System.getProperty("user.home")))`처럼 현재 작업 폴더와 홈을 넘깁니다. `ConfigException.getMessage()`는 문제 전체를 여러 줄로 담고 잘못된 제외 패턴 원문을 포함하므로, 마스커를 설치한 뒤 그대로 stderr에 씁니다
     - _Requirements: 1.9, 1.10, 3.11, 15.12, 18.7, 19.1, 19.2, 19.3, 19.4, 22.3_
-  - [ ] 18.3 파이프라인 조립 구현
+  - [x] 18.3 파이프라인 조립 구현
     - Spring 컨텍스트 없이 `HttpGitHubClient`, `PrFetcher`, `ContextCollector`, `RetryingLlmClient(AnthropicLlmClient)`, `ReviewEngine`을 직접 조립
     - 조립 함수는 `GitHubClient`와 `LlmClient`를 만드는 팩토리를 인자로 받음(CLI 통합 테스트가 호출 수를 세는 가짜를 넘길 수 있게)
     - 결과에서 유도하는 경고를 `StderrReporter`로 출력: 파일 수 부족(`fileCountGap`), 단가 없음(`estimatedCostUsd == null`), 1회 비용 상한 초과
@@ -440,11 +440,11 @@
     - 주의(15 리뷰): `ResultCodec.write`의 결과는 `\n`으로 끝나지 않습니다. `--format json`은 결과 뒤에 `\n`을 붙여 stdout에 한 번에 쓰고 flush합니다(끝의 `\n`은 `read`가 받아들입니다)
     - 주의(17 리뷰): `MarkdownFormatter.format`의 결과는 이미 `\n` 하나로 끝납니다. Markdown 출력에는 `\n`을 더 붙이지 않고, `--format json`일 때만 `ResultCodec.write` 결과에 `\n`을 붙입니다. 무조건 덧붙이면 stdout이 `\n\n`으로 끝나 20.2의 골든 비교가 어긋납니다
     - 주의(7.1 리뷰): 3인자 `HttpGitHubClient` 생성자는 빈 `SecretMasker`를 쓰고 디버그 로그가 꺼져 있습니다. 디버그 모드에서 HTTP 로그를 내려면 18.2에서 만든 같은 `SecretMasker`와 stderr로 가는 `debugLog`를 `Options`에 넣어 4인자 생성자로 조립합니다 (스펙을 읽고 추론한 항목)
-    - 미정(여기서 정함): `HttpGitHubClient`는 3xx 응답을 `Attempt.Fatal`(`NonRetryableApiException`)로 분류합니다. JDK `HttpClient` 기본값은 redirect를 따르지 않으므로, 이름이 바뀐 저장소의 301을 따를지(`followRedirects`)와 그때 `Authorization`이 다른 호스트로 가지 않는지(요구사항 19.6)를 정합니다. 실제 응답 확인은 7.7 (스펙을 읽고 추론한 항목)
+    - 결정(18.3): redirect를 따르지 않습니다. `CliPipeline.httpClient()`는 JDK 기본값(`Redirect.NEVER`)을 쓰고, 3xx는 `HttpGitHubClient`의 기존 분류(`Attempt.Fatal`)대로 오류가 됩니다. 따라가면 `Authorization`이 다른 호스트로 갈 수 있어 요구사항 19.6을 지키려면 호스트 검사를 하는 수동 추적을 새로 만들어야 하는데 조립 작업의 범위를 넘고, 이름이 바뀐 저장소가 아니면 영향이 없기 때문입니다. 실제 GitHub의 301 응답은 확인하지 않았습니다
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
-    - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
+    - 결정(18.3): "Chunk n/N 리뷰 중"은 `total`이 1보다 클 때(분할 모드)만 씁니다. 요구사항 13.12가 n/N 표시를 분할 모드로 한정하기 때문입니다. 엔진은 단일·요약 전용 모드에서도 `chunkStarted(1, 1)`을 부르므로 `StderrReporter`가 거릅니다
     - 주의(13 리뷰): `AnthropicLlmClient(apiKey)`는 `Options.defaults()`(기본 주소, 제한 시간 180초, 빈 `SecretMasker`, 디버그 로그 꺼짐)를 씁니다. 실제 조립에서는 2인자 생성자에 `new AnthropicLlmClient.Options(null, Duration.ofSeconds(180), masker, debugLog)`를 넘기고, `Options`에는 제한 시간 기본값이 없으므로 180초를 직접 넘깁니다. 키는 `ANTHROPIC_API_KEY`에서 읽은 값을 이 생성자에만 넘깁니다 (코드를 확인한 항목)
     - 주의(13 리뷰): SDK는 환경변수 `ANTHROPIC_LOG`(`debug`·`info`·`error`)를 읽고 요청과 응답을 `System.err`에 직접 씁니다(`x-api-key`, `authorization` 헤더는 SDK가 가림). SDK는 `System.err`를 쓸 때마다 다시 읽으므로, `PrLensMain.main`이 설치한 마스킹 스트림으로 나가는지는 클라이언트를 만드는 시점과 관계없습니다. 이 스트림을 바꾸거나 우회하지 않습니다 (리뷰어가 SDK 바이트코드로 확인한 항목. 실제 출력은 확인하지 않았습니다)
     - 주의(13.5 리뷰): 13.5부터 Claude 4xx 오류 메시지에 응답 본문의 `error.message`가 마스킹한 뒤 200자로 들어갑니다. `AnthropicLlmClient(apiKey)`와 `Options.defaults()`는 빈 `SecretMasker`를 써서 사유를 가리지 않으므로, 200자 경계에 걸린 키의 앞부분은 stderr의 `MaskingPrintStream`도 가리지 못합니다. 디버그 모드와 관계없이 18.2의 `CliPipeline.secretMasker`를 `Options`에 넣어 2인자 생성자로 조립합니다 (코드를 확인한 항목)
@@ -465,7 +465,7 @@
     - 결정(18.5): 예상하지 못한 예외와 `Error`는 `내부 오류가 발생했습니다 (<예외 클래스 이름>)` 한 줄이고, 메시지는 쓰지 않습니다. 스택은 디버그 모드에서만 마스킹된 stderr에 `\n` 줄바꿈으로 씁니다. `Error`도 잡는 것은 `main`이 스트림을 닫은 뒤 던져져 메시지 없이 종료 코드 1로 끝나는 것을 막기 위해서입니다
     - 결정(18.5): 디버그 모드는 환경변수 `PRLENS_DEBUG`가 비어 있지 않으면 켜집니다(`PrLensMain.main`이 읽음). 스펙에 켜는 방법이 없어 정한 제안값이며 G-20으로 올렸습니다
     - _Requirements: 1.11, 4.11, 13.8, 15.11, 21.5, 21.6, 21.8_
-  - [ ]* 18.6 CLI 통합 테스트
+  - [x]* 18.6 CLI 통합 테스트
     - 잘못된 URL·`--format`·설정·환경변수 사례별 종료 코드 2, 빈 stdout, 가짜 클라이언트 호출 수 0, 비밀 항목 오류에서 값 미출력, `--config` 파일 없음
     - 주의(3 리뷰): `MaskingPrintStream.stdout()`/`stderr()`는 실제 `FileDescriptor`를 열어 단위 테스트가 없고, 둘이 서로 바뀌어도 실패하는 테스트가 없습니다. 하위 프로세스로 실행해 결과는 stdout, 오류는 stderr에 BOM 없는 UTF-8로 나오는지, `\n` 없이 `s`로 끝나는 출력이 끝까지 나오는지, `PrLensMain`이 `System.exit` 직전에 스트림을 닫아도 출력이 잘리지 않는지 한 번 확인합니다
     - 주의(16 리뷰): 설정 사례에서 문자열 값은 큰따옴표로 감쌉니다. 따옴표 없는 `model: 5.5`나 `effort: yes`는 `llm.model`/`llm.effort` 오류가 됩니다. 단가표에 값 없이 적은 모델(`"m":`)은 네 단가 누락 오류입니다
@@ -512,6 +512,7 @@
     - 주의(15 리뷰): `ResultCodec.write`의 출력은 2칸 들여쓰기와 `\n` 줄바꿈이고 끝에 줄바꿈이 없습니다. JSON 바이트를 비교하는 골든 파일은 이 모양을 따릅니다
     - 주의(17 리뷰): stdout 바이트 비교의 Markdown 쪽은 `MarkdownFormatter` 출력 그대로이고 끝 줄바꿈은 `\n` 하나입니다
     - 주의(20.1 리뷰): 인젝션 픽스처 4개는 `blocker` Finding이 있어 기대 종료 코드가 1이고, `single-basic`, `split-three-chunks`, `excluded-files`는 `complete`이면서 `blocker`가 없어 0입니다. 제목·본문 인젝션의 `security` Finding은 `line`이 null인 `summary_only`(`line_missing`)입니다. `llm-responses/NN.json`은 파일 이름 순서가 Chunk 호출 순서이고 `text`가 객체면 `FixtureLoader`가 압축 JSON 문자열로 바꿉니다. `FixtureLoader`는 리소스를 `Path`로 열어서 jar 안에서는 동작하지 않습니다
+    - 주의(18.3~18.6 리뷰): 출력 단계는 `CliPipeline.emit(result, context, config, format, reporter, out)`로 떼어 두었습니다. `reportResult` 호출, `--format json`은 `ResultCodec.write` 결과 뒤에 `\n`, Markdown은 `MarkdownFormatter` 출력 그대로, stdout에 한 번 쓰기, 종료 코드는 `ExitCodeResolver.resolve`가 모두 이 메서드 안에 있습니다. `CliPipeline.review`는 항상 `PrFetcher`와 `ContextCollector`를 거치므로, 스냅샷과 컨텍스트를 직접 주입하는 이 테스트는 `emit`을 부르거나(`StderrReporter`는 `ByteArrayOutputStream` 위의 `PrintStream`으로 만듭니다) `GitHubFactory`에 픽스처를 돌려주는 가짜 `GitHubClient`를 넘겨 `review`를 부릅니다. 출력 규칙을 따로 다시 짜지 않습니다
     - _Requirements: 14.7, 15.7, 17.9, 17.10, 22.8_
   - [x] 20.3 픽스처 비밀정보 스캔 테스트 (토큰 형식 정규식)
     - 주의(20.1 리뷰): 픽스처에는 40자 hex 모양의 가짜 SHA(`aaaa…`, `bbbb…`), `config/secrets/dev.yml` 경로 문자열(내용 `placeholder: true`), 인젝션 표식 `[prlens-injection]`이 정상 데이터로 들어 있습니다. 토큰 정규식이 이것들을 오탐하지 않아야 합니다(40자 hex 전체를 비밀정보로 보지 않음)
@@ -523,6 +524,7 @@
     - 결과를 PR이나 `docs/spikes/`에 기록
     - 주의(18.7 리뷰): 18.7의 `backend/scripts/prlens.cmd`(Windows cmd, PowerShell)와 macOS의 `scripts/prlens`는 실행해 확인하지 못했습니다(Linux에서만 확인). 리허설 때 Windows와 macOS에서 래퍼로 `prlens review`를 한 번씩 실행해 인자와 종료 코드가 그대로 전달되는지 봅니다
     - 미정(여기서 정함): 13.5의 사유 추출은 `{"type":"error","error":{"type","message"}}` 모양을 가짜 서버로만 확인했습니다. 실제 API의 4xx(잘못된 모델 이름 등) 응답 하나로, 사유가 `invalid_request_error: …`로 나오는지와 본문에 입력 내용이 섞여 오는지를 확인합니다 (스펙을 읽고 추론한 항목)
+    - 주의(18.3~18.6 리뷰): 18.6의 하위 프로세스 테스트는 환경변수 없음과 명령 없음 두 사례만 확인했습니다. 실제 결과가 stdout에 BOM 없는 UTF-8로 끝까지 나오는지, `PRLENS_DEBUG`를 켰을 때 GitHub·Claude HTTP 디버그 로그가 stderr에 마스킹되어 나오는지, 재시도 대기 중단(`IllegalStateException`) 경로는 확인하지 않았습니다. redirect는 따르지 않으므로(결정 18.3) 이름이 바뀐 저장소의 PR URL은 3xx 상태 코드 오류로 끝납니다
     - _Requirements: 9.7, 14.7_
 
 - [x] 21. CI 매트릭스 구성
