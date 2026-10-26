@@ -439,6 +439,7 @@
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
+    - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고
