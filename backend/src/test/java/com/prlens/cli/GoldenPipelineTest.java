@@ -34,7 +34,7 @@ class GoldenPipelineTest {
   private final ResultCodec codec = new ResultCodec();
 
   /** 한 번 실행한 결과. */
-  private record Run(ReviewResult result, byte[] stdout, byte[] stderr, int exitCode) {
+  private record Run(ReviewResult result, byte[] stdout, int exitCode) {
 
     String stdoutText() {
       return new String(stdout, StandardCharsets.UTF_8);
@@ -78,7 +78,7 @@ class GoldenPipelineTest {
     int exit = CliPipeline.emit(result, fixture.context(), config, format, reporter, out);
 
     assertThat(llm.calls()).as(name + " 호출 수").isEqualTo(fixture.llmResponses().size());
-    return new Run(result, outBytes.toByteArray(), errBytes.toByteArray(), exit);
+    return new Run(result, outBytes.toByteArray(), exit);
   }
 
   @Test
