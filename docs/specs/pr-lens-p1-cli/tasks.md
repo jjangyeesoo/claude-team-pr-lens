@@ -311,8 +311,8 @@
   - [x]* 11.9 Property 29: 청크 결과 병합 테스트
     - **Validates: Requirements 13.5, 13.6, 13.7, 16.5, 20.10**
 
-- [ ] 12. `ReviewEngine` 조립
-  - [ ] 12.1 `ReviewEngine.review` 구현
+- [x] 12. `ReviewEngine` 조립
+  - [x] 12.1 `ReviewEngine.review` 구현
     - 설계의 흐름대로 필터 → 모드 → 청크 → Chunk별 `llm.send` → 해석 → 검증 → 비용 → 병합
     - `reportedChangedFiles > files.size()`이면 `files_truncated`와 `FileCountGap`. 이 판정과 `listener.modeDecided`는 대상 0개 분기보다 먼저 합니다
     - 대상 0개는 API 호출 없이 빈 결과(summary 문구, usage 0). 파일 수 부족이 아니면 `complete`, 부족이면 `incomplete`
@@ -320,8 +320,9 @@
     - `listener.modeDecided`, `chunkStarted`, 누적 비용 첫 초과 시 `costThresholdExceeded` 1회
     - `DiffFilter`가 돌려준 경고는 버림(수집기가 이미 알림). 엔진은 `WarningSink`를 받지 않음
     - 주의(선머지 리뷰): `RetriesExhaustedException`이 3.1에서 생기므로 3.1이 머지된 뒤 시작합니다. `ReviewResult`는 `usage`, `incompleteDetails`, `stats`를 포함해 모든 필드가 필수라, 대상 0개일 때도 `Usage(0, 0, 0, 0, model, …)`와 `IncompleteDetails(List.of(), null)`을 만들어야 합니다
-    - 미정(여기서 정함): 대상 0개일 때 `estimatedCostUsd`를 `0.0000`으로 할지 `null`로 할지. `null`이면 CLI가 "단가 없음" 경고(요구사항 20.5)를 잘못 냅니다
-    - 주의(11.1~11.4 리뷰): SINGLE에서는 `ChunkPlanner.plan`을 부르지 않고 대상 전체(원래 순서)를 Chunk 하나로 씁니다. `plan`은 모드와 무관하게 경로순으로 정렬해 묶으므로 SPLIT에서만 부릅니다. 모드는 `ChunkPlanner.decideMode(targets, sizeLimit)`, 줄 수는 `changedLineCount(targets)`이고 둘 다 정적 메서드입니다. SINGLE에서 diff 순서가 경로순이 아니어도 되는지는 여기서 정합니다(데이터 영역만 달라지고 캐시 앞부분은 영향 없음)
+    - 결정(12.1): 대상 0개일 때 `estimatedCostUsd`는 `0.0000`으로 하고 `model`은 `config.model()`로 합니다. `null`이면 CLI가 "단가 없음" 경고(요구사항 20.5)를 잘못 내기 때문입니다
+    - 주의(11.1~11.4 리뷰): SINGLE에서는 `ChunkPlanner.plan`을 부르지 않고 대상 전체(원래 순서)를 Chunk 하나로 씁니다. `plan`은 모드와 무관하게 경로순으로 정렬해 묶으므로 SPLIT에서만 부릅니다. 모드는 `ChunkPlanner.decideMode(targets, sizeLimit)`, 줄 수는 `changedLineCount(targets)`이고 둘 다 정적 메서드입니다.
+    - 결정(12.1): SINGLE과 SUMMARY_ONLY는 대상 파일을 입력 순서 그대로 둡니다. 순서는 데이터 영역만 바꾸고 캐시 앞부분에는 영향이 없기 때문입니다
     - 주의(10 리뷰): `FindingValidator.apply(List<RawFinding>, ReviewContext, Map<String, LineRanges>)`에 넘기는 `targets` 맵은 필터를 통과한 전체 대상 파일을 `ChangedFile.path()`(이름 변경이면 새 경로, `previousPath`는 넣지 않음)로 키를 삼아 한 번만 만듭니다(Chunk마다 만들지 않음, 요구사항 12.3). 삭제된 파일(head 줄 수가 0인 Hunk만 있는 파일)도 빈 `LineRanges`로 넣어야 요구사항 12.6의 `out_of_range`가 나옵니다. 빼면 `not_target_file`이 됩니다
     - 주의(10 리뷰): `ResponseParser.parse`는 `ParsedResponse(summary, findings: List<RawFinding>, incompleteReason, rawResponseExcerpt, usage: LlmUsage)`를 돌려줍니다. 모델 이름과 단가가 필요한 `Usage` 변환과 `CostCalculator.estimate`는 엔진이 `ParsedResponse.usage()`로 합니다. `incompleteReason`과 발췌문은 `ChunkIssue`로 옮깁니다
     - 주의(18.5 리뷰): CLI는 `PrLensException`을 타입으로 나누지 않고 `getMessage()`만 stderr에 씁니다(`cli.ErrorMapper`). `AllChunksFailedException`은 `PrLensException`을 상속하고, 설계 표가 요구하는 실패한 Chunk 수를 생성자 메시지에 넣어야 합니다. 메시지가 null이면 클래스 이름만 나옵니다
@@ -329,7 +330,7 @@
     - 주의(11.5~11.9 리뷰): `FILES_TRUNCATED`는 `merge`가 `fileCountGap`이 null이 아닐 때 Chunk 사유 뒤에 스스로 더합니다. 엔진은 이 사유를 `ChunkOutcome.incompleteReason`에 넣지 않습니다(`ChunkIssue`로 잘못 기록됨)
     - 주의(11.5~11.9 리뷰): `RetriesExhaustedException.lastStatus()`는 "상태 코드 또는 네트워크 오류 종류"를 담은 `String`입니다. `ChunkOutcome.failed(index, files, Integer)`에는 숫자일 때만 `Integer`로 넘기고 아니면 null로 넘깁니다. `Integer.parseInt`를 그대로 쓰지 않습니다
     - _Requirements: 1.14, 3.7, 9.1, 13.1, 13.5, 13.6, 13.7, 13.8, 13.9, 13.11, 13.12, 20.1, 20.4_
-  - [ ]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
+  - [x]* 12.2 가짜 `LlmClient`로 엔진 속성 테스트
     - Property 27(리뷰 모드와 API 호출 수), Property 11(제외 파일 내용 미전송), Property 34(프롬프트 배치와 캐시 앞부분 동일성), Property 41(누적 비용 경고 1회), Property 44(파일 수 부족 판정)
     - 주의(2.4~2.6 리뷰): `PullRequestSnapshotArbitraries.snapshots()`는 공유 타입의 불변성 검사용이라 이 테스트의 입력으로 쓰지 않습니다(Hunk의 줄 번호·줄 수·줄 목록이 서로 맞지 않고, 경로가 중복되거나 `""`일 수 있고, `additions`/`deletions`가 Hunk와 무관). 플래너는 path·additions·deletions만 읽으므로 Hunk 없는 별도 생성기로 만듭니다(11.2에서 확인: 5.4의 Hunk 생성기는 필요 없음). 또 `snapshots()`의 `reportedChangedFiles`(0~3,500)는 `files` 크기(0~4)와 무관해 거의 항상 더 큽니다. Property 44의 "크지 않을 때는 기록되지 않는다" 쪽을 보려면 `files.size()` 근처 값(같음, 1 작음, 1 큼)을 직접 섞습니다
     - 주의(11.5~11.9 리뷰): system 프롬프트에는 `<prlens:team_context>` 같은 태그 이름과 `security`, `summary`, `findings` 같은 단어가 원문으로 들어 있습니다. Property 34의 고유 표식은 고정 접두어와 UUID처럼 그 문구의 부분 문자열이 될 수 없는 값으로 만들고, 태그 개수는 요청 전체가 아니라 블록별로 셉니다 (스펙을 읽고 추론한 항목)
@@ -438,6 +439,7 @@
     - 주의(18.1~18.2 리뷰): 자격 증명은 `CliPipeline.Preflight`의 `githubToken()`, `anthropicApiKey()`(다듬은 값)를 쓰고 `System.getenv`를 다시 읽지 않습니다. 조립 함수는 `PrLensMain.main`의 `CliPipeline.runner(..., preflight -> ...)` 임시 구현 자리에 들어가고, 검증 실패는 `runner`가 예외로 던지므로 조립 쪽에서 다시 검사하지 않습니다
     - 주의(18.4 리뷰): 결과를 받은 뒤 `StderrReporter.reportResult(result, config)`를 출력 형식과 관계없이 한 번 부릅니다. 이 메서드는 위의 세 경고(파일 수 부족, 단가 없음, 1회 비용 상한 초과) 말고도 불완전 경고와 Chunk별 사유(요구사항 16.6)를 내므로 조립 함수에서 불완전 경고를 따로 쓰지 않습니다. 같은 `StderrReporter` 인스턴스를 `ReviewEngine`의 `ReviewListener`, `RetryingLlmClient`의 `RetryListener`, `PrFetcher`·`ContextCollector`의 `WarningSink`로 넘깁니다
     - 주의(18.5 리뷰): 디버그 모드는 `PrLensMain.main`이 환경변수 `PRLENS_DEBUG`(비어 있지 않으면 켜짐, G-20 제안값)로 계산해 `run(..., debug)`와 `ErrorMapper`에만 넘깁니다. `ReviewRunner`와 `CliPipeline.runner`에는 전달되지 않으므로, 7.1 주의의 HTTP 디버그 로그를 켜려면 `CliPipeline.runner`가 받은 `env`에서 같은 키를 읽거나 플래그를 인자로 더해 오류 스택과 같은 조건으로 맞춥니다
+    - 주의(12 리뷰): 엔진은 NO_TARGET을 뺀 모든 모드에서 `chunkStarted(index, total)`을 부릅니다. 18.4의 `StderrReporter`는 그때마다 "Chunk n/N 리뷰 중"을 쓰므로 단일·요약 전용 모드에도 "Chunk 1/1 리뷰 중"이 나옵니다. 요구사항 13.12는 n/N 표시를 분할 모드로 한정하므로, `StderrReporter`가 `total`이 1보다 클 때만 쓰게 할지 여기서 정합니다 (코드를 확인한 항목)
     - _Requirements: 15.7, 15.8, 17.2_
   - [x] 18.4 `StderrReporter` 구현 (`ReviewListener`, `RetryListener`, `WarningSink` 구현 겸)
     - 모드·Changed_Line_Count·Size_Limit·Chunk 수, 분할 모드 "n/N", 재시도 한 줄(API, "n/최대", 상태, 대기 초), 수집·필터 경고, 파일 수 부족 경고, 불완전 경고와 사유, 비용 상한 초과, 누적 비용 초과, 단가 없음 경고

@@ -96,6 +96,7 @@
     - `support`: `CancellationToken`(`NONE` 포함), `SecretRegistry`의 공개 시그니처(구현은 4.1)
     - `execution`: `JobTimeoutException`(P1 `PrLensException`의 하위 타입), `UsageAccumulator`, `RunErrorKinds.of(Throwable)`(설계의 예외 → Run_Error_Kind 대응표. 서버와 CLI가 함께 씀), `DeadlineSleeper`·`JobRetryListener`·`UsageRecordingLlmClient`·`CancellableLlmClient`의 생성자 시그니처(구현은 11.1, 11.2)
     - 주의(P1 3 리뷰): P1 `RetryExecutor`는 `execute`의 `api`와 `Retryable.statusOrError`를 가공 없이 예외의 `api()`, `lastStatus()`로 넘깁니다. `RunErrorKinds.of`가 GitHub/Claude와 "마지막이 상태 코드인지"를 가를 근거는 이 두 문자열뿐이므로, API 이름은 정확히 `GitHub`/`Claude`, HTTP 상태는 숫자만으로 된 문자열이라는 전제로 대응시킵니다 (스펙을 읽고 추론한 항목)
+    - 주의(P1 12 리뷰): P1 `AllChunksFailedException`은 마지막 Chunk의 `RetriesExhaustedException`을 cause로 둡니다. `RunErrorKinds.of`는 cause 사슬을 따라가기 전에 바깥 예외 타입을 먼저 판정해 `all_chunks_failed`로 분류해야 합니다. 안 그러면 `llm_api`나 `network`가 됩니다 (코드를 확인한 항목)
     - _Requirements: 4.5, 4.7, 8.2_
 
 - [ ] 3. 설정 확장 (B. 선머지 대상 아님. 2.6이 머지된 뒤 시작: 둘 다 P1 `CliPipeline`을 고침)
@@ -208,6 +209,7 @@
 - [ ] 11. `ReviewJob` 실행
   - PR 경계: 11.1~11.2 / 11.3~11.5 (T2의 18.3이 11.2를 씀)
   - [ ] 11.1 `JobScope`와 `execution` 구현 (제한 시각, 종료 상태 CAS `RUNNING → FINISHING | CANCELLED`, `JobRetryListener`(P1 `onRetry`의 `Duration`을 ms로 합산), `DeadlineSleeper`, `UsageAccumulator`). `webhook`에는 `JobScope`, `JobReviewListener`(P1 `ReviewListener` 구현, Review_Run ID를 담은 서버 로그), 경고를 서버 로그로 보내는 `WarningSink`
+    - 주의(P1 12 리뷰): P1 엔진은 `costThresholdExceeded`를 SPLIT에서만, 실패하지 않은 Chunk의 누적 비용이 처음 상한을 넘을 때 한 번 부릅니다. 단가가 없어 Chunk 비용이 null이면 누적을 멈추고 부르지 않습니다. 단일 모드의 비용 상한 경고(P2 요구사항 8.4)는 이 콜백으로 오지 않으므로 결과의 `usage().estimatedCostUsd()`로 직접 판정합니다 (코드를 확인한 항목)
     - _Requirements: 4.7, 4.10, 17.3_
   - [ ] 11.2 작업 전용 LLM 데코레이터 구현(`execution` 패키지): `CancellableLlmClient`, `UsageRecordingLlmClient`. 체인은 `RetryingLlmClient(UsageRecordingLlmClient(CancellableLlmClient(공유 클라이언트)))`. 실패한 Review_Run의 비용은 응답마다 P1 `CostCalculator.estimate`로 계산해 반올림한 값을 더함
     - _Requirements: 4.7, 8.2, 8.3_
