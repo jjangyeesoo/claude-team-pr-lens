@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR Lens 연구회 결과</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #18212E;
+  --ink-2: #3A4656;
+  --muted: #5D6A79;
+  --paper: #EEF1F4;
+  --sheet: #FFFFFF;
+  --rule: #D3DAE2;
+  --spec: #2648B8;
+  --spec-tint: #E5EBFA;
+  --add: #17805A;
+  --add-tint: #E2F2EA;
+  --warn: #A9640A;
+  --warn-tint: #FAEFDC;
+  --del: #B23A33;
+  --del-tint: #F8E3E1;
+  --serif: "Hahmlet", "Noto Serif KR", serif;
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --gutter: 16px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.75 var(--sans);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+a { color: var(--spec); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--spec); outline-offset: 3px; border-radius: 2px; }
+code, .code { font-family: var(--mono); font-size: .88em; background: var(--spec-tint); color: var(--ink); padding: .08em .35em; border-radius: 3px; }
+
+/* ---------- 레이아웃 ---------- */
+.shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+}
+@media (min-width: 1100px) {
+  .shell { grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding: 0 32px; }
+}
+nav.toc { font-size: 14px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+nav.toc li { counter-increment: toc; }
+nav.toc a { display: grid; grid-template-columns: 2em 1fr; padding: 5px 0; color: var(--ink-2); text-decoration: none; border-left: 2px solid transparent; padding-left: 10px; }
+nav.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--mono); font-size: 12px; padding-top: 2px; }
+nav.toc a:hover { color: var(--spec); }
+nav.toc a.active { color: var(--spec); border-left-color: var(--spec); font-weight: 600; }
+nav.toc .toc-title { font-family: var(--serif); font-weight: 600; font-size: 15px; margin: 0 0 8px 12px; }
+@media (min-width: 1100px) {
+  nav.toc { position: sticky; top: 24px; align-self: start; padding-top: 40px; }
+  nav.toc details > summary { display: none; }
+  nav.toc details { display: block; }
+}
+@media (max-width: 1099px) {
+  nav.toc details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; margin-top: 16px; }
+  nav.toc summary { cursor: pointer; font-weight: 600; }
+  nav.toc .toc-title { display: none; }
+}
+main { min-width: 0; padding-bottom: 96px; }
+
+/* ---------- 머리 ---------- */
+header.hero { padding: 48px 0 32px; display: grid; gap: 32px; }
+@media (min-width: 900px) { header.hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: end; padding-top: 72px; } }
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: clamp(34px, 5.2vw, 56px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+}
+.hero .lede { font-size: 18px; color: var(--ink-2); max-width: 34em; margin: 0 0 20px; }
+.hero dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; font-size: 14px; color: var(--muted); }
+.hero dt { font-weight: 600; color: var(--ink-2); }
+.hero dd { margin: 0; }
+
+/* 히어로: tasks.md 발췌 */
+.specsheet {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--rule), 0 18px 40px -28px rgba(24, 33, 46, .45);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.specsheet .bar { display: flex; justify-content: space-between; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--rule); color: var(--muted); font-size: 12px; background: #F7F9FB; }
+.specsheet pre { margin: 0; padding: 14px 16px 16px; white-space: pre-wrap; word-break: break-word; }
+.specsheet .ck { color: var(--add); font-weight: 500; }
+.specsheet .open { color: var(--del); font-weight: 500; }
+.specsheet .ju { display: block; background: var(--warn-tint); border-left: 3px solid var(--warn); margin: 2px -16px; padding: 2px 16px 2px 13px; }
+.specsheet .gy { display: block; background: var(--spec-tint); border-left: 3px solid var(--spec); margin: 2px -16px; padding: 2px 16px 2px 13px; }
+.specsheet .dim { color: var(--muted); }
+
+/* TL;DR */
+.tldr {
+  background: var(--ink);
+  color: #E9EDF2;
+  border-radius: 10px;
+  padding: 28px clamp(20px, 4vw, 40px);
+  margin: 8px 0 56px;
+}
+.tldr h2 { font-family: var(--serif); font-size: 22px; margin: 0 0 18px; color: #fff; }
+.tldr ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.tldr li { padding-left: 22px; position: relative; max-width: 62em; }
+.tldr li::before { content: ""; position: absolute; left: 0; top: .72em; width: 10px; height: 2px; background: #8FA8F0; }
+.tldr strong { color: #fff; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: #34404F; border: 1px solid #34404F; border-radius: 6px; overflow: hidden; margin-top: 24px; }
+@media (min-width: 720px) { .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.kpi { background: var(--ink); padding: 14px 16px; }
+.kpi b { display: block; font-family: var(--serif); font-size: 26px; color: #fff; line-height: 1.2; }
+.kpi span { font-size: 13px; color: #AEB8C5; }
+
+/* ---------- 본문 절 ---------- */
+section.chap { padding-top: 24px; margin-bottom: 72px; }
+.chap > h2 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: clamp(26px, 3.4vw, 34px);
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 0 0 8px;
+  display: flex; align-items: baseline; gap: 14px;
+}
+.chap > h2 .no { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--spec); border: 1px solid var(--spec); border-radius: 4px; padding: 0 7px; transform: translateY(-4px); }
+.chap > .sum { color: var(--muted); margin: 0 0 28px; max-width: 46em; }
+.chap h3 { font-family: var(--serif); font-weight: 600; font-size: 21px; margin: 40px 0 12px; }
+.chap h4 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; }
+.chap p, .chap li { max-width: 46em; }
+
+/* 본문 + 근거(여백 메모) */
+.row { display: grid; gap: 14px; }
+@media (min-width: 1240px) { .row { grid-template-columns: minmax(0, 1fr) 250px; gap: 32px; align-items: start; } }
+.ev {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  border-left: 2px solid var(--spec);
+  padding: 2px 0 2px 12px;
+}
+.ev .t { display: block; font-weight: 600; color: var(--spec); margin-bottom: 2px; }
+.ev p { margin: 0 0 6px; }
+.ev code { font-size: 12px; }
+
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 20px clamp(16px, 3vw, 24px); margin: 20px 0; }
+.panel > h4:first-child, .panel > h3:first-child { margin-top: 0; }
+
+/* 표 */
+.tbl-wrap { overflow-x: auto; margin: 16px 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { background: #F5F7FA; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.badge { display: inline-block; font-size: 13px; font-weight: 600; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.b-yes { background: var(--add-tint); color: var(--add); }
+.b-part { background: var(--warn-tint); color: var(--warn); }
+.b-no { background: var(--del-tint); color: var(--del); }
+.b-na { background: #E9EDF1; color: var(--muted); }
+
+/* 차트 */
+.charts { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.chart { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 18px 12px; min-width: 0; }
+.chart h4 { margin: 0 0 2px; font-size: 15px; }
+.chart .cap { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.chart .cv { position: relative; height: 240px; }
+.chart.wide { grid-column: 1 / -1; }
+
+/* Mermaid */
+.diagram { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; margin: 20px 0; overflow-x: auto; }
+.diagram .mermaid { min-width: 560px; text-align: center; }
+.diagram figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* 시행착오 */
+.trials { display: grid; gap: 16px; }
+.trial { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; display: grid; gap: 10px; }
+@media (min-width: 860px) { .trial { grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 20px; } }
+.trial h4 { margin: 0; font-family: var(--serif); font-size: 17px; }
+.trial h4 small { display: block; font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.trial div { font-size: 14px; }
+.trial div b { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+
+/* 회고 KPT */
+.kpt { display: grid; gap: 16px; }
+@media (min-width: 860px) { .kpt { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.kpt > div { background: var(--sheet); border: 1px solid var(--rule); border-top: 4px solid var(--c); border-radius: 8px; padding: 16px 18px; }
+.kpt h4 { margin: 0 0 8px; color: var(--c); font-size: 17px; font-family: var(--serif); }
+.kpt ul { margin: 0; padding-left: 18px; font-size: 14px; }
+.kpt li { margin-bottom: 6px; }
+
+/* 실무 제안 */
+.props { counter-reset: p; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.props li { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 20px; max-width: none; }
+.props li strong { display: block; font-family: var(--serif); font-size: 17px; margin-bottom: 4px; }
+.props li span.why { display: block; font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+details.appx { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 14px 0; }
+details.appx > summary { cursor: pointer; padding: 14px 18px; font-weight: 600; }
+details.appx[open] > summary { border-bottom: 1px solid var(--rule); }
+details.appx .inner { padding: 4px 0; }
+details.appx .inner .tbl-wrap { border: 0; margin: 0; border-radius: 0; }
+details.appx pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; }
+
+.foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 20px; }
+.muted { color: var(--muted); }
+.unk { color: var(--warn); font-weight: 600; }
+
+@media print {
+  nav.toc { display: none; }
+  .shell { display: block; }
+  .chart, .panel, .trial, .diagram { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<nav class="toc" aria-label="목차">
+  <details open>
+    <summary>목차</summary>
+    <p class="toc-title">목차</p>
+    <ol>
+      <li><a href="#overview">개요</a></li>
+      <li><a href="#sdd">스펙 기반 개발 방식</a></li>
+      <li><a href="#env">환경 구성</a></li>
+      <li><a href="#workflow">워크플로</a></li>
+      <li><a href="#numbers">정량 결과</a></li>
+      <li><a href="#effects">기대효과 대 실제</a></li>
+      <li><a href="#trials">시행착오와 개선</a></li>
+      <li><a href="#retro">회고</a></li>
+      <li><a href="#apply">실무 적용 제안</a></li>
+      <li><a href="#next">다음 단계</a></li>
+      <li><a href="#appendix">부록</a></li>
+    </ol>
+  </details>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div>
+    <h1>스펙을 먼저 쓰고,<br>작업 하나씩 구현했다</h1>
+    <p class="lede">세 명이 Claude Code로 PR 리뷰 도구 PR Lens를 만들면서 스펙 기반 개발이 실제로 무엇을 바꿨는지 저장소 기록으로 정리한 연구회 결과 보고서입니다.</p>
+    <dl>
+      <dt>기간</dt><dd>2026-10-04 ~ 2026-10-26 (첫 커밋부터 마지막 PR #70 머지까지)</dd>
+      <dt>참여</dt><dd>3명 (이 보고서에서는 커밋 수 순으로 멤버 1, 2, 3)</dd>
+      <dt>결과</dt><dd>P1 CLI 조건부 완료. P2·P3는 착수하지 못함</dd>
+    </dl>
+  </div>
+  <figure class="specsheet" aria-label="tasks.md 발췌">
+    <div class="bar"><span>docs/specs/pr-lens-p1-cli/tasks.md (발췌, 줄 생략)</span><span>110 / 112</span></div>
+<pre><span class="ck">- [x]</span> 18. CLI 명령과 파이프라인
+<span class="ck">- [x]</span> 19. Checkpoint: T3 완료 확인
+<span class="dim">…</span>
+<span class="open">- [ ]</span> 20. 골든 픽스처와 전체 파이프라인 테스트
+<span class="dim">  …</span>
+  <span class="ck">- [x]</span> 20.4 M1 데모 리허설 <span class="dim">(…)</span>
+<span class="dim">    …</span>
+    <span class="gy">- 결정(20.4): API 크레딧이 소진되었고 팀이 추가 결제를 하지 않기로 해서, 크레딧이 필요한 확인은 하지 않고 20.4를 닫습니다. …</span><span class="ju">- 주의(18.3~18.6 리뷰): … 재시도 대기 중단(IllegalStateException) 경로는 확인하지 않았습니다. …</span>  <span class="open">- [ ]</span> 20.5 400줄 실행 시간 측정과 인젝션 픽스처 실제 실행 <span class="dim">(…)</span>
+<span class="ck">- [x]</span> 21. CI 매트릭스 구성
+<span class="ck">- [x]</span> 22. Final Checkpoint</pre>
+  </figure>
+</header>
+
+<section class="tldr" aria-labelledby="tldr-h">
+  <h2 id="tldr-h">요약</h2>
+  <ul>
+    <li><strong>P1 CLI는 조건부 완료입니다.</strong> <code>prlens review &lt;PR URL&gt;</code>가 실제 PR을 리뷰해 규칙 근거 지적 17건을 냈습니다. 400줄 실행 시간 측정(20.5)은 API 크레딧이 떨어져 하지 못했습니다. 계획했던 P2(webhook)와 P3(웹)는 시작하지 못했습니다.</li>
+    <li><strong>스펙은 구현 중에 계속 자랐습니다.</strong> 요구사항은 7번만 바뀌었지만 <code>tasks.md</code>는 64번, <code>design.md</code>는 35번 바뀌었습니다. 리뷰가 찾은 "뒤 작업이 스펙만 읽으면 틀리는 것"이 주의 줄 87개로 쌓였습니다.</li>
+    <li><strong>리뷰는 AI가 했고 사람 리뷰는 거의 없었습니다.</strong> AI 리뷰 지적 519건 중 348건(67%)을 반영했고 CI 실패는 0회였습니다. 사람 리뷰는 PR 70건 중 2건이었습니다.</li>
+    <li><strong>반복된 지적을 규칙과 테스트로 옮겼습니다.</strong> PR 25개의 기각 사유를 모아 규칙 6개와 검사 테스트 1개로 만들었습니다(#52, #53). 그 뒤 반복이 줄었는지는 확인하지 않았습니다.</li>
+    <li><strong>병렬 작업은 공유 타입을 먼저 머지한 뒤에야 일어났습니다.</strong> 1~2주차는 한 사람이 PR 대부분을 냈고, 3주차부터 세 사람이 동시에 PR을 냈습니다.</li>
+  </ul>
+  <div class="kpis">
+    <div class="kpi"><b>68</b><span>머지한 PR (전체 70)</span></div>
+    <div class="kpi"><b>110/112</b><span>P1 작업 체크박스</span></div>
+    <div class="kpi"><b>838</b><span>테스트 (실패 0, 건너뜀 10)</span></div>
+    <div class="kpi"><b>67%</b><span>AI 리뷰 반영률 (348/519)</span></div>
+    <div class="kpi"><b>0</b><span>CI 실패 (147회 실행)</span></div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="chap" id="overview">
+  <h2><span class="no">1</span>개요</h2>
+  <p class="sum">무엇을 만들었고, 무엇을 확인하려 했는가.</p>
+
+  <div class="row">
+    <div>
+      <h3>목적</h3>
+      <p>연구회의 목적은 두 가지였습니다.</p>
+      <ul>
+        <li><strong>제품</strong>: 팀 컨텍스트(<code>CLAUDE.md</code>, <code>.claude/rules/</code>, PR 본문에 링크된 스펙)를 기준으로 GitHub PR을 리뷰하는 도구 PR Lens를 만듭니다. 단계는 P1 CLI, P2 webhook 자동 리뷰와 저장, P3 웹 조회입니다.</li>
+        <li><strong>방법</strong>: 요구사항·설계·작업 목록을 스펙으로 먼저 쓰고 작업 단위로 Claude Code에 맡기는 팀 개발 방식이 실제로 통하는지 확인합니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>루트 <code>CLAUDE.md</code>, <code>docs/product/PRD.md</code>, <code>docs/product/PLAYBOOK.md</code></p></aside>
+  </div>
+
+  <h3>계획과 실제</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>주차</th><th>계획 (ROADMAP)</th><th>실제</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>1주 (10/4~10/11, #1~#11)</td><td>M0 기반과 합의</td><td>패키지 정리, ADR 0004·0005, 공유 타입 선머지. PR 11건 중 6건이 컨텍스트(스킬, 에이전트, 아키텍처 규칙) 정비</td><td><span class="badge b-part">부분 완료</span></td></tr>
+        <tr><td>2주 (10/12~10/16, #12~#26)</td><td>M1 CLI MVP</td><td>P1 작업 1~6, 11.1~11.4. 체크박스 37/110</td><td><span class="badge b-no">미완</span></td></tr>
+        <tr><td>3주 (10/16~10/23, #27~#54)</td><td>M2 자동화·저장</td><td>P1을 이어서 진행. 체크박스 82/110. 세 사람이 동시에 PR을 냄</td><td><span class="badge b-no">미착수</span></td></tr>
+        <tr><td>4주 (10/23~10/26, #55~#70)</td><td>M3 웹 조회</td><td>P1을 이어서 진행해 리뷰 엔진과 CLI 조립, M1 데모 리허설. 체크박스 110/112 (13.5, 18.7이 추가되어 분모가 112로 늘어남). P1 조건부 완료</td><td><span class="badge b-no">미착수</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>참여자와 트랙</h3>
+  <div class="row">
+    <div>
+      <p>P1 작업은 세 트랙과 공유 작업으로 나뉘었습니다. 트랙마다 맡는 패키지가 달라 서로의 파일을 거의 건드리지 않게 설계했습니다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>트랙</th><th>패키지</th><th>작업</th></tr></thead>
+          <tbody>
+            <tr><td>공유</td><td><code>model</code>, <code>support</code></td><td>1~4 (2.1~2.3 선머지)</td></tr>
+            <tr><td>T2 GitHub 연동</td><td><code>github</code>, <code>diff</code>, <code>filter</code>, <code>context</code> 등</td><td>5~9</td></tr>
+            <tr><td>T1 리뷰 엔진</td><td><code>llm</code>, <code>review</code></td><td>10~14</td></tr>
+            <tr><td>T3 CLI 출력</td><td><code>codec</code>, <code>output</code>, <code>config</code>, <code>cli</code></td><td>15~19</td></tr>
+            <tr><td>통합·컨텍스트</td><td>픽스처, CI, <code>.claude/</code></td><td>20~23</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <aside class="ev"><span class="t">참여자 표기</span><p>실명 대신 커밋 수 순으로 멤버 1(커밋 76), 멤버 2(51), 멤버 3(7)로 적습니다.</p><p>멤버와 트랙의 대응은 PR 작성자만으로 확정할 수 없어 <span class="unk">확인 필요</span>로 둡니다.</p></aside>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="chap" id="sdd">
+  <h2><span class="no">2</span>스펙 기반 개발 방식</h2>
+  <p class="sum">코드보다 스펙을 먼저 쓰고, AI는 스펙의 작업 하나만 보고 구현합니다.</p>
+
+  <h3>진행 흐름</h3>
+  <p>스펙은 단계마다 폴더 하나이고 네 문서로 나뉩니다. 구현 중에 드러난 사실은 다시 스펙으로 돌아갑니다.</p>
+  <figure class="diagram">
+<pre class="mermaid">
+flowchart LR
+  PRD["PRD · ROADMAP"] --> R["requirements.md<br/>요구사항 22 · 인수 기준 225"]
+  R --> D["design.md<br/>설계 · 정확성 속성 44"]
+  D --> T["tasks.md<br/>작업 95 · PR 경계 · 의존 그래프"]
+  T --> I["/task 로 작업 하나 구현"]
+  I -- "주의 · 결정 줄" --> T
+  I -- "설계와 다르게 구현하면" --> D
+  Q{{"결정 대기 D-n · G-n"}} -. "제안값으로 구현, 임의 확정 금지" .-> I
+  I -- "요구사항 공백 발견" --> Q
+</pre>
+    <figcaption>P1 스펙의 문서 구성과 구현에서 스펙으로 돌아가는 경로. 수치는 <code>docs/specs/pr-lens-p1-cli/README.md</code> 기준.</figcaption>
+  </figure>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>문서</th><th>담는 것</th><th>AI가 읽는 방식</th></tr></thead>
+      <tbody>
+        <tr><td><code>README.md</code> (색인)</td><td>절 위치, 트랙 표, 결정 대기 표</td><td>항상 먼저 읽음</td></tr>
+        <tr><td><code>requirements.md</code></td><td>요구사항과 인수 기준(무엇을)</td><td>작업 본문 끝의 <code>_Requirements: …_</code> 번호만</td></tr>
+        <tr><td><code>design.md</code></td><td>패키지, 인터페이스, 데이터 형식, 정확성 속성(어떻게)</td><td>그 작업의 클래스가 나오는 절만</td></tr>
+        <tr><td><code>tasks.md</code></td><td>작업, PR 경계, 의존 그래프, 결정 대기가 막는 작업</td><td>맡은 작업 본문과 Overview·Notes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>이 방식을 고른 이유</h3>
+  <div class="row">
+    <div>
+      <ul>
+        <li><strong>AI가 읽을 범위를 좁히려고</strong>: P1 스펙만 2,216줄입니다. 색인과 번호로 필요한 절만 찾아 읽게 해, 세션마다 문서를 통째로 읽지 않게 했습니다.</li>
+        <li><strong>세 사람이 동시에 일하려고</strong>: 트랙 사이의 경계 인터페이스(작업 2.1~2.3)를 먼저 머지하고, 각 트랙은 그 위에서 따로 구현하게 했습니다.</li>
+        <li><strong>AI가 정하면 안 되는 것을 표시하려고</strong>: 팀이 정할 항목은 결정 대기(D-n, G-n)로 적고, 구현은 제안값으로만 하게 했습니다.</li>
+        <li><strong>리뷰 기준을 미리 정하려고</strong>: 리뷰어는 작성자의 의도 대신 인수 기준과 대조합니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>docs/specs/README.md</code> "스펙을 읽는 법", P1 <code>tasks.md</code> Overview의 선머지 범위</p></aside>
+  </div>
+
+  <h3>TDD와의 결합</h3>
+  <div class="row">
+    <div>
+      <p>인수 기준이 곧 테스트 목록입니다. <code>/task</code>는 계획 단계에서 인수 기준마다 테스트 이름을 적고, 승인을 받은 뒤 그 테스트가 assertion으로 실패하는지 먼저 확인합니다. 설계의 정확성 속성 44개는 jqwik 속성 테스트로 옮겼고, 테스트마다 <code>// Feature: …, Property N</code> 태그를 답니다.</p>
+      <p><code>/task-flow</code>로 구현한 브랜치는 슬라이스마다 <code>test:</code> 커밋이 구현 커밋보다 먼저 있어, test-first를 커밋 이력으로 확인할 수 있었습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>.claude/skills/task/SKILL.md</code> 5~7번</p><p>소스 기준 <code>@Property</code> 64개</p><p><code>docs/spikes/2026-10-18-task-vs-task-flow.md</code></p></aside>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="chap" id="env">
+  <h2><span class="no">3</span>환경 구성</h2>
+  <p class="sum">팀 규칙을 문서, 스킬, 에이전트, hook, CI에 나눠 담았습니다. 강제력이 필요한 것일수록 아래쪽에 두었습니다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>층</th><th>구성</th><th>하는 일</th></tr></thead>
+      <tbody>
+        <tr><td>컨텍스트</td><td>루트 <code>CLAUDE.md</code>, <code>backend/</code>·<code>web/</code>의 <code>CLAUDE.md</code>, ADR 색인 import</td><td>구조, 작업 흐름, 브랜치·커밋 규칙, 의존성 승인 규칙</td></tr>
+        <tr><td>규칙</td><td><code>.claude/rules/</code>: backend(api-design, github, review, testing), context/editing, docs/writing, frontend/nextjs</td><td>그 경로의 파일을 다룰 때 로드되는 세부 규칙</td></tr>
+        <tr><td>스킬</td><td><code>/task</code>, <code>/pr-ready</code>, <code>/task-flow</code>, <code>/spec</code>, <code>/adr</code>, <code>/new-endpoint</code>, <code>/new-page</code></td><td>반복 절차. <code>/new-endpoint</code>, <code>/new-page</code>를 뺀 다섯 개는 사람만 부를 수 있음</td></tr>
+        <tr><td>에이전트</td><td><code>reviewer</code>(opus), <code>context-reviewer</code>(opus), <code>planner</code>, <code>implementer</code></td><td>코드 리뷰, 설정 리뷰, <code>/task-flow</code>의 계획과 구현</td></tr>
+        <tr><td>hook</td><td><code>ProtectFiles.java</code> (PreToolUse), <code>VerifyOnStop.java</code> (Stop, PreToolUse: SubagentHandback)</td><td>보호 파일 편집 차단, 턴이 끝날 때 바뀐 스택만 검증</td></tr>
+        <tr><td>권한</td><td><code>.claude/settings.json</code></td><td>테스트·조회는 허용, push·의존성 수정·<code>.claude/</code> 편집은 확인, 비밀값 파일은 거부</td></tr>
+        <tr><td>아키텍처 테스트</td><td>ArchUnit, <code>SourceConventionsTest</code></td><td>패키지 의존 방향, <code>println</code>, 보이지 않는 문자 금지</td></tr>
+        <tr><td>CI</td><td><code>.github/workflows/ci.yml</code></td><td>backend는 ubuntu·windows·macos 매트릭스, web은 포맷·린트·타입·테스트·빌드</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>결정 기록</h3>
+  <div class="row">
+    <div>
+      <ul>
+        <li>ADR 6건: 패키지 구조(0001 → 0003으로 대체), 오류 응답 형식(0002), CLI는 picocli(0004), LLM 기본값(0005), API 경로 규칙(0008)</li>
+        <li>spike 5건: 빌드 스택, LLM 설정, 고정 픽스처 PR, <code>/task</code>와 <code>/task-flow</code> 비교, Claude 스모크</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>docs/adr/README.md</code>, <code>docs/spikes/</code></p></aside>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="chap" id="workflow">
+  <h2><span class="no">4</span>워크플로</h2>
+  <p class="sum">작업 하나는 <code>/task</code> → <code>reviewer</code> → <code>/pr-ready</code>를 거쳐 PR 하나가 됩니다. 사람은 세 번 멈춰서 승인합니다.</p>
+
+  <figure class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Dev as 개발자
+  participant T as /task
+  participant S as 스펙 문서
+  participant H as Stop hook
+  participant P as /pr-ready
+  participant R as reviewer
+  Dev->>T: /task pr-lens-p1-cli 5
+  T->>S: 색인, 작업 본문, 인수 기준, 설계 절만 읽기
+  T-->>Dev: 브랜치 이름 제안 (멈춤)
+  Dev->>T: 확인 후 브랜치 생성과 push
+  T-->>Dev: 계획 20줄 (멈춤)
+  Dev->>T: 계획 승인
+  T->>T: 실패 테스트, 구현, handoff 메모
+  T->>H: 턴 종료
+  H-->>T: 바뀐 스택만 spotlessApply test
+  Dev->>P: /pr-ready
+  P->>R: diff, 스펙 경로, 작업 번호
+  R-->>P: 반드시 수정, 선택, 뒤 작업에 넘길 것
+  P-->>Dev: 선택 지적 중 고칠 ID 묻기 (멈춤)
+  P->>S: 주의 줄, G-n 반영 (승인 항목만)
+  P-->>Dev: PR 설명 초안 (지적 n건 / 반영 m건)
+  Dev->>Dev: 커밋, push, PR 생성, 머지
+</pre>
+    <figcaption>세 번의 멈춤: 브랜치 이름, 계획, 리뷰 선택 지적. push와 PR 생성은 항상 사람이 합니다.</figcaption>
+  </figure>
+
+  <h3>단계별 역할</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>하는 일</th><th>남기는 것</th></tr></thead>
+      <tbody>
+        <tr><td><code>/task</code></td><td>상태 확인(완료·진행 중·선행 작업), 브랜치, 계획 승인, 실패 테스트, 구현, 체크박스</td><td>코드, 테스트, <code>handoff/&lt;번호&gt;.md</code> 메모</td></tr>
+        <tr><td><code>reviewer</code></td><td>작성자 맥락 없이 diff를 인수 기준·설계·컨벤션과 대조. 결정 대기를 임의로 확정했는지 확인</td><td>ID가 붙은 표(M1, S1…)와 "뒤 작업에 넘길 것"</td></tr>
+        <tr><td><code>/pr-ready</code></td><td>바뀐 스택 검증, 리뷰어 호출, 지적 분류, 뒤 작업의 스펙 본문에 주의 줄 반영, 메모 파일 삭제, PR 설명 초안</td><td>스펙의 <code>주의(n 리뷰)</code>·<code>결정(n)</code> 줄, PR 설명</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>handoff 메모: 스펙으로 돌아가는 고리</h3>
+  <div class="row">
+    <div>
+      <p>구현 중 "뒤 작업이 스펙만 읽으면 틀리게 되는 것"이 생기면 <code>/task</code>가 메모 파일에 적습니다. <code>/pr-ready</code>는 메모와 리뷰 결과를 합쳐 해당 작업 본문에 <code>- 주의(5 리뷰): …</code> 한 줄을 넣고 메모를 지웁니다. 다음 작업의 세션은 PR 설명을 보지 않아도 스펙에서 이 줄을 읽습니다.</p>
+      <p>이 고리로 P1 <code>tasks.md</code>에 주의 줄 87개, 결정 줄 38개가 쌓였고, P2 스펙에도 P1 리뷰에서 넘긴 주의 줄 19개가 들어갔습니다. 지금 이 저장소의 <code>handoff/</code> 폴더는 비어 있습니다(메모 파일은 <code>main</code>에 남지 않게 하므로 다른 멤버의 작업 폴더는 확인하지 않았습니다).</p>
+    </div>
+    <aside class="ev"><span class="t">도입</span><p>#8: 뒤 작업에 넘길 것을 스펙에 반영</p><p>#14: 메모 파일로 바꿔 세션이 바뀌거나 컨텍스트가 압축되어도 잃지 않게 함</p></aside>
+  </div>
+
+  <h3>변형: <code>/task-flow</code></h3>
+  <p>3주차에 단계를 에이전트로 나눈 <code>/task-flow</code>(planner → implementer → reviewer, 매니저는 메인 세션)를 만들고, 같은 작업을 두 방식으로 동시에 구현해 세 번 비교했습니다. 결과는 <a href="#trials">7절</a>에 있습니다.</p>
+</section>
+
+<!-- 5 -->
+<section class="chap" id="numbers">
+  <h2><span class="no">5</span>정량 결과</h2>
+  <p class="sum">수치는 모두 저장소와 GitHub에서 다시 셀 수 있습니다. 집계 명령은 <a href="#appendix">부록</a>에 있습니다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th class="num">값</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>PR</td><td class="num">70</td><td>머지 68, 닫힘 1(#23), 머지하지 않는 픽스처 1(#15)</td></tr>
+        <tr><td>커밋</td><td class="num">134</td><td>머지 커밋 제외 117</td></tr>
+        <tr><td>P1 작업 체크박스</td><td class="num">110 / 112</td><td>남은 것: 20.5와 상위 작업 20. 4주차에 13.5, 18.7이 추가되어 분모가 110에서 112로 늘어남</td></tr>
+        <tr><td><code>src/main</code> Java</td><td class="num">7,018줄</td><td>133개 파일</td></tr>
+        <tr><td><code>src/test</code> Java</td><td class="num">18,933줄</td><td>119개 파일. <code>src/main</code>의 약 2.7배</td></tr>
+        <tr><td>테스트 실행</td><td class="num">838</td><td>10-26 로컬 실행. 실패 0, 건너뜀 10(환경변수가 있을 때만 도는 실제 API 스모크)</td></tr>
+        <tr><td>커버리지</td><td class="num">—</td><td>측정하지 않음 (JaCoCo 미설정)</td></tr>
+        <tr><td>CI 실행</td><td class="num">147</td><td>성공 145, 취소 2(동시 실행 취소), 실패 0</td></tr>
+        <tr><td>AI 리뷰 지적 / 반영</td><td class="num">519 / 348</td><td>67%. PR 설명에 적힌 값의 합</td></tr>
+        <tr><td>사람 리뷰</td><td class="num">2</td><td>#1 승인, #30 변경 요청</td></tr>
+        <tr><td><code>src/main</code> 400줄 초과 PR</td><td class="num">5</td><td>#7(1,096), #30(557), #42(497), #28(451), #35(429)</td></tr>
+        <tr><td>M1 리허설</td><td class="num">23건</td><td>Finding 중 규칙 근거 17, 일반 4, 스펙 2. 추정 비용 $0.44(상한 제안값 $0.50)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="charts">
+    <div class="chart">
+      <h4>주차별 머지한 PR</h4>
+      <p class="cap">3주차에 세 사람이 동시에 PR을 내면서 가장 많았습니다.</p>
+      <div class="cv"><canvas id="cWeekly" role="img" aria-label="주차별 머지 PR: 1주 11, 2주 13, 3주 28, 4주 16"></canvas></div>
+    </div>
+    <div class="chart">
+      <h4>AI 리뷰 지적과 반영</h4>
+      <p class="cap">반영률은 63% → 74% → 57%로 움직였습니다.</p>
+      <div class="cv"><canvas id="cReview" role="img" aria-label="AI 리뷰: 1~2주 227건 중 144, 3주 215건 중 160, 4주 77건 중 44"></canvas></div>
+    </div>
+    <div class="chart wide">
+      <h4>날짜별 커밋</h4>
+      <p class="cap">전체 134건 중 98건(73%)이 10/16 이후에 나왔습니다. 커밋이 없는 날은 표시하지 않았습니다.</p>
+      <div class="cv"><canvas id="cDaily" role="img" aria-label="날짜별 커밋 수"></canvas></div>
+    </div>
+    <div class="chart">
+      <h4>멤버별 PR과 커밋</h4>
+      <p class="cap">PR 작성은 한 사람에게 몰렸습니다(58/70).</p>
+      <div class="cv"><canvas id="cPeople" role="img" aria-label="멤버별 PR 58, 10, 2. 커밋 76, 51, 7"></canvas></div>
+    </div>
+    <div class="chart">
+      <h4>스펙 파일별 변경 커밋 (P1)</h4>
+      <p class="cap">요구사항은 거의 그대로였고 작업 목록이 가장 많이 바뀌었습니다.</p>
+      <div class="cv"><canvas id="cSpec" role="img" aria-label="tasks.md 64, design.md 35, requirements.md 7"></canvas></div>
+    </div>
+  </div>
+
+  <h3>리드타임</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>구간</th><th class="num">평균</th><th class="num">중앙값</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>1~2주 (#1~#26)</td><td class="num">4.9시간</td><td class="num">3분</td><td>2시간을 넘은 것은 기능 PR 6건</td></tr>
+        <tr><td>3주 (#27~#54)</td><td class="num">2.7시간</td><td class="num">2.8분</td><td>#30(사람 리뷰), #37(픽스처)을 빼면 평균 3.7분</td></tr>
+        <tr><td>4주 (#55~#70)</td><td class="num">3.3분</td><td class="num">2.2분</td><td>최대 17.7분</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">리드타임은 PR을 연 시점부터 머지까지입니다. 사람 리뷰 없이 작성자가 바로 머지했기 때문에 중앙값이 몇 분입니다. 구현에 걸린 시간을 재는 지표로는 맞지 않습니다.</p>
+</section>
+
+<!-- 6 -->
+<section class="chap" id="effects">
+  <h2><span class="no">6</span>스펙 기반 개발의 기대효과 대 실제 효과</h2>
+  <p class="sum">다섯 가지 기대효과를 저장소 기록에 대어 봤습니다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>기대효과</th><th>평가</th><th>실제로 일어난 것</th><th>근거</th></tr></thead>
+      <tbody>
+        <tr><td>요구사항 명확화</td><td><span class="badge b-yes">달성</span></td><td>요구사항은 거의 바뀌지 않았고, 모호한 곳은 결정 대기로 드러났습니다</td><td><code>requirements.md</code> 커밋 7건, G-14~G-21</td></tr>
+        <tr><td>AI 출력 일관성</td><td><span class="badge b-part">부분 달성</span></td><td>형식은 통일됐지만 같은 실수가 PR마다 반복됐습니다</td><td>PR 설명 형식, #52의 반복 지적 6개</td></tr>
+        <tr><td>협업·병렬화</td><td><span class="badge b-part">부분 달성</span></td><td>선머지 뒤 3주차에만 병렬이 일어났고, 한 트랙이 병목이 됐습니다</td><td>#7, 3주차 작성자 20/7/1, 4주차 T1 PR</td></tr>
+        <tr><td>리뷰·검증 기준 명확화</td><td><span class="badge b-yes">달성</span></td><td>AI 리뷰가 인수 기준과 대조했고, 테스트와 CI가 기준을 지켰습니다. 사람 리뷰는 거의 없었습니다</td><td>reviewer 표, 테스트 838, CI 실패 0</td></tr>
+        <tr><td>문서가 결과물로 남음</td><td><span class="badge b-yes">달성</span></td><td>결정의 이유가 스펙, ADR, spike, 회고에 남았습니다</td><td>주의 87, 결정 38, ADR 6, spike 5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>요구사항 명확화 <span class="badge b-yes">달성</span></h3>
+  <div class="row">
+    <div>
+      <p>P1 <code>requirements.md</code>는 7번 바뀌었습니다. 5번은 10/4~10/8의 준비 단계(초기 커밋, 스펙 검토, ADR 0004·0005, PRD 결정)였고, 트랙 구현이 본격적으로 진행된 10/16 이후로는 2번(#17, 작업 17 리뷰 반영)뿐입니다. 구현 중에 인수 기준이 거의 바뀌지 않았습니다.</p>
+      <p>대신 구현하면서 요구사항이 정하지 않은 곳이 드러났습니다. AI가 그 자리에서 정하지 않고 결정 대기 G-14~G-21로 올렸습니다(Markdown 구조 문자, 스펙 링크 경계, BOM, 디버그 모드, 4xx 사유 표시 등). 다만 3주차에는 요구사항 공백을 이유로 기각하고 기록하지 않은 지적도 6건 있었고, 이를 #52에서 규칙으로 막았습니다(<code>docs/retro/week-3.md</code>). 스펙이 "무엇을 모르는지"를 기록하는 장치로도 작동했습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>git log -- requirements.md</code></p><p>#29(G-14), #49(G-15~17), #54(G-19), #63(G-21 확정)</p></aside>
+  </div>
+
+  <h3>AI 출력 일관성 <span class="badge b-part">부분 달성</span></h3>
+  <div class="row">
+    <div>
+      <p><strong>일관된 것</strong>: 브랜치 이름(<code>feat/t2-p1-5-diff-parser</code>), Conventional Commits, PR 설명의 "AI 리뷰 지적 n건 / 반영 m건" 줄은 모든 멤버의 PR에 있었습니다. 리뷰 결과의 ID 표(M1, S1)는 #32(10/18) 뒤로 쓰였습니다. 같은 스킬과 같은 스펙 읽기 절차를 쓴 결과입니다.</p>
+      <p><strong>일관되지 않은 것</strong>: 코드 품질의 같은 실수가 PR마다 반복됐습니다. PR #27~#51의 리뷰를 모아 보니 속성 테스트 생성기 범위, 경고를 문구 대신 코드로 단언하기, 경로 비교 전 정규화, 보이지 않는 문자 등 6개가 되풀이됐습니다. 스펙은 무엇을 만들지를 고정했지만 어떻게 짤지까지 고정하지는 못했습니다. AI 리뷰 반영률도 63% → 74% → 57%로 흔들렸습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>#52: 반복 지적 6개를 규칙으로</p><p>#53: 소스 검사 테스트</p><p><code>docs/retro/week-3.md</code> 코드 PR 반영률 73% → 51%</p></aside>
+  </div>
+
+  <h3>Task 단위 분할로 협업·병렬화 용이 <span class="badge b-part">부분 달성</span></h3>
+  <div class="row">
+    <div>
+      <p>경계 인터페이스를 먼저 머지한 설계(#7, 작업 2.1~2.3)는 맞았습니다. 3주차에 세 트랙이 모두 그 위에서 작업했고, T3와 T3가 주도한 통합 작업이 한 주에 7건(15~17, 18.1~18.2, 20.1, 20.3, 21)을 머지했습니다. <code>/task</code>가 브랜치 이름으로 다른 사람의 진행 중 작업을 알아보고, 다른 사람의 브랜치가 봐야 할 주의 줄을 스펙에 넣고 "직접 알릴 것"을 적는 방식도 썼습니다(#28, #47). 받은 브랜치(#50)가 이를 어떻게 반영했는지는 확인하지 않았습니다.</p>
+      <p>하지만 1~2주차는 PR 26건 중 25건을 한 사람이 냈고, 3주차에는 리뷰 엔진(T1) 머지가 1건이라 데모 경로의 병목이 됐습니다. 작업 분할이 병렬을 가능하게 했지만, 실제 병렬 여부는 사람의 투입 시간이 정했습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>docs/retro/week-1-2.md</code> "트랙 병렬이 일어나지 않았습니다"</p><p><code>docs/retro/week-3.md</code> 작성자 3명 20/7/1</p></aside>
+  </div>
+
+  <h3>리뷰·검증 기준 명확화 <span class="badge b-yes">달성</span></h3>
+  <div class="row">
+    <div>
+      <p>reviewer는 작성자의 의도를 모르는 상태에서 인수 기준과 하나씩 대조했고, 결과를 ID가 붙은 표로 냈습니다. 그래서 "무엇을 고칠지"를 ID로 고를 수 있었습니다. 실제 리허설에서 정답표의 심어 둔 지적 18개 모두에 대응하는 Finding이 나왔습니다.</p>
+      <p>남은 공백은 사람 리뷰입니다. PR 70건 중 사람 리뷰는 2건입니다. 유일한 변경 요청(#30)은 AI 리뷰에서 기각된 3건을 처리하라는 것이었습니다. 기준이 명확해도 기각 판단을 사람이 다시 보는 과정이 없으면 빠지는 것이 있었습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>.claude/agents/reviewer.md</code> 4번</p><p><code>docs/spikes/2026-10-14-fixture-pr.md</code> 대조표</p><p>#26: 승인 필수를 걸지 않는 결정</p></aside>
+  </div>
+
+  <h3>문서가 결과물로 남음 <span class="badge b-yes">달성</span></h3>
+  <div class="row">
+    <div>
+      <p>코드 외에 남은 것이 많습니다. P1 <code>tasks.md</code>의 주의 줄 87개와 결정 줄 38개는 각각 "어느 리뷰에서 무엇을 확인했는지"와 "무엇을 왜 그렇게 정했는지"를 작업 옆에 남깁니다. 예를 들어 <code>결정(20.4)</code>는 크레딧이 소진되어 무엇을 확인하지 못했는지까지 적습니다. 이 보고서의 수치도 대부분 이 기록에서 바로 가져왔습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>ADR 6, spike 5, 회고 2(1~2주, 3주. 4주차 회고는 없음)</p></aside>
+  </div>
+
+  <h3>예상하지 못했던 효과</h3>
+  <ul>
+    <li><strong>스펙이 사람 사이의 전달 채널이 됨</strong>: 진행 중인 다른 사람의 작업에 넘길 주의를 스펙 본문에 넣었습니다(#28, #47). 다른 전달 경로와 비교하지는 않았습니다.</li>
+    <li><strong>실제 응답으로 가정을 바로잡음</strong>: 실제 GitHub 스모크 테스트에서 없는 SHA의 트리 조회가 404가 아니라 422를 돌려준다는 것을 찾아 <code>design.md</code>에 적었습니다(#46).</li>
+    <li><strong>정답표가 있는 픽스처로 AI 출력을 평가함</strong>: 규칙 위반을 심어 둔 PR(#15)과 정답표 덕분에 리뷰 품질을 숫자로 확인했습니다.</li>
+    <li><strong>규칙이 테스트가 됨</strong>: 문서 규칙 일부를 ArchUnit과 소스 검사 테스트로 옮겨 리뷰에 기대지 않게 했습니다.</li>
+  </ul>
+
+  <h3>예상하지 못했던 비용</h3>
+  <ul>
+    <li><strong>스펙 유지 부담</strong>: P1 스펙 폴더에 커밋 약 70건이 들어갔고, <code>tasks.md</code>만 64번 바뀌었습니다. 기능 PR 하나 뒤에 <code>docs:</code> 커밋이 따라붙는 형태가 많았습니다.</li>
+    <li><strong>작업 흐름을 만드는 시간</strong>: 1주차 PR 11건 중 6건이 컨텍스트(스킬, 에이전트, 아키텍처 규칙) 정비였습니다(<code>docs/retro/week-1-2.md</code>). 3주차에는 한 멤버의 PR 20건 중 7건이 <code>/task-flow</code> 실험이었습니다.</li>
+    <li><strong>세션 고정 비용</strong>: spike에서 잰 세션 시작 직후 컨텍스트는 약 5.8만 토큰이었고, 작은 작업(1차, P1 7.1)에서는 "이 고정분과 대화가 대부분을 차지"했습니다(spike "드러난 것"). 다만 팀 파일의 몫은 작습니다. 10/27 새 터미널에서 Claude Code를 시작하자마자 <code>/context</code>를 실행해 보니 시작 직후 컨텍스트는 37.2k였고, 그중 팀 저장소가 넣는 것은 약 3천(<code>CLAUDE.md</code>와 ADR 색인 2.6k, 프로젝트 에이전트 4개 363)으로 약 8%입니다. 나머지는 Claude Code의 도구 정의(18.3k)와 시스템 프롬프트(4.3k), 설치된 플러그인과 claude.ai 동기화 skill이 대부분인 skill 목록(10k), MCP 서버 안내문(717)과 도구 이름(607, 스키마는 쓸 때 로드)입니다. spike 때와 약 2만 차이가 나는 원인은 당시 플러그인·MCP 구성을 기록하지 않아 확인하지 않았습니다.</li>
+    <li><strong>큰 PR</strong>: PR 경계가 나눌 지점을 주지 않아 <code>src/main</code> 400줄 초과가 5건 나왔습니다.</li>
+    <li><strong>API 크레딧</strong>: 크레딧이 떨어져 마지막 확인(20.5)을 하지 못했습니다.</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section class="chap" id="trials">
+  <h2><span class="no">7</span>시행착오와 개선</h2>
+  <p class="sum">문제가 생기면 규칙, 스킬, 테스트 중 하나를 고쳤습니다. 날짜순입니다.</p>
+
+  <div class="trials">
+    <article class="trial">
+      <h4>뒤 작업 전달 유실<small>#8 · #14 · 10/10~13</small></h4>
+      <div><b>문제</b>리뷰가 찾은 "뒤 작업 주의"가 PR 설명에만 남아 다음 세션이 읽지 못했습니다.</div>
+      <div><b>조치</b>스펙 본문에 주의 줄을 넣게 하고, 구현 중에는 handoff 메모 파일에 적게 했습니다.</div>
+      <div><b>결과</b>주의 줄 87개. 세션을 새로 시작하거나 압축되어도 잃지 않습니다.</div>
+    </article>
+    <article class="trial">
+      <h4>규칙이 로드되지 않음<small>#9 · 10/10</small></h4>
+      <div><b>문제</b><code>paths</code>로 지정한 <code>editing.md</code>가 메인 세션에서 로드되지 않을 때가 있었습니다.</div>
+      <div><b>조치</b>원인을 찾지 못해 루트 <code>CLAUDE.md</code>가 직접 그 파일을 읽으라고 가리키게 했습니다.</div>
+      <div><b>결과</b>꼭 필요한 규칙은 자동 로드에 맡기지 않는 편이 안전합니다.</div>
+    </article>
+    <article class="trial">
+      <h4>계획 에이전트 분리<small>#23 · 10/16 · 철회</small></h4>
+      <div><b>문제</b>계획 품질을 높이려고 계획 작성을 opus 에이전트에 맡기려 했습니다.</div>
+      <div><b>조치</b>시도했지만 중복 읽기와 재위임 비용이 이득보다 커서 PR을 닫았습니다.</div>
+      <div><b>결과</b>작업이 이미 잘게 나뉘어 있으면 에이전트 분리의 이득이 작다는 교훈을 남겼습니다.</div>
+    </article>
+    <article class="trial">
+      <h4>Windows에서만 실패<small>#36 · #40 · 10/18~20</small></h4>
+      <div><b>문제</b>ubuntu CI는 통과했지만 로컬 Windows에서 <code>--config</code>가 폴더일 때의 테스트가 실패했습니다.</div>
+      <div><b>조치</b>오류 문구를 고치고, CI backend 잡을 세 OS 매트릭스로 넓혔습니다.</div>
+      <div><b>결과</b>매트릭스가 이후 잡은 버그는 아직 없습니다.</div>
+    </article>
+    <article class="trial">
+      <h4>종료 검증 누락<small>#38 · 10/18</small></h4>
+      <div><b>문제</b><code>/task-flow</code>의 implementer가 보고 도구 없이 끝나 검증 hook이 돌지 않았습니다.</div>
+      <div><b>조치</b>보고가 없으면 매니저가 <code>--verify</code>로 대신 검증하게 했습니다.</div>
+      <div><b>결과</b>hook에 기대는 검증은 실행 경로가 빠질 수 있다는 점을 확인했습니다.</div>
+    </article>
+    <article class="trial">
+      <h4><code>/task-flow</code> 효과 미달<small>spike · 10/18~21 · 3회</small></h4>
+      <div><b>문제</b>에이전트로 단계를 나눴을 때 메인 컨텍스트가 <code>/task</code>의 0.6배 이하이면 효과가 있다고 보는 기준을 두었습니다.</div>
+      <div><b>조치</b>같은 작업을 두 방식으로 동시에 구현해 교차 테스트, 블라인드 리뷰, 토큰을 세 번 쟀습니다.</div>
+      <div><b>결과</b>0.89, 0.67, 0.78배로 세 번 다 미달했습니다. 정확성·비용 기준은 세 번 모두 충족했습니다. 결과물은 정확성과 test-first 증거를 보고 세 번 모두 <code>/task-flow</code> 쪽을 골랐고(#35, #42, #47), <code>/task</code>를 대체할지는 정하지 않았습니다.</div>
+    </article>
+    <article class="trial">
+      <h4>반복되는 리뷰 지적<small>#52 · #53 · 10/23</small></h4>
+      <div><b>문제</b>PR마다 같은 지적이 나오고, 요구사항 공백을 이유로 기각한 지적이 기록 없이 사라졌습니다.</div>
+      <div><b>조치</b>PR 25개의 기각 사유를 모아 규칙 6개와 검사 테스트 1개로 만들고, 공백 기각은 G-n으로 올릴지 묻게 했습니다.</div>
+      <div><b>결과</b>G-19가 이렇게 올라왔습니다. 4주차 반영률 변화와의 인과는 확인하지 않았습니다.</div>
+    </article>
+    <article class="trial">
+      <h4>API 크레딧 소진<small>#68 · #70 · 10/26</small></h4>
+      <div><b>문제</b>M1 리허설 중 크레딧이 떨어져 400줄 실행 시간과 인젝션 픽스처를 실행하지 못했습니다.</div>
+      <div><b>조치</b>추가 결제를 하지 않기로 하고, 하지 못한 것을 20.5와 리허설 기록에 남겼습니다.</div>
+      <div><b>결과</b>P1을 "완료"가 아니라 "조건부 완료"로 표시했습니다. 요구사항 9.7은 미확인입니다.</div>
+    </article>
+  </div>
+
+  <div class="charts" style="margin-top:20px">
+    <div class="chart wide">
+      <h4><code>/task-flow</code> 메인 세션 최대 컨텍스트 (<code>/task</code> 대비)</h4>
+      <p class="cap">점선이 효과 기준 0.6배입니다. 세션 시작 고정분(spike 측정 약 5.8만 토큰)과 PR 준비 단계가 메인에 남아 줄지 않았습니다.</p>
+      <div class="cv"><canvas id="cFlow" role="img" aria-label="1차 0.89배, 2차 0.67배, 3차 0.78배, 기준 0.6배"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="chap" id="retro">
+  <h2><span class="no">8</span>회고</h2>
+  <p class="sum">주간 회고 두 건(1~2주, 3주)과 4주차 기록을 합쳤습니다.</p>
+
+  <div class="kpt">
+    <div style="--c: var(--add)">
+      <h4>계속할 것</h4>
+      <ul>
+        <li>경계 인터페이스를 먼저 머지하고 트랙을 나누기</li>
+        <li>계획을 승인한 뒤 실패 테스트부터 쓰기</li>
+        <li>뒤 작업 주의를 PR 설명이 아닌 스펙 본문에 남기기</li>
+        <li>반복 지적을 규칙으로, 가능하면 테스트로 옮기기</li>
+        <li>설정 변경은 전용 리뷰어(<code>context-reviewer</code>)로 보기</li>
+        <li>정답표가 있는 픽스처로 AI 결과를 평가하기</li>
+      </ul>
+    </div>
+    <div style="--c: var(--del)">
+      <h4>문제였던 것</h4>
+      <ul>
+        <li>사람 리뷰가 운영되지 않음(70건 중 2건)</li>
+        <li>1~2주차는 사실상 한 사람이 진행, 역할 순환 미운영</li>
+        <li>1주차의 절반 이상을 작업 흐름 정비에 씀</li>
+        <li>리뷰 지적을 반영한 마지막 커밋을 다시 리뷰하지 않은 PR이 많음</li>
+        <li>PR 경계가 커서 400줄 초과 5건</li>
+        <li>API 예산 관리 부재로 마지막 확인을 못 함</li>
+      </ul>
+    </div>
+    <div style="--c: var(--spec)">
+      <h4>시도할 것</h4>
+      <ul>
+        <li>스펙을 쓸 때 PR 경계에 나눌 지점을 미리 표시</li>
+        <li>AI 리뷰에서 기각한 지적만 사람이 짧게 확인</li>
+        <li>리드타임 대신 "첫 커밋부터 머지까지" 같은 지표</li>
+        <li>크레딧이 드는 확인을 일정 앞쪽에 배치</li>
+        <li>4주차 회고를 같은 형식으로 남기기</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="chap" id="apply">
+  <h2><span class="no">9</span>실무 적용 제안</h2>
+  <p class="sum">이번 실습에서 효과가 확인된 것만 골랐습니다.</p>
+
+  <ol class="props">
+    <li><strong>스펙 색인을 먼저 만들고, AI에게는 번호로 읽히세요</strong>요구사항 번호와 설계 절 제목으로 필요한 부분만 읽게 하면 큰 스펙도 다룰 수 있습니다.<span class="why">근거: P1 스펙 2,216줄을 색인과 <code>_Requirements: …_</code> 번호로 나눠 읽음</span></li>
+    <li><strong>팀이 정할 것은 "결정 대기"로 적고 제안값을 함께 두세요</strong>AI가 임의로 확정하지 않고 작업도 멈추지 않습니다.<span class="why">근거: D-1~D-8, G-1~G-21. 그중 G-14~G-21은 구현 중에 올라옴</span></li>
+    <li><strong>공유 타입부터 머지하고 병렬을 시작하세요</strong>트랙 사이 인터페이스가 먼저 있어야 병렬 작업이 서로를 기다리지 않습니다.<span class="why">근거: #7 선머지 뒤 3주차에 세 트랙이 동시에 진행</span></li>
+    <li><strong>뒤 작업에 넘길 것은 스펙에 쓰세요</strong>다음 세션은 PR 설명을 읽지 못합니다. 작업 본문의 주의 줄이 가장 확실한 전달 경로입니다.<span class="why">근거: #8, #14, 주의 줄 87개</span></li>
+    <li><strong>리뷰 기각 사유를 주기적으로 모아 규칙으로 바꾸세요</strong>같은 지적이 반복되면 문서 규칙으로, 기계적으로 검사할 수 있으면 테스트로 옮깁니다.<span class="why">근거: #21·#22, #52·#53</span></li>
+    <li><strong>사람 리뷰의 범위를 작게 정하세요</strong>모든 PR을 사람이 볼 수 없다면 AI가 기각한 지적과 결정 대기 추가만 사람이 확인하는 식으로 줄이세요.<span class="why">근거: 유일한 변경 요청(#30)이 AI가 기각한 3건을 다시 짚음</span></li>
+    <li><strong>쓰지 않는 플러그인과 MCP는 프로젝트 단위로 끄세요</strong>세션 고정분 중 팀이 손댈 수 있는 부분은 <code>CLAUDE.md</code>보다 설치된 플러그인의 skill 목록이 더 큽니다.<span class="why">근거: 10/27 새 세션 직후 <code>/context</code> 37.2k. 팀 파일 약 3천 대 skill 목록 10k(75개). 이번 프로젝트에서 쓰지 않은 Vercel 플러그인만 skill 약 40개와 에이전트 3개를 더함(약 4.3k로 추정). Claude Code 자체의 도구 정의 18.3k와 시스템 프롬프트 4.3k는 줄일 수 없음. 플러그인을 끈 뒤의 효과는 확인하지 않음</span></li>
+    <li><strong>LLM 예산을 일정 계획에 넣으세요</strong>실제 API로만 확인할 수 있는 항목은 크레딧이 남아 있을 때 먼저 하세요.<span class="why">근거: 20.5 미실행, P1 조건부 완료</span></li>
+  </ol>
+</section>
+
+<!-- 10 -->
+<section class="chap" id="next">
+  <h2><span class="no">10</span>다음 단계</h2>
+  <p class="sum">worktree로 한 사람이 여러 작업을 동시에 돌리고, 오케스트레이션으로 사람의 개입 지점을 줄이는 방향입니다.</p>
+
+  <h3>worktree 병렬</h3>
+  <div class="row">
+    <div>
+      <p><code>/task-flow</code> 비교 실험에서 이미 같은 작업을 두 worktree, 두 터미널에서 동시에 구현해 봤습니다(1차는 두 쪽 모두 약 30분대). 다음에는 같은 작업의 A/B가 아니라 <strong>의존이 없는 서로 다른 작업</strong>을 worktree마다 하나씩 돌립니다. <code>tasks.md</code>의 의존 그래프가 동시에 시작할 수 있는 작업을 알려 주고, <code>/task</code>의 상태 확인이 중복 착수를 막습니다.</p>
+      <ul>
+        <li>이미 있는 것: <code>.worktreeinclude</code>가 gitignore된 비밀값·로컬 설정 파일을 새 worktree로 복사하고, <code>/task</code>는 <code>worktree-&lt;이름&gt;</code> 브랜치를 작업 브랜치 이름으로 바꿉니다</li>
+        <li>지킬 것: 브랜치를 만들면 바로 push해 다른 worktree와 사람이 진행 중임을 알게 하기</li>
+        <li>주의할 것: 세션마다 고정 비용(spike 측정 약 5.8만, 10/27 새 세션 37.2k 토큰)이 들고, 사람의 승인 지점(브랜치, 계획, 리뷰 선택)도 worktree 수만큼 늘어납니다</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>docs/spikes/2026-10-18-task-vs-task-flow.md</code> "결과"</p><p><code>/task</code> skill의 <code>worktree-&lt;이름&gt;</code> 브랜치 처리</p></aside>
+  </div>
+
+  <h3>오케스트레이션</h3>
+  <figure class="diagram">
+<pre class="mermaid">
+flowchart LR
+  G["의존 그래프<br/>tasks.md"] --> M["매니저 세션"]
+  M --> P1["planner<br/>작업 A 계획"]
+  M --> P2["planner<br/>작업 B 계획"]
+  P1 --> A{{"사람: 계획 승인"}}
+  P2 --> A
+  A --> I1["implementer<br/>worktree A"]
+  A --> I2["implementer<br/>worktree B"]
+  I1 --> R["reviewer<br/>확인 리뷰 모드"]
+  I2 --> R
+  R --> S{{"사람: 선택 지적, 스펙 반영 승인"}}
+  S --> PR["/pr-ready → PR"]
+</pre>
+    <figcaption>사람의 승인 지점을 계획과 리뷰 두 곳으로 모으는 구성안. 아직 구현하지 않았습니다.</figcaption>
+  </figure>
+  <div class="row">
+    <div>
+      <p>이번 실험에서 배운 것을 조건으로 둡니다.</p>
+      <ul>
+        <li><strong>메인 세션을 가볍게</strong>: <code>/pr-ready</code>를 메인에서 돌리면 에이전트로 아낀 컨텍스트가 다시 쓰였습니다. PR 준비도 에이전트로 넘겨야 합니다.</li>
+        <li><strong>재읽기 비용을 피하기</strong>: 수정할 때마다 에이전트가 스펙을 다시 읽으면 #23처럼 이득이 사라집니다. 계획 파일에 필요한 인수 기준을 옮겨 두는 방식이 필요합니다.</li>
+        <li><strong>검증은 hook과 매니저 양쪽에서</strong>: implementer가 보고 없이 끝나는 경우(#38)를 매니저가 잡아야 합니다.</li>
+        <li><strong>결정 기준을 먼저 정하기</strong>: 세 번의 비교에서 기준이 계속 미달일 때의 결정을 미리 정하지 않아 <code>/task-flow</code> 대체 여부가 열려 있습니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><code>docs/guide/task-flow-workflow.md</code></p><p><code>docs/retro/week-3.md</code> "정할 것"</p></aside>
+  </div>
+
+  <h3>제품 쪽 다음 작업</h3>
+  <ul>
+    <li>P1 20.5: 크레딧을 확보하면 400줄 실행 시간과 인젝션 픽스처를 실행합니다.</li>
+    <li>P2: 스펙 문서는 다 썼고 팀 승인 전입니다. P1 리뷰에서 넘긴 주의 줄 19개가 이미 들어가 있습니다.</li>
+    <li>P3: 요구사항만 있습니다. <code>/spec</code>으로 설계와 작업 목록을 쓸 때 PR 경계에 나눌 지점을 미리 둡니다.</li>
+  </ul>
+</section>
+
+<!-- 11 -->
+<section class="chap" id="appendix">
+  <h2><span class="no">11</span>부록</h2>
+  <p class="sum">원자료와 집계 방법.</p>
+
+  <details class="appx">
+    <summary>PR 전체 목록 (70건)</summary>
+    <div class="inner"><div class="tbl-wrap"><table>
+      <thead><tr><th>PR</th><th>제목</th><th>작성</th><th>상태</th><th>머지일</th><th class="num">변경 줄</th></tr></thead>
+      <tbody>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/70">#70</a></td><td>docs: P1 CLI를 조건부 완료로 문서에 표시한다</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+11 / −9</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/69">#69</a></td><td>docs: 작업 22 Final Checkpoint 완료 표시 (P1)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+3 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/68">#68</a></td><td>docs: M1 데모 리허설 결과를 기록하고 20.4를 닫는다 (P1 20.4)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+100 / −9</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/67">#67</a></td><td>test: 골든 파이프라인 테스트를 추가한다 (P1 20.2)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+166 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/66">#66</a></td><td>chore: github·review 모듈별 rules를 추가한다 (P1 23.2)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+39 / −2</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/65">#65</a></td><td>docs: 작업 19 Checkpoint 완료 표시 (P1 T3)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+1 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/64">#64</a></td><td>feat: CLI 파이프라인을 조립한다 (P1 18.3~18.6)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+816 / −12</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/63">#63</a></td><td>feat: Claude 429 외 4xx 응답의 사유를 오류 메시지에 담는다 (P1 13.5, G-21)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+263 / −12</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/62">#62</a></td><td>docs: 작업 14 Checkpoint 완료 표시 (P1 T1)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+1 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/61">#61</a></td><td>feat: AnthropicLlmClient와 RetryingLlmClient를 구현한다 (P1 13.1~13.4)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+1134 / −10</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/60">#60</a></td><td>feat: ReviewEngine을 조립한다 (P1 12.1~12.2)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+1033 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/59">#59</a></td><td>feat: PromptBuilder, CostCalculator, ResultMerger를 구현한다 (P1 11.5~11.9)</td><td>멤버 1</td><td>머지</td><td>10-26</td><td class="num">+1146 / −6</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/58">#58</a></td><td>chore: 실행 jar의 시작 클래스와 이름을 고정하고 prlens 래퍼 스크립트를 추가한다 (P1 작업 18.7)</td><td>멤버 2</td><td>머지</td><td>10-25</td><td class="num">+35 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/57">#57</a></td><td>feat: 예외를 stderr 메시지와 종료 코드 2로 바꾸는 ErrorMapper를 구현한다 (P1 작업 18.5)</td><td>멤버 2</td><td>머지</td><td>10-25</td><td class="num">+332 / −9</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/56">#56</a></td><td>feat: StderrReporter로 진행, 재시도, 경고를 표준 오류에 쓴다 (P1 작업 18.4)</td><td>멤버 2</td><td>머지</td><td>10-25</td><td class="num">+407 / −3</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/55">#55</a></td><td>docs: 3주차 회고 노트를 추가한다</td><td>멤버 1</td><td>머지</td><td>10-23</td><td class="num">+76 / −0</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/54">#54</a></td><td>docs: 읽은 텍스트의 BOM과 비ASCII 공백 처리를 결정 대기 G-19로 올린다</td><td>멤버 1</td><td>머지</td><td>10-23</td><td class="num">+4 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/53">#53</a></td><td>fix: 소스의 BOM과 U+2028을 이스케이프로 바꾸고 원문 문자를 검사한다</td><td>멤버 1</td><td>머지</td><td>10-23</td><td class="num">+40 / −7</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/52">#52</a></td><td>chore: PR #27~51 리뷰에서 반복된 지적을 규칙으로 옮긴다</td><td>멤버 1</td><td>머지</td><td>10-23</td><td class="num">+20 / −3</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/51">#51</a></td><td>docs: T2의 상위 작업 7, 8과 Checkpoint 9를 완료로 표시한다 (P1 작업 9)</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+3 / −3</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/50">#50</a></td><td>feat: 응답 해석기와 FindingValidator를 추가한다 (P1 작업 10)</td><td>멤버 3</td><td>머지</td><td>10-21</td><td class="num">+1316 / −11</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/49">#49</a></td><td>docs: 스펙 링크의 요구사항 공백 G-15~G-17을 결정 대기로 올린다</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+11 / −2</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/48">#48</a></td><td>docs: /task와 /task-flow 비교 3차(P1 8.9~8.12) 결과를 기록한다</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+115 / −10</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/47">#47</a></td><td>feat: PR 본문의 스펙 링크를 수집하고 컨텍스트 수집기를 조립한다 (P1 작업 8.9~8.12)</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+1166 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/46">#46</a></td><td>test: GitHub 클라이언트를 가짜 서버와 실제 GitHub로 검증한다 (P1 작업 7.6~7.7)</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+956 / −4</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/45">#45</a></td><td>feat: base SHA에서 CLAUDE.md의 @import를 깊이 4까지 따라간다 (P1 작업 8.6~8.8)</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+962 / −12</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/44">#44</a></td><td>docs: 2차 비교의 모델 구성 차이를 기록하고 3차(P1 8.9~8.12) 비교를 준비한다</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+77 / −5</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/43">#43</a></td><td>docs: /task와 /task-flow 비교 2차(P1 8.1~8.5) 결과를 기록한다</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+113 / −10</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/42">#42</a></td><td>feat: base SHA 기준 CLAUDE.md와 rule 컨텍스트를 수집한다 (P1 작업 8.1~8.5)</td><td>멤버 1</td><td>머지</td><td>10-21</td><td class="num">+1768 / −6</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/41">#41</a></td><td>test: 픽스처 비밀정보 스캔 테스트를 추가한다 (P1 작업 20.3)</td><td>멤버 2</td><td>머지</td><td>10-20</td><td class="num">+189 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/40">#40</a></td><td>chore: CI backend 잡을 ubuntu·windows·macos 매트릭스로 넓힌다 (P1 작업 21)</td><td>멤버 2</td><td>머지</td><td>10-20</td><td class="num">+30 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/39">#39</a></td><td>docs: /task와 /task-flow 비교 1차 결과(P1 7.1)와 2차(P1 8.1~8.5) 절차를 기록한다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+438 / −0</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/38">#38</a></td><td>chore: implementer가 보고 도구 없이 끝나면 매니저가 --verify로 종료 검증을 대신한다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+84 / −10</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/37">#37</a></td><td>test: 골든 픽스처 7개와 FixtureLoader를 추가한다 (P1 작업 20.1)</td><td>멤버 2</td><td>머지</td><td>10-20</td><td class="num">+1910 / −2</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/36">#36</a></td><td>fix: Windows에서 --config가 폴더일 때 권한 오류가 아니라 폴더라고 알린다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+20 / −5</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/35">#35</a></td><td>feat: HttpGitHubClient와 PAT 자격 증명, rate limit 분류를 구현한다 (P1 작업 7.1)</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+1133 / −19</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/34">#34</a></td><td>feat: PrLensMain, ReviewCommand와 CliPipeline.preflight를 구현한다 (P1 작업 18.1~18.2)</td><td>멤버 2</td><td>머지</td><td>10-18</td><td class="num">+825 / −7</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/33">#33</a></td><td>feat: GitHub PR URL 해석과 PR 변경 파일 조회(PrFetcher)를 구현한다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+786 / −9</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/32">#32</a></td><td>chore: 단계를 에이전트로 나눈 /task-flow와 구현 중 검증 hook을 추가한다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+1273 / −107</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/31">#31</a></td><td>docs: 단계를 에이전트로 나눈 /task-flow의 구현 전 계획을 추가한다</td><td>멤버 1</td><td>머지</td><td>10-18</td><td class="num">+353 / −0</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/30">#30</a></td><td>feat: ConfigLoader와 ConfigPrinter를 구현한다 (P1 작업 16)</td><td>멤버 2</td><td>머지</td><td>10-18</td><td class="num">+1319 / −5</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/29">#29</a></td><td>feat: MarkdownFormatter와 ExitCodeResolver를 구현한다 (P1 작업 17)</td><td>멤버 2</td><td>머지</td><td>10-17</td><td class="num">+1037 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/28">#28</a></td><td>feat: ResultCodec과 CodecException을 구현한다 (P1 작업 15)</td><td>멤버 2</td><td>머지</td><td>10-17</td><td class="num">+1149 / −4</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/27">#27</a></td><td>docs: 1~2주차 회고 노트를 추가한다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+80 / −0</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/26">#26</a></td><td>docs: GitHub 저장소 설정 현황과 승인 필수를 걸지 않는 결정을 반영한다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+9 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/25">#25</a></td><td>docs: &quot;모든 변경 줄을 설명할 수 있음&quot; 요건을 책임 중심 표현으로 바꾼다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+2 / −4</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/24">#24</a></td><td>docs: README를 현재 진행 상태에 맞게 최신화한다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+7 / −6</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/23">#23</a></td><td>chore: /task 계획 작성을 opus task-planner 에이전트에 맡긴다</td><td>멤버 1</td><td>닫힘</td><td></td><td class="num">+33 / −11</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/22">#22</a></td><td>test: 패키지 경로째 쓴 Random과 Locale을 import로 바꾼다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+4 / −2</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/21">#21</a></td><td>chore: 클래스를 패키지 경로째 쓰지 않고 import하는 규칙을 추가한다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+2 / −1</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/20">#20</a></td><td>feat: GlobMatcher와 DiffFilter를 구현한다 (P1 작업 6)</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+967 / −20</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/19">#19</a></td><td>chore: reviewer, context-reviewer 에이전트의 모델을 opus로 지정한다</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+4 / −2</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/18">#18</a></td><td>feat: DiffParser, DiffPrinter, LineRanges를 구현한다 (P1 작업 5)</td><td>멤버 1</td><td>머지</td><td>10-16</td><td class="num">+849 / −16</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/17">#17</a></td><td>feat: ChunkPlanner와 DelimiterCodec을 추가한다 (P1 작업 11.1~11.4)</td><td>멤버 3</td><td>머지</td><td>10-16</td><td class="num">+509 / −10</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/16">#16</a></td><td>docs: 실제 API 확인에 쓸 고정 픽스처 PR #15와 정답표를 기록한다</td><td>멤버 1</td><td>머지</td><td>10-14</td><td class="num">+60 / −0</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/15">#15</a></td><td>[DO NOT MERGE] chore: 리뷰 요청 수동 생성·조회 API (스모크 픽스처)</td><td>멤버 1</td><td>열림</td><td></td><td class="num">+326 / −77</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/14">#14</a></td><td>chore: 뒤 작업에 넘길 것을 메모 파일로 남기고 /pr-ready가 반영한 뒤 지우게 한다</td><td>멤버 1</td><td>머지</td><td>10-13</td><td class="num">+24 / −17</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/13">#13</a></td><td>test: testkit 공용 생성기와 Property 22, 43 테스트를 추가한다 (P1 작업 2.4~2.6)</td><td>멤버 1</td><td>머지</td><td>10-13</td><td class="num">+1208 / −3</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/12">#12</a></td><td>feat: 재시도 실행기와 비밀정보 마스킹을 구현한다 (P1 작업 3)</td><td>멤버 1</td><td>머지</td><td>10-12</td><td class="num">+1406 / −17</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/11">#11</a></td><td>chore: /task가 브랜치 이름 확인에서 멈춘 뒤 계획으로 가게 한다</td><td>멤버 1</td><td>머지</td><td>10-11</td><td class="num">+5 / −5</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/10">#10</a></td><td>chore: /task에 계획 승인 단계를 추가한다</td><td>멤버 1</td><td>머지</td><td>10-11</td><td class="num">+46 / −21</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/9">#9</a></td><td>chore: 설정 변경용 리뷰 에이전트와 수정 규칙을 추가한다</td><td>멤버 1</td><td>머지</td><td>10-10</td><td class="num">+71 / −15</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/8">#8</a></td><td>chore: 리뷰에서 뒤 작업에 넘길 것을 스펙 문서에 반영하게 한다</td><td>멤버 1</td><td>머지</td><td>10-10</td><td class="num">+41 / −14</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/7">#7</a></td><td>feat: 공유 타입과 경계 인터페이스를 선머지한다 (P1 작업 2.1~2.3)</td><td>멤버 1</td><td>머지</td><td>10-11</td><td class="num">+2782 / −31</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/6">#6</a></td><td>feat: 의존성 4개와 아키텍처 규칙 테스트를 추가한다 (P1 작업 1.2)</td><td>멤버 1</td><td>머지</td><td>10-10</td><td class="num">+233 / −4</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/5">#5</a></td><td>docs: new-endpoint 스킬을 평면 패키지 기준으로 고친다 (P1 작업 23.1)</td><td>멤버 1</td><td>머지</td><td>10-08</td><td class="num">+13 / −8</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/4">#4</a></td><td>docs: PRD 1주차 결정(제품 이름, API 키와 예산, 투입 시간, 수기 기록 형식)을 반영한다</td><td>멤버 1</td><td>머지</td><td>10-08</td><td class="num">+12 / −11</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/3">#3</a></td><td>docs: ADR 0005로 LLM 설정을 정한다</td><td>멤버 1</td><td>머지</td><td>10-08</td><td class="num">+157 / −25</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/2">#2</a></td><td>docs: ADR 0004로 CLI 라이브러리를 picocli로 정한다</td><td>멤버 1</td><td>머지</td><td>10-08</td><td class="num">+57 / −13</td></tr>
+<tr><td><a href="https://github.com/jjangyeesoo/claude-team-pr-lens/pull/1">#1</a></td><td>feat: 패키지를 com.prlens로 바꾸고 메모 샘플을 지운다 (P1 작업 1.1)</td><td>멤버 1</td><td>머지</td><td>10-08</td><td class="num">+46 / −277</td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details class="appx">
+    <summary>P1 결정 대기 항목</summary>
+    <div class="inner"><div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>내용</th><th>상태 또는 제안값</th></tr></thead>
+      <tbody>
+        <tr><td>D-1</td><td>CLI 라이브러리</td><td>확정: picocli (ADR 0004)</td></tr>
+        <tr><td>D-2</td><td>모델, effort, 최대 출력 토큰</td><td>확정: <code>claude-opus-5-5</code>, <code>medium</code>, 16,000 (ADR 0005)</td></tr>
+        <tr><td>D-3</td><td>1회 비용 상한</td><td>$0.50</td></tr>
+        <tr><td>D-4</td><td>불완전 결과의 종료 코드</td><td>3</td></tr>
+        <tr><td>D-5</td><td>설정 파일 형식과 위치</td><td>YAML, <code>./.prlens.yml</code> → <code>~/.prlens.yml</code></td></tr>
+        <tr><td>D-6~D-8</td><td>생성 코드 제외 패턴, 스펙 head SHA fallback, 대상 저장소 한정</td><td>제안값으로 구현</td></tr>
+        <tr><td>G-1~G-13</td><td>스펙 승인 때까지 나온 요구사항 공백</td><td>설계의 처리대로 반영</td></tr>
+        <tr><td>G-14</td><td>LLM이 만든 문자열의 Markdown 구조 문자</td><td>구현 중 추가 (#29)</td></tr>
+        <tr><td>G-15~G-17</td><td>스펙 링크의 폴더 경로, 끝 구두점, ref 경계</td><td>구현 중 추가 (#49)</td></tr>
+        <tr><td>G-18</td><td><code>basis.ref</code> 비교 대상</td><td>구현 중 추가 (#50)</td></tr>
+        <tr><td>G-19</td><td>읽은 텍스트의 BOM과 비ASCII 공백</td><td>구현 중 추가 (#54)</td></tr>
+        <tr><td>G-20</td><td>디버그 모드를 켜는 방법</td><td>구현 중 추가 (18.5 리뷰)</td></tr>
+        <tr><td>G-21</td><td>Claude 4xx 사유 표시</td><td>구현 중 추가, 확정 (#63)</td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details class="appx">
+    <summary>확인하지 못한 항목</summary>
+    <div class="inner"><div class="tbl-wrap"><table>
+      <thead><tr><th>항목</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>테스트 커버리지</td><td>JaCoCo 등 측정 도구를 설정하지 않음</td></tr>
+        <tr><td>멤버와 트랙의 대응</td><td>4주차 T1·T3 PR(#59~#64)의 작성자가 한 계정이라 PR 작성자만으로 판단할 수 없음</td></tr>
+        <tr><td>요구사항 9.7 (400줄 120초)</td><td>API 크레딧 소진으로 측정하지 않음 (작업 20.5)</td></tr>
+        <tr><td>실제 API 청구액</td><td>리허설 비용 $0.44는 CLI의 추정값</td></tr>
+        <tr><td>4주차 회고</td><td>회고 문서가 없음. 이 보고서의 4주차 수치는 PR 설명과 GitHub 기록에서 직접 셈</td></tr>
+        <tr><td>Task별 스펙-구현 일치율</td><td>작업마다 정량화한 자료가 없음. 주의·결정 줄과 <code>design.md</code> 커밋으로만 추적 가능</td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details class="appx">
+    <summary>집계 방법</summary>
+<pre># PR 수, 작성자, 머지일
+gh pr list --state all --limit 200 --json number,state,author,createdAt,mergedAt
+
+# 커밋 수와 작성자
+git rev-list --count HEAD; git rev-list --count --no-merges HEAD
+git shortlog -sne HEAD
+
+# 스펙 변경 이력
+git log --oneline -- docs/specs/pr-lens-p1-cli/tasks.md   # design.md, requirements.md도 같은 방식
+
+# 스펙의 주의·결정 줄
+grep -cE '^\s*- 주의\(' docs/specs/pr-lens-p1-cli/tasks.md
+grep -cE '^\s*- 결정\(' docs/specs/pr-lens-p1-cli/tasks.md
+
+# 테스트 (backend/build/test-results/test/*.xml의 testsuite 속성 합계, 2026-10-26 17:06 실행분)
+
+# CI
+gh run list --limit 200 --json conclusion
+
+# AI 리뷰 지적·반영: 각 PR 설명의 "AI 리뷰 지적 n건 / 반영 m건"
+# 1~3주차는 docs/retro/의 집계, 4주차(#56~#70)는 PR 설명에서 직접 합산
+
+# src/main 400줄 초과: PR별 gh pr view &lt;n&gt; --json files 에서 backend/src/main 파일의 추가+삭제 합</pre>
+  </details>
+
+  <p class="foot">작성일 2026-10-27. 출처는 이 저장소의 <code>docs/</code>, <code>.claude/</code>, git 이력, GitHub PR과 Actions 기록입니다. AI 리뷰 수치는 PR 설명에 적힌 값이고 리뷰어가 다시 확인하지 않았습니다.</p>
+</section>
+
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js" integrity="sha384-WmdflGW9aGfoBdHc4rRyWzYuAjEmDwMdGdiPNacbwfGKxBW/SO6guzuQ76qjnSlr" crossorigin="anonymous"></script>
+<script>
+(function () {
+  var css = getComputedStyle(document.documentElement);
+  var c = function (n) { return css.getPropertyValue(n).trim(); };
+  var ink = c('--ink'), muted = c('--muted'), rule = c('--rule'), spec = c('--spec'),
+      add = c('--add'), warn = c('--warn'), specTint = '#A9BBEE';
+
+  /* Mermaid */
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'strict',
+      theme: 'base',
+      fontFamily: 'IBM Plex Sans KR, Malgun Gothic, sans-serif',
+      themeVariables: {
+        primaryColor: '#E5EBFA', primaryBorderColor: spec, primaryTextColor: ink,
+        lineColor: '#7B8796', secondaryColor: '#FAEFDC', tertiaryColor: '#FFFFFF',
+        actorBkg: '#E5EBFA', actorBorder: spec, actorTextColor: ink,
+        signalColor: ink, signalTextColor: ink, noteBkgColor: '#FAEFDC', noteBorderColor: warn,
+        fontSize: '14px'
+      },
+      flowchart: { curve: 'basis', htmlLabels: true },
+      sequence: { mirrorActors: false, useMaxWidth: true }
+    });
+  }
+
+  /* Chart.js */
+  if (!window.Chart) return;
+  Chart.defaults.font.family = 'IBM Plex Sans KR, Malgun Gothic, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = muted;
+  Chart.defaults.borderColor = rule;
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.maintainAspectRatio = false;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) Chart.defaults.animation = false;
+  var grid = { color: rule }, noGrid = { display: false };
+
+  new Chart(document.getElementById('cWeekly'), {
+    type: 'bar',
+    data: { labels: ['1주', '2주', '3주', '4주'],
+      datasets: [{ label: '머지한 PR', data: [11, 13, 28, 16], backgroundColor: [specTint, specTint, spec, specTint], borderRadius: 4 }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: { grid: noGrid }, y: { beginAtZero: true, grid: grid } } }
+  });
+
+  new Chart(document.getElementById('cReview'), {
+    data: { labels: ['1~2주', '3주', '4주'],
+      datasets: [
+        { type: 'bar', label: '지적', data: [227, 215, 77], backgroundColor: '#C9D3E6', borderRadius: 4, yAxisID: 'y' },
+        { type: 'bar', label: '반영', data: [144, 160, 44], backgroundColor: add, borderRadius: 4, yAxisID: 'y' },
+        { type: 'line', label: '반영률(%)', data: [63, 74, 57], borderColor: warn, backgroundColor: warn, pointRadius: 4, tension: 0, yAxisID: 'y2' }
+      ] },
+    options: { scales: {
+      x: { grid: noGrid },
+      y: { beginAtZero: true, grid: grid, title: { display: true, text: '건' } },
+      y2: { position: 'right', min: 0, max: 100, grid: noGrid, ticks: { callback: function (v) { return v + '%'; } } }
+    } }
+  });
+
+  var days = ['10/04','10/05','10/08','10/10','10/11','10/12','10/13','10/14','10/15','10/16','10/17','10/18','10/20','10/21','10/23','10/25','10/26'];
+  var commits = [16,2,5,3,3,1,4,1,1,10,14,17,12,14,4,15,12];
+  new Chart(document.getElementById('cDaily'), {
+    type: 'bar',
+    data: { labels: days, datasets: [{ label: '커밋', data: commits, backgroundColor: spec, borderRadius: 3 }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: { grid: noGrid }, y: { beginAtZero: true, grid: grid } } }
+  });
+
+  new Chart(document.getElementById('cPeople'), {
+    type: 'bar',
+    data: { labels: ['멤버 1', '멤버 2', '멤버 3'],
+      datasets: [
+        { label: 'PR', data: [58, 10, 2], backgroundColor: spec, borderRadius: 3 },
+        { label: '커밋', data: [76, 51, 7], backgroundColor: specTint, borderRadius: 3 }
+      ] },
+    options: { indexAxis: 'y', scales: { x: { beginAtZero: true, grid: grid }, y: { grid: noGrid } } }
+  });
+
+  new Chart(document.getElementById('cSpec'), {
+    type: 'bar',
+    data: { labels: ['tasks.md', 'design.md', 'requirements.md'],
+      datasets: [{ label: '변경 커밋', data: [64, 35, 7], backgroundColor: [spec, specTint, '#C9D3E6'], borderRadius: 3 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: grid }, y: { grid: noGrid } } }
+  });
+
+  new Chart(document.getElementById('cFlow'), {
+    data: { labels: ['1차 (P1 7.1)', '2차 (P1 8.1~8.5)', '3차 (P1 8.9~8.12)'],
+      datasets: [
+        { type: 'bar', label: '/task 대비 배율', data: [0.89, 0.67, 0.78], backgroundColor: warn, borderRadius: 4, maxBarThickness: 64 },
+        { type: 'line', label: '효과 기준 0.6배', data: [0.6, 0.6, 0.6], borderColor: add, borderDash: [6, 5], pointRadius: 0, borderWidth: 2 }
+      ] },
+    options: { scales: { x: { grid: noGrid }, y: { min: 0, max: 1, grid: grid, ticks: { callback: function (v) { return v + '배'; } } } } }
+  });
+})();
+
+/* 목차: 좁은 화면에서는 접어서 시작 */
+(function () {
+  var d = document.querySelector('nav.toc details');
+  if (d && window.matchMedia('(max-width: 1099px)').matches) d.removeAttribute('open');
+})();
+
+/* 목차 현재 위치 */
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  if (!('IntersectionObserver' in window)) return;
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        links.forEach(function (a) { a.classList.remove('active'); });
+        var a = byId[e.target.id]; if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('section.chap').forEach(function (s) { io.observe(s); });
+})();
+</script>
+</body>
+</html>
