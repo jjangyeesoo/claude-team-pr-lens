@@ -792,7 +792,7 @@ sequenceDiagram
       </div>
       <p class="muted">"어려운 점"은 고객사 시스템을 조사한 결과가 아니라 이번 연구회에서 겪은 문제를 바탕으로 한 예상입니다. 실제 고객사 시스템에 이 방식을 적용해 보지는 않았습니다.</p>
     </div>
-    <aside class="ev"><span class="t">연결되는 경험</span><p>이번 연구회도 AI가 코드를 쓰고 사람은 계획 승인과 머지를 맡아(<a href="#workflow">4절</a>) LLM을 호출하는 도구(PR Lens)를 만들었습니다. 다만 새로 만든 것이지 남이 만든 것을 넘겨받은 것은 아닙니다.</p></aside>
+    <aside class="ev"><span class="t">연결되는 경험</span><p>이번 연구회도 AI가 코드를 쓰고 사람은 세 번의 승인(브랜치·계획·리뷰 지적 선택)과 머지를 맡아(<a href="#workflow">4절</a>) LLM을 호출하는 도구(PR Lens)를 만들었습니다. 다만 새로 만든 것이지 남이 만든 것을 넘겨받은 것은 아닙니다.</p></aside>
   </div>
 
   <h3>대응 흐름: 인수 → 안정화 → 운영</h3>
@@ -826,7 +826,7 @@ flowchart LR
         <li><strong>팀 컨텍스트 파일 만들기</strong>: 고객 시스템마다 <code>CLAUDE.md</code>, <code>.claude/rules/</code>, ADR 색인을 만들어 다음 담당자와 다음 세션이 같은 기준으로 시작하게 합니다.</li>
       </ul>
     </div>
-    <aside class="ev"><span class="t">근거</span><p>구현 중 요구사항 공백을 G-14~G-21로 올림(<a href="#effects">6절</a>)</p><p>스펙 색인과 번호로 2,216줄 스펙을 나눠 읽음</p></aside>
+    <aside class="ev"><span class="t">근거</span><p>구현 중 요구사항 공백을 G-14~G-21로 올림(<a href="#effects">6절</a>)</p><p>스펙 색인과 번호로 P1 스펙 2,216줄을 나눠 읽음</p></aside>
   </div>
 
   <h4>2. 안정화: 고치기 전에 지금 동작을 고정한다</h4>
@@ -860,10 +860,10 @@ flowchart LR
     <table>
       <thead><tr><th>단계</th><th>고객에게 주는 산출물</th><th>우리가 가진 것</th><th>준비 상태</th></tr></thead>
       <tbody>
-        <tr><td>진단</td><td>역스펙(요구사항·설계), 결정 대기 목록, 위험 목록</td><td>스펙 4문서 구조, <code>/spec</code> 스킬, G-n 운영 경험</td><td><span class="badge b-part">기존 코드에 미적용</span></td></tr>
-        <tr><td>안정화</td><td>현재 동작 고정 테스트(이번에는 하지 않음), 에이전트 평가 픽스처와 정답표, CI·hook 구성</td><td>골든 픽스처 7개(#37, 가짜 LLM), 정답표가 있는 픽스처 PR #15(실제 모델로 1회 대조), hook 2종, ArchUnit, CI 매트릭스</td><td><span class="badge b-part">도구 있음, 기존 코드에 미적용</span></td></tr>
-        <tr><td>운영</td><td>요청별 PR, 스펙 갱신 이력</td><td><code>/task</code>, <code>reviewer</code>, <code>/pr-ready</code>, handoff 메모</td><td><span class="badge b-part">도구 있음, 다른 저장소에 미적용</span></td></tr>
-        <tr><td>보안 점검</td><td>프롬프트 인젝션 등 에이전트 입력 검증 결과</td><td>인젝션 픽스처 4개(20.1, 가짜 LLM 테스트로만 확인)</td><td><span class="badge b-no">실제 모델 실행 못 함(20.5)</span></td></tr>
+        <tr><td>진단</td><td>역스펙(요구사항·설계. 이번에는 해 보지 않음), 결정 대기 목록, 위험 목록</td><td>스펙 4문서 구조, <code>/spec</code> 스킬, G-n 운영 경험</td><td><span class="badge b-part">도구 있음, 다른 시스템에 미적용</span></td></tr>
+        <tr><td>안정화</td><td>현재 동작 고정 테스트(이번에는 하지 않음), 에이전트 평가 픽스처와 정답표, CI·hook 구성</td><td>골든 픽스처 7개(#37, 가짜 LLM), 정답표가 있는 픽스처 PR #15(실제 모델로 1회 대조), hook 2종, ArchUnit, CI 매트릭스</td><td><span class="badge b-part">도구 있음, 다른 시스템에 미적용</span></td></tr>
+        <tr><td>운영</td><td>요청별 PR, 스펙 갱신 이력</td><td><code>/task</code>, <code>reviewer</code>, <code>/pr-ready</code>, handoff 메모</td><td><span class="badge b-part">도구 있음, 다른 시스템에 미적용</span></td></tr>
+        <tr><td>보안 점검</td><td>프롬프트 인젝션 등 에이전트 입력 검증 결과</td><td>인젝션 픽스처 4개(골든 픽스처 7개 중, 20.1에서 만들고 가짜 LLM 테스트로만 확인)</td><td><span class="badge b-no">실제 모델 실행 못 함(20.5)</span></td></tr>
       </tbody>
     </table>
   </div>
