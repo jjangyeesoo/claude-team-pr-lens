@@ -249,6 +249,7 @@ details.appx pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font
       <li><a href="#trials">시행착오와 개선</a></li>
       <li><a href="#retro">회고</a></li>
       <li><a href="#apply">실무 적용 제안</a></li>
+      <li><a href="#maintain">AI 개발 시스템 유지보수 대응</a></li>
       <li><a href="#next">다음 단계</a></li>
       <li><a href="#appendix">부록</a></li>
     </ol>
@@ -772,8 +773,120 @@ sequenceDiagram
 </section>
 
 <!-- 10 -->
+<section class="chap" id="maintain">
+  <h2><span class="no">10</span>AI로 만든 고객사 시스템·에이전트의 유지보수 대응 방안</h2>
+  <p class="sum">고객사가 AI로 직접 만든 시스템과 에이전트가 늘면서 생기는 유지보수 수요에, 이번 연구회에서 써 본 방식을 어떻게 옮길 수 있는지 정리한 제안입니다.</p>
+
+  <h3>대상과 전제</h3>
+  <div class="row">
+    <div>
+      <p>대상은 두 종류로 나눕니다. 대응 방법이 겹치지만 검증 방법이 다릅니다.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>유형</th><th>예</th><th>유지보수에서 어려운 점 (예상)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>AI로 만든 시스템</strong></td><td>AI 코딩 도구로 짠 사내 업무 앱, 자동화 스크립트</td><td>요구사항과 결정 이유가 대화 기록에만 있고, 테스트가 적으며, 만든 사람이 떠나면 동작의 근거를 알 수 없음</td></tr>
+            <tr><td><strong>AI가 동작하는 에이전트</strong></td><td>LLM을 호출해 문서를 분류·요약하거나 도구를 실행하는 에이전트</td><td>위 문제에 더해 같은 입력에도 출력이 달라지고, 모델·프롬프트·비용 설정이 코드 곳곳에 흩어져 있음</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">"어려운 점"은 고객사 시스템을 조사한 결과가 아니라 이번 연구회에서 겪은 문제를 바탕으로 한 예상입니다. 실제 고객사 시스템에 이 방식을 적용해 보지는 않았습니다.</p>
+    </div>
+    <aside class="ev"><span class="t">연결되는 경험</span><p>이번 연구회도 AI가 코드를 쓰고 사람은 계획 승인과 머지를 맡아(<a href="#workflow">4절</a>) LLM을 호출하는 도구(PR Lens)를 만들었습니다. 다만 새로 만든 것이지 남이 만든 것을 넘겨받은 것은 아닙니다.</p></aside>
+  </div>
+
+  <h3>대응 흐름: 인수 → 안정화 → 운영</h3>
+  <figure class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph A["1 인수 · 진단"]
+    A1["코드·대화 기록 수집"] --> A2["역(逆)스펙<br/>requirements · design"]
+    A2 --> A3["모르는 것은<br/>결정 대기 G-n"]
+  end
+  subgraph B["2 안정화"]
+    B1["현재 동작 고정 테스트"] --> B2["정답표 있는<br/>평가 픽스처"]
+    B2 --> B3["hook · 아키텍처 테스트 · CI"]
+  end
+  subgraph C["3 운영"]
+    C1["변경 요청 = 작업 1개"] --> C2["/task → reviewer<br/>→ /pr-ready"]
+    C2 --> C3["주의 · 결정 줄을<br/>스펙에 누적"]
+    C3 -. "반복 지적은 규칙·테스트로" .-> C1
+  end
+  A --> B --> C
+</pre>
+    <figcaption>새로 만드는 대신 넘겨받은 시스템에 스펙 기반 개발을 거꾸로 적용하는 구성안. 아직 실제 고객사 시스템에 적용하지 않았습니다.</figcaption>
+  </figure>
+
+  <h4>1. 인수·진단: 스펙을 거꾸로 만든다</h4>
+  <div class="row">
+    <div>
+      <ul>
+        <li><strong>역스펙 작성</strong>: 지금 코드가 하는 일을 AI로 읽혀 <code>requirements.md</code>(무엇을)와 <code>design.md</code>(어떻게)로 정리합니다. 고객사에 남은 프롬프트·대화 기록이 있으면 결정 이유의 단서로 씁니다.</li>
+        <li><strong>모르는 것은 결정 대기로</strong>: 코드만으로 의도를 알 수 없는 동작(버그인지 의도인지)은 AI가 추측해 확정하지 않고 결정 대기(G-n)로 올려 고객과 확인합니다. 이 목록 자체가 진단 보고서의 핵심 산출물이 됩니다.</li>
+        <li><strong>팀 컨텍스트 파일 만들기</strong>: 고객 시스템마다 <code>CLAUDE.md</code>, <code>.claude/rules/</code>, ADR 색인을 만들어 다음 담당자와 다음 세션이 같은 기준으로 시작하게 합니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>구현 중 요구사항 공백을 G-14~G-21로 올림(<a href="#effects">6절</a>)</p><p>스펙 색인과 번호로 2,216줄 스펙을 나눠 읽음</p></aside>
+  </div>
+
+  <h4>2. 안정화: 고치기 전에 지금 동작을 고정한다</h4>
+  <div class="row">
+    <div>
+      <ul>
+        <li><strong>현재 동작 고정 테스트</strong>: 변경 전에 지금의 입출력을 테스트로 고정합니다. 버그 수정은 재현하는 실패 테스트부터 씁니다(이번 프로젝트 규칙과 같음).</li>
+        <li><strong>에이전트는 정답표로 평가</strong>: 기대하는 판단을 심어 둔 입력과 정답표를 만들어, 모델이나 프롬프트를 바꿀 때마다 같은 표로 대조합니다. 출력 문구가 아니라 "정답 항목에 대응하는 결과가 나왔는가"로 셉니다. 이번에는 실제 모델로 한 번(20.4 리허설) 대조했고, 바꿀 때마다 반복해 보지는 않았습니다. 출력 형식은 가짜 LLM 응답을 쓰는 골든 픽스처로 따로 고정합니다.</li>
+        <li><strong>규칙을 기계로 강제</strong>: 보호 파일 편집 차단 hook, 턴 종료 검증 hook, 패키지 의존 방향 테스트, 여러 OS의 CI를 고객 시스템에 맞게 옮깁니다.</li>
+        <li><strong>LLM 설정을 한곳에 기록</strong>: 모델, effort, 최대 토큰, 실행당 비용 상한을 ADR 한 건으로 남기고 코드도 그 값을 따르게 합니다. 실제 API를 부르는 테스트는 환경변수가 있을 때만 돌게 분리합니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>픽스처 PR #15의 심어 둔 지적 18개 모두에 대응하는 Finding이 나옴</p><p><code>ProtectFiles.java</code>, <code>VerifyOnStop.java</code>, ArchUnit, CI 매트릭스(#40)</p><p>ADR 0005, M1 리허설 추정 비용 $0.44(상한 제안값 $0.50), 실제 API 스모크 10개는 건너뜀 처리</p></aside>
+  </div>
+
+  <h4>3. 운영: 변경 요청 하나를 작업 하나로</h4>
+  <div class="row">
+    <div>
+      <ul>
+        <li><strong>요청 → 작업 → PR</strong>: 고객의 변경 요청을 <code>tasks.md</code>의 작업 하나로 적고, <code>/task</code> → <code>reviewer</code> → <code>/pr-ready</code>로 PR 하나를 냅니다. 요청과 인수 기준, 테스트, PR이 번호로 이어집니다.</li>
+        <li><strong>담당자가 바뀌어도 이어지게</strong>: 리뷰에서 나온 "뒤 작업에 넘길 것"을 PR 설명이 아니라 스펙 본문의 주의 줄로 남깁니다. 유지보수는 담당자 교체가 잦으므로 이 효과가 개발 때보다 클 것으로 예상합니다.</li>
+        <li><strong>사람 리뷰는 좁고 확실하게</strong>: AI 리뷰가 전체를 보고, 사람은 AI가 기각한 지적과 결정 대기 추가만 확인합니다.</li>
+        <li><strong>반복 지적은 규칙으로</strong>: 고객 시스템별로 기각 사유를 주기적으로 모아 규칙과 검사 테스트로 옮깁니다.</li>
+      </ul>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p>주의 줄 87개, P2 스펙에 넘긴 주의 줄 19개</p><p>유일한 사람 변경 요청(#30)이 AI가 기각한 3건을 짚음</p><p>#52·#53: 기각 사유 → 규칙 6개, 검사 테스트 1개</p></aside>
+  </div>
+
+  <h3>서비스 구성안</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>단계</th><th>고객에게 주는 산출물</th><th>우리가 가진 것</th><th>준비 상태</th></tr></thead>
+      <tbody>
+        <tr><td>진단</td><td>역스펙(요구사항·설계), 결정 대기 목록, 위험 목록</td><td>스펙 4문서 구조, <code>/spec</code> 스킬, G-n 운영 경험</td><td><span class="badge b-part">기존 코드에 미적용</span></td></tr>
+        <tr><td>안정화</td><td>현재 동작 고정 테스트(이번에는 하지 않음), 에이전트 평가 픽스처와 정답표, CI·hook 구성</td><td>골든 픽스처 7개(#37, 가짜 LLM), 정답표가 있는 픽스처 PR #15(실제 모델로 1회 대조), hook 2종, ArchUnit, CI 매트릭스</td><td><span class="badge b-part">도구 있음, 기존 코드에 미적용</span></td></tr>
+        <tr><td>운영</td><td>요청별 PR, 스펙 갱신 이력</td><td><code>/task</code>, <code>reviewer</code>, <code>/pr-ready</code>, handoff 메모</td><td><span class="badge b-part">도구 있음, 다른 저장소에 미적용</span></td></tr>
+        <tr><td>보안 점검</td><td>프롬프트 인젝션 등 에이전트 입력 검증 결과</td><td>인젝션 픽스처 4개(20.1, 가짜 LLM 테스트로만 확인)</td><td><span class="badge b-no">실제 모델 실행 못 함(20.5)</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">"도구 있음"은 이 저장소에서 동작했다는 뜻입니다. hook과 스킬은 이 저장소의 명령과 폴더 구조를 전제로 하므로 다른 시스템에 옮기려면 고쳐야 하고, 옮겨 보지는 않았습니다.</p>
+
+  <h3>한계와 먼저 확인할 것</h3>
+  <div class="row">
+    <div>
+      <ul>
+        <li><strong>역스펙은 해 보지 않았습니다</strong>: 이번 연구회는 스펙을 먼저 쓰고 코드를 만든 경우입니다. 이미 있는 코드에서 스펙을 복원하는 데 드는 시간과 정확도는 확인하지 않았습니다.</li>
+        <li><strong>스펙 유지 비용</strong>: P1에서 <code>tasks.md</code>가 64번 바뀌었습니다. 작은 고객 시스템에는 4문서 대신 색인과 작업 목록만 두는 가벼운 형태가 필요할 수 있습니다.</li>
+        <li><strong>사람 리뷰 운영</strong>: 이번에는 사람 리뷰가 70건 중 2건이었습니다. 고객 납품물에는 사람 확인 범위를 계약에 정해 두어야 합니다.</li>
+        <li><strong>LLM 비용</strong>: 크레딧이 떨어져 마지막 확인을 하지 못했습니다. 고객 시스템의 실제 API 검증 비용을 누가 부담할지 미리 정해야 합니다.</li>
+      </ul>
+      <p><strong>제안하는 첫 단계</strong>: 사내 또는 협조 가능한 고객사의 AI 개발 시스템 하나를 골라 진단·안정화만 짧게 시범 적용하고, 역스펙 작성 시간, 결정 대기 개수, 고정 테스트 수, 이후 변경 요청 하나의 첫 커밋부터 머지까지 시간을 잽니다. 그 수치로 서비스 단가와 범위를 정합니다.</p>
+    </div>
+    <aside class="ev"><span class="t">근거</span><p><a href="#numbers">5절</a> 스펙 변경 커밋, 사람 리뷰 2건</p><p><a href="#trials">7절</a> API 크레딧 소진</p><p><a href="#retro">8절</a> "리드타임 대신 첫 커밋부터 머지까지"</p></aside>
+  </div>
+</section>
+
+<!-- 11 -->
 <section class="chap" id="next">
-  <h2><span class="no">10</span>다음 단계</h2>
+  <h2><span class="no">11</span>다음 단계</h2>
   <p class="sum">worktree로 한 사람이 여러 작업을 동시에 돌리고, 오케스트레이션으로 사람의 개입 지점을 줄이는 방향입니다.</p>
 
   <h3>worktree 병렬</h3>
@@ -828,9 +941,9 @@ flowchart LR
   </ul>
 </section>
 
-<!-- 11 -->
+<!-- 12 -->
 <section class="chap" id="appendix">
-  <h2><span class="no">11</span>부록</h2>
+  <h2><span class="no">12</span>부록</h2>
   <p class="sum">원자료와 집계 방법.</p>
 
   <details class="appx">
